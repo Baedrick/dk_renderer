@@ -36,11 +36,11 @@ if "%debug%"=="1"     set compile=%cl_debug%
 if "%release%"=="1"   set compile=%cl_release%
 
 :: --- Prep Directories --------------------------------------------------------
-if not exist build mkdir build
+if not exist bin mkdir bin
 if not exist .tmp mkdir .tmp
 
 :: --- Build -------------------------------------------------------------------
-pushd build
+pushd bin
 %compile% ..\src\main.cpp %cl_link% %cl_out%toy_viewer.exe || exit /b 1
 popd
 
