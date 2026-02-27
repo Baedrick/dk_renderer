@@ -21,7 +21,7 @@ if "%release%"=="1" set debug=0 && echo [release mode]
 
 set compile_flags=
 if "%profile%"=="1" set compile_flags=%compile_flags% -DDK_PROFILE=1 && echo [profiling enabled]
-if "%asan%"=="1"    set auto_compile_flags=%auto_compile_flags% -fsanitize=address && echo [asan enabled]
+if "%asan%"=="1"    set compile_flags=%compile_flags% -fsanitize=address && echo [asan enabled]
 
 :: --- Compile/Link Time Definitions -------------------------------------------
 set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++17 /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
@@ -32,8 +32,8 @@ set cl_out=     /out:
 set cl_linker=  
 
 :: --- Choose Compile Lines ----------------------------------------------------
-if "%debug%"=="1"     set compile=%cl_debug%
-if "%release%"=="1"   set compile=%cl_release%
+if "%debug%"=="1"   set compile=%cl_debug%
+if "%release%"=="1" set compile=%cl_release%
 
 :: --- Prep Directories --------------------------------------------------------
 if not exist bin mkdir bin
