@@ -33,6 +33,24 @@
 #	define DK_ASSERT(x) (void)(x)
 #endif
 
+#if defined(DK_COMPILER_MSVC)
+#	if defined(__SANITIZE_ADDRESS__)
+#		define DK_ASAN_ENABLED
+#		define DK_ASAN_EXCLUDE __declspec(no_sanitize_address)
+#	else
+#		define DK_ASAN_EXCLUDE
+#	endif
+#endif
+
+#if defined(DK_ASAN_ENABLED)
+#	include <sanitizer/asan_interface.h>
+#	define DK_ASAN_POISON_MEMORY_REGION(addr, size) __asan_poison_memory_region((addr), (size))
+#	define DK_ASAN_UNPOISON_MEMORY_REGION(addr, size) __asan_unpoison_memory_region((addr), (size))
+#else
+#	define DK_ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#	define DK_ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#endif
+
 namespace dk {
 	using b8 = bool;
 	using s8 = std::int8_t;
@@ -75,5 +93,33 @@ namespace dk {
 	constexpr auto align_down_pow2(u64 value, u64 align) noexcept -> u64 {
 		DK_ASSERT(is_pow2(align));
 		return value & ~(align - 1);
+	}
+
+	template <typename T>
+	constexpr auto min(T a, T b) noexcept -> T {
+		return a < b ? a : b;
+	}
+
+	template <typename T>
+	constexpr auto max(T a, T b) noexcept -> T {
+		return a < b ? b : a;
+	}
+
+	template <typename T>
+	constexpr auto clamp(T x, T bottom, T top) noexcept -> T {
+		return min(top, max(bottom, x));
+	}
+
+	template <typename T>
+	auto forward_list_stack_push(T **first, T *node) noexcept -> void {
+		node->next = *first;
+		*first = node;
+	}
+
+	template <typename T>
+	auto forward_list_stack_pop(T **first) noexcept -> void {
+		if (*first != nullptr) {
+			*first = (*first)->next;
+		}
 	}
 }

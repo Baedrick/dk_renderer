@@ -32,7 +32,7 @@ namespace dk {
 
 	auto plt_reserve(u64 size) noexcept -> void *;
 	auto plt_commit(void *ptr, u64 size) noexcept -> b8;
-	auto plt_decommit(void *ptr, u64 size) noexcept -> void;
+	auto plt_decommit(void *ptr, u64 size) noexcept -> b8;
 	auto plt_release(void *ptr, u64 size) noexcept -> void;
 	auto plt_malloc(u64 size) noexcept -> void *;
 	auto plt_free(void *ptr) noexcept -> void;

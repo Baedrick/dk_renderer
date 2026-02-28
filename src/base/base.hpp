@@ -6,3 +6,4 @@
 #pragma once
 
 #include "base_core.hpp"
+#include "base_arena.hpp"

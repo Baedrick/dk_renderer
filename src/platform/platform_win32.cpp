@@ -49,8 +49,8 @@ auto dk::plt_commit(void *ptr, u64 size) noexcept -> b8 {
 	return VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE) != nullptr;
 }
 
-auto dk::plt_decommit(void *ptr, u64 size) noexcept -> void {
-	VirtualFree(ptr, size, MEM_DECOMMIT);
+auto dk::plt_decommit(void *ptr, u64 size) noexcept -> b8 {
+	return VirtualFree(ptr, size, MEM_DECOMMIT) != 0;
 }
 
 auto dk::plt_release(void *ptr, u64 size) noexcept -> void {
