@@ -44,7 +44,7 @@ if "%asan%"=="1"    set compile_flags=%compile_flags% -fsanitize=address && echo
 if "%profile%"=="1" set compile_flags=%compile_flags% -DDK_PROFILE=1 && echo [profiling enabled]
 
 :: --- Compile/Link Time Definitions -------------------------------------------
-set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++17 /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
+set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++20 /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
 set cl_debug=   call cl /Od /MTd /D_DEBUG /RTC1 %cl_common%
 set cl_release= call cl /O2 /MT /DNDEBUG %cl_common%
 set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /SUBSYSTEM:WINDOWS /pdbaltpath:%%%%_PDB%%%%
