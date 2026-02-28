@@ -4,17 +4,14 @@
  */
 
 #include "base/base.hpp"
+#include "platform/platform.hpp"
 
 #include "base/base.cpp"
+#include "platform/platform.cpp"
 
 auto entry_point(int argc, char **argv) noexcept -> int {
 	(void)argc;
 	(void)argv;
 
 	return 0;
-}
-
-// TODO(Dedrick): Move main to platform initialization.
-int main(int argc, char **argv) {
-	return entry_point(argc, argv);
 }
