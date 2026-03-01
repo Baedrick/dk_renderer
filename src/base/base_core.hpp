@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2026 Koh Swee Teck Dedrick.
- * Licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+ * Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
  */
 
 #include <cstdint>
@@ -106,8 +105,8 @@ namespace dk {
 	}
 
 	template <typename T>
-	constexpr auto clamp(T x, T bottom, T top) noexcept -> T {
-		return min(top, max(bottom, x));
+	constexpr auto clamp(T x, T min_x, T max_x) noexcept -> T {
+		return min(max_x, max(min_x, x));
 	}
 
 	template <typename T>
