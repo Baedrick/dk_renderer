@@ -5,7 +5,7 @@
 #pragma once
 
 namespace dk {
-	constexpr u64 ARENA_HEADER_SIZE = 128;
+	u64 constexpr ARENA_HEADER_SIZE = 128;
 
 	using ArenaFlags = u32;
 	enum : u32 {
@@ -37,9 +37,9 @@ namespace dk {
 		u64 position;
 	};
 
-	constexpr u64 ARENA_DEFAULT_RESERVE_SIZE = mega_bytes(64);
-	constexpr u64 ARENA_DEFAULT_COMMIT_SIZE = kilo_bytes(64);
-	constexpr u64 ARENA_DEFAULT_FLAGS = ARENA_FLAG_NONE;
+	u64 constexpr ARENA_DEFAULT_RESERVE_SIZE = mega_bytes(64);
+	u64 constexpr ARENA_DEFAULT_COMMIT_SIZE = kilo_bytes(64);
+	u64 constexpr ARENA_DEFAULT_FLAGS = ARENA_FLAG_NONE;
 
 	auto arena_alloc(ArenaParams const *params) noexcept -> Arena *;
 	auto arena_release(Arena *arena) noexcept -> void;

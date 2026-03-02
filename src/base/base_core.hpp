@@ -26,7 +26,7 @@
 #endif
 
 #define DK_ASSERT_ALWAYS(x) do { if (!(x)) { DK_TRAP(); } } while(false) /* NOLINT */
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 #	define DK_ASSERT(x) DK_ASSERT_ALWAYS(x)
 #else
 #	define DK_ASSERT(x) (void)(x)

@@ -101,7 +101,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 		info->pid = GetCurrentProcessId();
 	}
 
+	dk::ThreadContext *thread_context = dk::thread_context_alloc();
+	dk::thread_context_select(thread_context);
+
 	// TODO(Dedrick): Parse CommandLineW, pass it to entry point.
 	int const result = entry_point(0, nullptr);
+
+	dk::thread_context_select(nullptr);
+	dk::thread_context_release(thread_context);
+
 	return result;
 }
