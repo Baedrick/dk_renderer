@@ -7,15 +7,10 @@ namespace {
 }
 
 auto dk::thread_context_alloc() noexcept -> ThreadContext * {
-	ArenaParams constexpr params = {
-		.reserve_size = ARENA_DEFAULT_RESERVE_SIZE,
-		.commit_size = ARENA_DEFAULT_COMMIT_SIZE,
-		.flags = ARENA_DEFAULT_FLAGS
-	};
-	Arena *arena = arena_alloc(&params);
+	Arena *arena = arena_alloc(&ARENA_DEFAULT_PARAMS);
 	ThreadContext *thread_context = arena_push<ThreadContext>(arena);
 	thread_context->scratch_arenas[0] = arena;
-	thread_context->scratch_arenas[1] = arena_alloc(&params);
+	thread_context->scratch_arenas[1] = arena_alloc(&ARENA_DEFAULT_PARAMS);
 	return thread_context;
 }
 
