@@ -39,7 +39,12 @@ namespace dk {
 
 	u64 constexpr ARENA_DEFAULT_RESERVE_SIZE = mega_bytes(64);
 	u64 constexpr ARENA_DEFAULT_COMMIT_SIZE = kilo_bytes(64);
-	u64 constexpr ARENA_DEFAULT_FLAGS = ARENA_FLAG_NONE;
+	ArenaFlags constexpr ARENA_DEFAULT_FLAGS = ARENA_FLAG_NONE;
+	ArenaParams constexpr ARENA_DEFAULT_PARAMS = {
+		.reserve_size = ARENA_DEFAULT_RESERVE_SIZE,
+		.commit_size = ARENA_DEFAULT_COMMIT_SIZE,
+		.flags = ARENA_DEFAULT_FLAGS
+	};
 
 	auto arena_alloc(ArenaParams const *params) noexcept -> Arena *;
 	auto arena_release(Arena *arena) noexcept -> void;

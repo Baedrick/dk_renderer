@@ -3,7 +3,6 @@
  */
 
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 
 #if defined(_WIN32)

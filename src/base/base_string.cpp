@@ -1,0 +1,360 @@
+/*
+ * Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
+ */
+
+#define STB_SPRINTF_IMPLEMENTATION
+#include "thirdparty/stb/stb_sprintf.h"
+#undef STB_SPRINTF_IMPLEMENTATION
+
+namespace {
+	// NOTE(Dedrick): Supports lookup values for hex numbers.
+	dk::u8 constexpr char_to_digit_value[128] = {
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+	};
+}
+
+auto dk::String8::operator[](u64 index) noexcept -> u8 {
+	DK_ASSERT(index < size);
+	return data[index];
+}
+
+auto dk::String16::operator[](u64 index) noexcept -> u16 {
+	DK_ASSERT(index < size);
+	return data[index];
+}
+
+auto dk::char_is_upper(u8 c) noexcept -> b8 {
+	return c >= 'A' && c <= 'Z';
+}
+
+auto dk::char_is_lower(u8 c) noexcept -> b8 {
+	return c >= 'a' && c <= 'z';
+}
+
+auto dk::char_is_whitespace(u8 c) noexcept -> b8 {
+	return c == ' ' || c == '\r' || c == '\t' || c == '\f' || c == '\v' || c == '\n';
+}
+
+auto dk::char_is_digit(u8 c, u32 radix) noexcept -> b8 {
+	DK_ASSERT(radix >= 2 && radix <= 16);
+	b8 is_digit = false;
+	if (char_to_digit_value[c] < radix) {
+		is_digit = true;
+	}
+	return is_digit;
+}
+
+auto dk::char_to_upper(u8 c) noexcept -> u8 {
+	return char_is_lower(c) ? 'A' + (c - 'a') : c;
+}
+
+auto dk::char_to_lower(u8 c) noexcept -> u8 {
+	return char_is_upper(c) ? 'a' + (c - 'A') : c;
+}
+
+auto dk::char_to_forward_slash(u8 c) noexcept -> u8 {
+	return c == '\\' ? '/' : c;
+}
+
+auto dk::cstring_length(char const *cstr) noexcept -> u64 {
+	u64 length = 0;
+	for (; cstr[length] != '\0'; ++length) {}
+	return length;
+}
+
+auto dk::str8_substr(String8 str, u64 begin, u64 end) noexcept -> String8 {
+	begin = min(begin, str.size);
+	end = min(end, str.size);
+	str.data += begin;
+	str.size = end - begin;
+	return str;
+}
+
+auto dk::str8_substr_size(String8 str, u64 begin, u64 size) noexcept -> String8 {
+	begin = min(begin, str.size);
+	size = min(size, str.size - begin);
+	str.data += begin;
+	str.size = size;
+	return str;
+}
+
+auto dk::str8_skip(String8 str, u64 amount) noexcept -> String8 {
+	amount = min(amount, str.size);
+	str.data += amount;
+	str.size -= amount;
+	return str;
+}
+
+auto dk::str8_trim_whitespace(String8 str) noexcept -> String8 {
+	u64 begin = 0;
+	for (; begin < str.size && char_is_whitespace(str[begin]); ++begin) { }
+	u64 end = str.size;
+	for (; end > begin && char_is_whitespace(str[end - 1]); --end) { }
+	return str8_substr(str, begin, end);
+}
+
+auto dk::str8_equals(String8 s1, String8 s2, StringMatchFlags flags) noexcept -> b8 {
+	if (s1.size != s2.size) {
+		return false;
+	}
+	for (u64 i = 0; i < s1.size; ++i) {
+		u8 c1 = s1[i];
+		u8 c2 = s2[i];
+		if ((flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0) {
+			c1 = char_to_lower(c1);
+			c2 = char_to_lower(c2);
+		}
+		if ((flags & STRING_MATCH_FLAG_SLASH_INSENSITIVE) != 0) {
+			c1 = char_to_forward_slash(c1);
+			c2 = char_to_forward_slash(c2);
+		}
+		if (c1 != c2) {
+			return false;
+		}
+	}
+	return true;
+}
+
+auto dk::str8_compare(String8 s1, String8 s2, StringMatchFlags flags) noexcept -> s32 {
+	u64 const size = min(s1.size, s2.size);
+	for (u64 i = 0; i < size; ++i) {
+		u8 c1 = s1[i];
+		u8 c2 = s2[i];
+		if ((flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0) {
+			c1 = char_to_lower(c1);
+			c2 = char_to_lower(c2);
+		}
+		if ((flags & STRING_MATCH_FLAG_SLASH_INSENSITIVE) != 0) {
+			c1 = char_to_forward_slash(c1);
+			c2 = char_to_forward_slash(c2);
+		}
+		if (c1 != c2) {
+			return c1 < c2 ? -1 : 1;
+		}
+	}
+	if (s1.size < s2.size) {
+		return -1;
+	}
+	if (s1.size > s2.size) {
+		return 1;
+	}
+	return 0;
+}
+
+auto dk::str8_find_needle(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64 {
+	if (needle.size == 0) {
+		return str.size;
+	}
+	u64 const stop_index = max(str.size + 1, needle.size) - needle.size;
+	b8 const case_insensitive = (flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0;
+	u8 const needle_first = case_insensitive ? char_to_lower(needle[0]) : needle[0];
+	for (u64 i = start_pos; i < stop_index; ++i) {
+		u8 const haystack_char = case_insensitive ? char_to_lower(str[i]) : str[i];
+		if (haystack_char == needle_first) {
+			String8 const substr = str8_substr(str, i, i + needle.size);
+			if (str8_equals(substr, needle, flags) == 0) {
+				return i;
+			}
+		}
+	}
+	return str.size;
+}
+
+auto dk::str8_find_needle_reverse(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64 {
+	if (needle.size == 0) {
+		return str.size;
+	}
+	if (str.size < needle.size + start_pos) {
+		return str.size;
+	}
+	s64 const start_index = static_cast<s64>(str.size - needle.size - start_pos);
+	for (s64 i = start_index; i >= 0; i -= 1) {
+		String8 const sub = str8_substr(str, static_cast<u64>(i), static_cast<u64>(i) + needle.size);
+		if (str8_equals(sub, needle, flags)) {
+			return static_cast<u64>(i);
+		}
+	}
+	return str.size;
+}
+
+auto dk::str8_to_upper(Arena *arena, String8 str) noexcept -> String8 {
+	u8 *s = arena_push_array<u8>(arena, str.size + 1);
+	for (u64 i = 0; i < str.size; ++i) {
+		s[i] = char_to_upper(str[i]);
+	}
+	s[str.size] = '\0';
+	return { .data = s, .size = str.size };
+}
+
+auto dk::str8_to_lower(Arena *arena, String8 str) noexcept -> String8 {
+	u8 *s = arena_push_array<u8>(arena, str.size + 1);
+	for (u64 i = 0; i < str.size; ++i) {
+		s[i] = char_to_lower(str[i]);
+	}
+	s[str.size] = '\0';
+	return { .data = s, .size = str.size };
+}
+
+auto dk::str8_cat(Arena *arena, String8 s1, String8 s2) noexcept -> String8 {
+	u64 const size = s1.size + s2.size;
+	u8 *s = arena_push_array<u8>(arena, size + 1);
+	std::memcpy(s, s1.data, s1.size);
+	std::memcpy(s + s1.size, s2.data, s2.size);
+	s[size] = '\0';
+	return { .data = s, .size = size };
+}
+
+auto dk::str8_copy(Arena *arena, String8 str) noexcept -> String8 {
+	u8 *s = arena_push_array<u8>(arena, str.size + 1);
+	std::memcpy(s, str.data, str.size);
+	s[str.size] = '\0';
+	return { .data = s, .size = str.size };
+}
+
+auto dk::str8fv(Arena *arena, char const *fmt, va_list args) noexcept -> String8 {
+	va_list args2;
+	va_copy(args2, args);
+	s32 const needed_bytes = stbsp_vsnprintf(nullptr, 0, fmt, args) + 1; // NOLINT(clang-diagnostic-format-nonliteral)
+	u8 *s = arena_push_array<u8>(arena, needed_bytes);
+	stbsp_vsnprintf(reinterpret_cast<char *>(s), needed_bytes, fmt, args2); // NOLINT(clang-diagnostic-format-nonliteral)
+	return { .data = s, .size = static_cast<u64>(needed_bytes - 1) };
+}
+
+auto dk::str8f(Arena *arena, char const *fmt, ...) noexcept -> String8 {
+	va_list args;
+	va_start(args, fmt);
+	String8 const result = str8fv(arena, fmt, args);
+	va_end(args);
+	return result;
+}
+
+auto dk::sign_from_str8(String8 str, String8 *out_tail) noexcept -> s32 {
+	u64 negative_count = 0;
+	u64 i = 0;
+	for (; i < str.size; ++i) {
+		if (str[i] == '-') {
+			++negative_count;
+		}
+		else if (str[i] != '+') {
+			break;
+		}
+	}
+	if (out_tail != nullptr) {
+		*out_tail = str8_skip(str, i);
+	}
+	return (negative_count & 1) ? -1 : 1;
+}
+
+auto dk::u64_from_str8(String8 str, u32 radix) noexcept -> u64 {
+	DK_ASSERT(radix >= 2 && radix <= 16);
+	u64 value = 0;
+	for (u64 i = 0; i < str.size; ++i) {
+		u8 const digit = char_to_digit_value[str[i] & 0x7F];
+		value = value * radix + digit;
+	}
+	return value;
+}
+
+auto dk::s64_from_str8(String8 str, u32 radix) noexcept -> s64 {
+	String8 tail = str;
+	s64 const sign = sign_from_str8(str, &tail);
+	return sign * static_cast<s64>(u64_from_str8(tail, radix));
+}
+
+auto dk::u32_from_str8(String8 str, u32 radix) noexcept -> u32 {
+	return static_cast<u32>(u64_from_str8(str, radix));
+}
+
+auto dk::s32_from_str8(String8 str, u32 radix) noexcept -> s32 {
+	return static_cast<s32>(s64_from_str8(str, radix));
+}
+
+auto dk::str8_list_push_node(String8List *list, String8Node *node) noexcept -> void {
+	node->next = nullptr;
+	if (list->last != nullptr) {
+		list->last->next = node;
+		list->last = node;
+	}
+	else {
+		list->first = list->last = node;
+	}
+	list->node_count += 1;
+	list->total_size += node->string.size;
+}
+
+auto dk::str8_list_push_node_front(String8List *list, String8Node *node) noexcept -> void {
+	node->next = list->first;
+	list->first = node;
+	if (list->last == nullptr) {
+		list->last = node;
+	}
+	list->node_count += 1;
+	list->total_size += node->string.size;
+}
+
+auto dk::str8_list_push(Arena *arena, String8List *list, String8 str) noexcept -> void {
+	String8Node *node = arena_push<String8Node>(arena);
+	node->string = str;
+	str8_list_push_node(list, node);
+}
+
+auto dk::str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> void {
+	va_list args;
+	va_start(args, fmt);
+	String8 const str = str8fv(arena, fmt, args);
+	va_end(args);
+	str8_list_push(arena, list, str);
+}
+
+auto dk::str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> void {
+	String8Node *node = arena_push<String8Node>(arena);
+	node->string = str;
+	str8_list_push_node_front(list, node);
+}
+
+auto dk::str8_list_split(Arena *arena, String8 str, u8 const *delims, u64 delims_count) noexcept -> String8List {
+
+}
+
+auto dk::str8_list_split(Arena *arena, String8 str, String8 delims) noexcept -> String8List {
+
+}
+
+auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const *opt_params) noexcept -> String8 {
+
+}
+
+auto dk::str8_array_from_list(Arena *arena, String8List *list) noexcept -> String8Array {
+
+}
+
+auto dk::utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode {
+
+}
+
+auto dk::utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode {
+
+}
+
+auto dk::utf8_encode(u8 *out, u32 codepoint) noexcept -> u32 {
+
+}
+
+auto dk::utf16_encode(u16 *out, u32 codepoint) noexcept -> u32 {
+
+}
+
+auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
+
+}
+
+auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
+
+}

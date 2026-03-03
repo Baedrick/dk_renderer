@@ -1,0 +1,123 @@
+/*
+ * Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
+ */
+
+#include "thirdparty/stb/stb_sprintf.h"
+
+namespace dk {
+	struct String8 {
+		u8 const *data;
+		u64 size;
+
+		auto operator[](u64 index) noexcept -> u8;
+	};
+
+	struct String16 {
+		u16 const *data;
+		u64 size;
+
+		auto operator[](u64 index) noexcept -> u16;
+	};
+
+	struct String8Node {
+		String8Node *next;
+		String8 string;
+	};
+
+	struct String8List {
+		String8Node *first;
+		String8Node *last;
+		u64 node_count;
+		u64 total_size;
+	};
+
+	struct String8Array {
+		String8 *v;
+		u64 count;
+		u64 total_size;
+	};
+
+	struct String8JoinParams {
+		String8 prefix;
+		String8 postfix;
+		String8 separator;
+	};
+
+	using StringMatchFlags = u32;
+	enum : u32 {
+		STRING_MATCH_FLAG_NONE = 0,
+		STRING_MATCH_FLAG_CASE_INSENSITIVE = 1u << 0,
+		STRING_MATCH_FLAG_SLASH_INSENSITIVE = 1u << 1
+	};
+
+	struct StringDecode {
+		u32 codepoint;
+		u32 advance;
+	};
+
+	auto char_is_upper(u8 c) noexcept -> b8;
+	auto char_is_lower(u8 c) noexcept -> b8;
+	auto char_is_whitespace(u8 c) noexcept -> b8;
+	auto char_is_digit(u8 c, u32 radix) noexcept -> b8;
+	auto char_to_upper(u8 c) noexcept -> u8;
+	auto char_to_lower(u8 c) noexcept -> u8;
+	auto char_to_forward_slash(u8 c) noexcept -> u8;
+
+	auto cstring_length(char const *cstr) noexcept -> u64;
+
+	constexpr auto str8(u8 const *str, u64 size) noexcept -> String8 {
+		return { .data = str, .size = size };
+	}
+	constexpr auto str8_range(u8 const *begin, u8 const *end) noexcept -> String8 {
+		return { .data = begin, .size = static_cast<u64>(end - begin) };
+	}
+	template <u64 N>
+	auto str8_literal(char const (&cstr)[N]) noexcept -> String8 {
+		return { .data = reinterpret_cast<u8 const *>(cstr), .size = N - 1 };
+	}
+
+	auto str8_substr(String8 str, u64 begin, u64 end) noexcept -> String8;
+	auto str8_substr_size(String8 str, u64 begin, u64 size) noexcept -> String8;
+	auto str8_skip(String8 str, u64 amount) noexcept -> String8;
+	auto str8_trim_whitespace(String8 str) noexcept -> String8;
+
+	auto str8_equals(String8 s1, String8 s2, StringMatchFlags flags) noexcept -> b8;
+	auto str8_compare(String8 s1, String8 s2, StringMatchFlags flags) noexcept -> s32;
+	auto str8_find_needle(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64;
+	auto str8_find_needle_reverse(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64;
+
+	auto str8_to_upper(Arena *arena, String8 str) noexcept -> String8;
+	auto str8_to_lower(Arena *arena, String8 str) noexcept -> String8;
+
+	auto str8_cat(Arena *arena, String8 s1, String8 s2) noexcept -> String8;
+	auto str8_copy(Arena *arena, String8 str) noexcept -> String8;
+	auto str8fv(Arena *arena, char const *fmt, va_list args) noexcept -> String8;
+	auto str8f(Arena *arena, char const *fmt, ...) noexcept -> String8;
+
+	auto sign_from_str8(String8 str, String8 *out_tail) noexcept -> s32;
+	auto u64_from_str8(String8 str, u32 radix) noexcept -> u64;
+	auto s64_from_str8(String8 str, u32 radix) noexcept -> s64;
+	auto u32_from_str8(String8 str, u32 radix) noexcept -> u32;
+	auto s32_from_str8(String8 str, u32 radix) noexcept -> s32;
+	// TODO(Dedrick): f64 from string.
+
+	auto str8_list_push_node(String8List *list, String8Node *node) noexcept -> void;
+	auto str8_list_push_node_front(String8List *list, String8Node *node) noexcept -> void;
+	auto str8_list_push(Arena *arena, String8List *list, String8 str) noexcept -> void;
+	auto str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> void;
+	auto str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> void;
+
+	auto str8_list_split(Arena *arena, String8 str, u8 const *delims, u64 delims_count) noexcept -> String8List;
+	auto str8_list_split(Arena *arena, String8 str, String8 delims) noexcept -> String8List;
+	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *opt_params) noexcept -> String8;
+
+	auto str8_array_from_list(Arena *arena, String8List *list) noexcept -> String8Array;
+
+	auto utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode;
+	auto utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode;
+	auto utf8_encode(u8 *out, u32 codepoint) noexcept -> u32;
+	auto utf16_encode(u16 *out, u32 codepoint) noexcept -> u32;
+
+	auto str8_from_16(Arena *arena, String16 str) noexcept -> String8;
+	auto str16_from_8(Arena *arena, String8 str) noexcept -> String16;
+}

@@ -3,8 +3,6 @@
  */
 
 auto dk::arena_alloc(ArenaParams const *params) noexcept -> Arena * {
-	DK_ASSERT(is_pow2(params->commit_size));
-
 	u64 const page_size = plt_get_system_info()->page_size;
 	u64 const reserve_size = align_forward_pow2(params->reserve_size, page_size);
 	u64 const commit_size = align_forward_pow2(params->commit_size, page_size);
