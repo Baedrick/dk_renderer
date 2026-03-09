@@ -1,6 +1,4 @@
-/*
- * Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
- */
+// Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 #include <cstdint>
 #include <cstdio>

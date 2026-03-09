@@ -1,6 +1,4 @@
-/*
- * Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
- */
+// Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::arena_alloc(ArenaParams const *params) noexcept -> Arena * {
 	u64 const page_size = plt_get_system_info()->page_size;

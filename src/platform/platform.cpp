@@ -1,6 +1,4 @@
-/*
- * Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
- */
+// Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::PLT_Handle::operator==(PLT_Handle o) const noexcept -> b8 {
 	return v == o.v;
