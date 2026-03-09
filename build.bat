@@ -61,7 +61,7 @@ if not exist .tmp mkdir .tmp
 
 :: --- Build -------------------------------------------------------------------
 pushd bin
-%compile% ..\src\main.cpp %cl_link% %cl_out%toy_viewer.exe || exit /b 1
+%compile% ..\src\viewer\viewer_main.cpp %cl_link% %cl_out%toy_viewer.exe || exit /b 1
 popd
 
 if %ERRORLEVEL% neq 0 (
