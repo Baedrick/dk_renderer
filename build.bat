@@ -10,10 +10,13 @@ cd /D "%~dp0"
 :: passed, the project is compiled in debug.
 ::
 :: Below is a non-exhaustive list of possible ways to use the script:
-:: "build"
-:: "build release"
-:: "build debug"
-:: "build asan profile"
+:: `build all`
+:: `build all release`
+:: `build viewer debug`
+:: `build viewer asan`
+::
+:: For a full list of possible build targets and their build command lines,
+:: search for @build_targets in this file.
 ::
 :: This is a list of all possible command line options:
 :: - debug: build in debug
@@ -62,12 +65,12 @@ if "%release%"=="1" set compile=%cl_release%
 if not exist bin mkdir bin
 if not exist .tmp mkdir .tmp
 
-:: --- Build -------------------------------------------------------------------
+:: --- Build (@build_targets)----------------------------------------------------
 pushd bin
 if "%viewer%"=="1" set didbuild=1 && %compile% ..\src\viewer\viewer_main.cpp %cl_link% %cl_out%viewer.exe || exit /b 1
 popd
 
 if "%didbuild%"=="" (
-  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build viewer`.
+  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build viewer` or `build all`.
   exit /b 1
 )
