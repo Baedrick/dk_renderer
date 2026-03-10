@@ -1,5 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+#pragma once
+
 #include "thirdparty/stb/stb_sprintf.h"
 
 namespace dk {

@@ -1,5 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+#pragma once
+
 namespace dk {
 	struct ThreadContext {
 		Arena *scratch_arenas[2];
