@@ -7,14 +7,14 @@ namespace dk {
 		u8 const *data;
 		u64 size;
 
-		auto operator[](u64 index) noexcept -> u8;
+		auto operator[](u64 index) const noexcept -> u8 const &;
 	};
-
+	
 	struct String16 {
 		u16 const *data;
 		u64 size;
-
-		auto operator[](u64 index) noexcept -> u16;
+		
+		auto operator[](u64 index) const noexcept -> u16 const &;
 	};
 
 	struct String8Node {
@@ -30,9 +30,12 @@ namespace dk {
 	};
 
 	struct String8Array {
-		String8 *v;
+		String8 *data;
 		u64 count;
 		u64 total_size;
+
+		auto operator[](u64 index) noexcept -> String8 &;
+		auto operator[](u64 index) const noexcept -> String8 const &;
 	};
 
 	struct String8JoinParams {
@@ -56,7 +59,7 @@ namespace dk {
 	auto char_is_upper(u8 c) noexcept -> b8;
 	auto char_is_lower(u8 c) noexcept -> b8;
 	auto char_is_whitespace(u8 c) noexcept -> b8;
-	auto char_is_digit(u8 c, u32 radix) noexcept -> b8;
+	auto char_is_digit(u8 c) noexcept -> b8;
 	auto char_to_upper(u8 c) noexcept -> u8;
 	auto char_to_lower(u8 c) noexcept -> u8;
 	auto char_to_forward_slash(u8 c) noexcept -> u8;
@@ -105,11 +108,11 @@ namespace dk {
 	auto str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> void;
 	auto str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> void;
 
-	auto str8_list_split(Arena *arena, String8 str, u8 const *delims, u64 delims_count) noexcept -> String8List;
-	auto str8_list_split(Arena *arena, String8 str, String8 delims) noexcept -> String8List;
-	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *opt_params) noexcept -> String8;
+	auto str8_list_split_by_char(Arena *arena, String8 str, String8 delims) noexcept -> String8List;
+	auto str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count) noexcept -> String8List;
+	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8;
 
-	auto str8_array_from_list(Arena *arena, String8List *list) noexcept -> String8Array;
+	auto str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array;
 
 	auto utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode;
 	auto utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode;

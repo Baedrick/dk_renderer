@@ -4,28 +4,24 @@
 #include "thirdparty/stb/stb_sprintf.h"
 #undef STB_SPRINTF_IMPLEMENTATION
 
-namespace {
-	// NOTE(Dedrick): Supports lookup values for hex numbers.
-	dk::u8 constexpr char_to_digit_value[128] = {
-		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-	};
-}
-
-auto dk::String8::operator[](u64 index) noexcept -> u8 {
+auto dk::String8::operator[](u64 index) const noexcept -> u8 const & {
 	DK_ASSERT(index < size);
 	return data[index];
 }
 
-auto dk::String16::operator[](u64 index) noexcept -> u16 {
+auto dk::String16::operator[](u64 index) const noexcept -> u16 const & {
 	DK_ASSERT(index < size);
 	return data[index];
+}
+
+auto dk::String8Array::operator[](u64 index) noexcept -> String8 & {
+	DK_ASSERT(index < count);
+	return data[count];
+}
+
+auto dk::String8Array::operator[](u64 index) const noexcept -> String8 const & {
+	DK_ASSERT(index < count);
+	return data[count];
 }
 
 auto dk::char_is_upper(u8 c) noexcept -> b8 {
@@ -40,13 +36,8 @@ auto dk::char_is_whitespace(u8 c) noexcept -> b8 {
 	return c == ' ' || c == '\r' || c == '\t' || c == '\f' || c == '\v' || c == '\n';
 }
 
-auto dk::char_is_digit(u8 c, u32 radix) noexcept -> b8 {
-	DK_ASSERT(radix >= 2 && radix <= 16);
-	b8 is_digit = false;
-	if (char_to_digit_value[c] < radix) {
-		is_digit = true;
-	}
-	return is_digit;
+auto dk::char_is_digit(u8 c) noexcept -> b8 {
+	return c >= '0' && c <= '9';
 }
 
 auto dk::char_to_upper(u8 c) noexcept -> u8 {
@@ -252,9 +243,16 @@ auto dk::sign_from_str8(String8 str, String8 *out_tail) noexcept -> s32 {
 
 auto dk::u64_from_str8(String8 str, u32 radix) noexcept -> u64 {
 	DK_ASSERT(radix >= 2 && radix <= 16);
+	constexpr u8 char_to_value[] = {
+		0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+		0x08,0x09,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+		0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,
+		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+	};
 	u64 value = 0;
-	for (u64 i = 0; i < str.size; ++i) {
-		u8 const digit = char_to_digit_value[str[i] & 0x7F];
+	for (u64 i = 0; i < str.size; i += 1) {
+		u8 const c = str[i];
+		u8 const digit = char_to_value[(c - 0x30) & 0x1F];
 		value = value * radix + digit;
 	}
 	return value;
@@ -317,42 +315,97 @@ auto dk::str8_list_push_front(Arena *arena, String8List *list, String8 str) noex
 	str8_list_push_node_front(list, node);
 }
 
-auto dk::str8_list_split(Arena *arena, String8 str, u8 const *delims, u64 delims_count) noexcept -> String8List {
-
+auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims) noexcept -> String8List {
+	(void)arena;
+	(void)str;
+	(void)delims;
+	return {};
 }
 
-auto dk::str8_list_split(Arena *arena, String8 str, String8 delims) noexcept -> String8List {
-
+auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count) noexcept -> String8List {
+	(void)arena;
+	(void)str;
+	(void)delims;
+	(void)delims_count;
+	return {};
 }
 
-auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const *opt_params) noexcept -> String8 {
+auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8 {
+	String8JoinParams params = {};
+	if (optional_params != nullptr) {
+		params = *optional_params;
+	}
 
+	u64 total_size = params.prefix.size + params.postfix.size + list.total_size;
+	if (list.node_count > 1) {
+		total_size += params.separator.size * (list.node_count - 1);
+	}
+
+	u8 *s = arena_push_array<u8>(arena, total_size + 1);
+	u8 *p = s;
+
+	std::memcpy(p, params.prefix.data, params.prefix.size);
+	p += params.prefix.size;
+
+	for (String8Node *node = list.first; node != nullptr; node = node->next) {
+		std::memcpy(p, node->string.data, node->string.size);
+		p += node->string.size;
+		if (node != list.last) {
+			std::memcpy(p, params.separator.data, params.separator.size);
+			p += params.separator.size;
+		}
+	}
+
+	std::memcpy(p, params.postfix.data, params.postfix.size);
+	p += params.postfix.size;
+	*p = '\0';
+
+	return { .data = s, .size = total_size };
 }
 
-auto dk::str8_array_from_list(Arena *arena, String8List *list) noexcept -> String8Array {
-
+auto dk::str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array {
+	String8Array array = {};
+	array.count = list.node_count;
+	array.data = arena_push_array<String8>(arena, array.count);
+	u64 idx = 0;
+	for (String8Node *node = list.first; node != nullptr; node = node->next) {
+		array[idx++] = node->string;
+	}
+	return array;
 }
 
 auto dk::utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode {
-
+	(void)str;
+	(void)max;
+	return {};
 }
 
 auto dk::utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode {
-
+	(void)str;
+	(void)max;
+	return {};
 }
 
 auto dk::utf8_encode(u8 *out, u32 codepoint) noexcept -> u32 {
-
+	(void)out;
+	(void)codepoint;
+	return 0;
 }
 
 auto dk::utf16_encode(u16 *out, u32 codepoint) noexcept -> u32 {
-
+	(void)out;
+	(void)codepoint;
+	return 0;
 }
 
 auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
-
+	(void)arena;
+	(void)str;
+	return {};
 }
 
 auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
-
+	(void)arena;
+	(void)str;
+	return {};
 }
