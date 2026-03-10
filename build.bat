@@ -19,7 +19,6 @@ cd /D "%~dp0"
 :: - debug: build in debug
 :: - release: build in release
 :: - asan: enable address sanitizer
-:: - profile: enable profiling
 
 :: --- Environment -------------------------------------------------------------
 where /Q cl.exe || (
@@ -41,7 +40,11 @@ if "%release%"=="1" set debug=0 && echo [release mode]
 
 set compile_flags=
 if "%asan%"=="1"    set compile_flags=%compile_flags% -fsanitize=address && echo [asan enabled]
-if "%profile%"=="1" set compile_flags=%compile_flags% -DDK_PROFILE=1 && echo [profiling enabled]
+
+if "%all%"=="1" (
+    echo [building all targets]
+    set viewer=1
+)
 
 :: --- Compile/Link Time Definitions -------------------------------------------
 set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++20 /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
@@ -61,10 +64,10 @@ if not exist .tmp mkdir .tmp
 
 :: --- Build -------------------------------------------------------------------
 pushd bin
-%compile% ..\src\viewer\viewer_main.cpp %cl_link% %cl_out%toy_viewer.exe || exit /b 1
+if "%viewer%"=="1" set didbuild=1 && %compile% ..\src\viewer\viewer_main.cpp %cl_link% %cl_out%viewer.exe || exit /b 1
 popd
 
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] build failed.
-    exit /b %ERRORLEVEL%
+if "%didbuild%"=="" (
+  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build viewer`.
+  exit /b 1
 )
