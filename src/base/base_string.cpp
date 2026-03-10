@@ -243,7 +243,7 @@ auto dk::sign_from_str8(String8 str, String8 *out_tail) noexcept -> s32 {
 
 auto dk::u64_from_str8(String8 str, u32 radix) noexcept -> u64 {
 	DK_ASSERT(radix >= 2 && radix <= 16);
-	constexpr u8 char_to_value[] = {
+	u8 constexpr char_to_value[] = {
 		0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
 		0x08,0x09,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 		0xFF,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,
@@ -374,28 +374,73 @@ auto dk::str8_array_from_list(Arena *arena, String8List list) noexcept -> String
 	return array;
 }
 
+// NOTE(Dedrick): Based on the following decoder.
+// https://nullprogram.com/blog/2017/10/06/
+// https://git.mr4th.com/mr4th-public/mr4th/src/branch/main/src/base/base_big_functions.c#L696
 auto dk::utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode {
 	(void)str;
 	(void)max;
+	u8 constexpr utf8_lengths[] = {
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0
+	};
+	
+
+
 	return {};
 }
 
 auto dk::utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode {
 	(void)str;
 	(void)max;
+
 	return {};
 }
 
 auto dk::utf8_encode(u8 *out, u32 codepoint) noexcept -> u32 {
-	(void)out;
-	(void)codepoint;
-	return 0;
+	u32 advance = 0;
+	if (codepoint <= 0x7F) {
+		out[0] = static_cast<u8>(codepoint);
+		advance = 1;
+	}
+	else if (codepoint <= 0x7FF) {
+		out[0] = static_cast<u8>(0xC0 | (codepoint >> 6));
+		out[1] = static_cast<u8>(0x80 | (codepoint & 0x3F));
+		advance = 2;
+	}
+	else if (codepoint <= 0xFFFF) {
+		out[0] = static_cast<u8>(0xE0 | (codepoint >> 12));
+		out[1] = static_cast<u8>(0x80 | ((codepoint >> 6) & 0x3F));
+		out[2] = static_cast<u8>(0x80 | (codepoint & 0x3F));
+		advance = 3;
+	}
+	else if (codepoint <= 0x10FFFF) {
+		out[0] = static_cast<u8>(0xF0 | (codepoint >> 18));
+		out[1] = static_cast<u8>(0x80 | ((codepoint >> 12) & 0x3F));
+		out[2] = static_cast<u8>(0x80 | ((codepoint >> 6) & 0x3F));
+		out[3] = static_cast<u8>(0x80 | (codepoint & 0x3F));
+		advance = 4;
+	}
+	else {
+		// NOTE(Dedrick): Replacement character '?'.
+		advance = utf8_encode(out, 0xFFFD);
+	}
+	return advance;
 }
 
 auto dk::utf16_encode(u16 *out, u32 codepoint) noexcept -> u32 {
-	(void)out;
-	(void)codepoint;
-	return 0;
+	u32 advance = 0;
+	if (codepoint < 0x10000) {
+		out[0] = static_cast<u16>(codepoint);
+		advance = 1;
+	}
+	else {
+		u32 const v = codepoint - 0x10000;
+		out[0] = static_cast<u16>(0xD800 + (v >> 10));
+		out[1] = static_cast<u16>(0xDC00 + (v & 0x3FF));
+		advance = 2;
+	}
+	return advance;
 }
 
 auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
