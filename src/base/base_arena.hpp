@@ -22,8 +22,8 @@ namespace dk {
 		Arena *next; ///< Next arena in chain.
 		u64 commit_size;
 		u64 reserve_size;
-		u64 base_offset;
-		u64 offset;
+		u64 base_pos;
+		u64 pos;
 		u64 committed;
 		u64 reserved;
 		ArenaFlags flags;
@@ -32,7 +32,7 @@ namespace dk {
 
 	struct TempArena {
 		Arena *arena;
-		u64 position;
+		u64 pos;
 	};
 
 	u64 constexpr ARENA_DEFAULT_RESERVE_SIZE = mega_bytes(64);
@@ -51,9 +51,9 @@ namespace dk {
 	auto arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept -> void *;
 
 	auto arena_clear(Arena *arena) noexcept -> void;
-	auto arena_offset(Arena *arena) noexcept -> u64;
+	auto arena_pos(Arena *arena) noexcept -> u64;
 	auto arena_pop(Arena *arena, u64 amount) noexcept -> void;
-	auto arena_pop_to(Arena *arena, u64 offset) noexcept -> void;
+	auto arena_pop_to(Arena *arena, u64 pos) noexcept -> void;
 
 	auto arena_temp_begin(Arena *arena) noexcept -> TempArena;
 	auto arena_temp_end(TempArena temp) noexcept -> void;
