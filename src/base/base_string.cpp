@@ -59,8 +59,8 @@ auto dk::cstring_length(char const *cstr) noexcept -> u64 {
 }
 
 auto dk::str8_substr(String8 str, u64 begin, u64 end) noexcept -> String8 {
-	begin = min(begin, str.size);
 	end = min(end, str.size);
+	begin = min(begin, end);
 	str.data += begin;
 	str.size = end - begin;
 	return str;
@@ -316,18 +316,62 @@ auto dk::str8_list_push_front(Arena *arena, String8List *list, String8 str) noex
 }
 
 auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List {
-	(void)arena;
-	(void)str;
-	(void)delims;
-	return {};
+	String8List list = {};
+	b8 const keep_empties = (flags & STRING_SPLIT_FLAG_KEEP_EMPTIES) != 0;
+	u64 last_split = 0;
+	for (u64 i = 0; i < str.size; ++i) {
+		b8 is_delim = false;
+		for (u64 d = 0; d < delims.size; ++d) {
+			if (str[i] == delims[d]) {
+				is_delim = true;
+				break;
+			}
+		}
+		if (is_delim) {
+			if (keep_empties || i > last_split) {
+				str8_list_push(arena, &list, str8_substr(str, last_split, i));
+			}
+			last_split = i + 1;
+		}
+	}
+	if (keep_empties || last_split < str.size) {
+		str8_list_push(arena, &list, str8_substr(str, last_split, str.size));
+	}
+	return list;
 }
 
 auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count, StringSplitFlags flags) noexcept -> String8List {
-	(void)arena;
-	(void)str;
-	(void)delims;
-	(void)delims_count;
-	return {};
+	String8List list = {};
+	b8 const keep_empties = (flags & STRING_SPLIT_FLAG_KEEP_EMPTIES) != 0;
+	u64 last_split = 0;
+	for (u64 i = 0; i < str.size; ) {
+		b8 is_delim = false;
+		u64 delim_size = 0;
+		for (u64 d = 0; d < delims_count; ++d) {
+			String8 const delim = delims[d];
+			if (delim.size > 0 && str.size - i >= delim.size) {
+				String8 const sub = str8_substr(str, i, i + delim.size);
+				if (str8_equals(sub, delim, STRING_MATCH_FLAG_NONE)) {
+					is_delim = true;
+					delim_size = delim.size;
+					break;
+				}
+			}
+		}
+		if (is_delim) {
+			if (keep_empties || i > last_split) {
+				str8_list_push(arena, &list, str8_substr(str, last_split, i));
+			}
+			last_split = i + delim_size;
+			i += delim_size;
+		} else {
+			i += 1;
+		}
+	}
+	if (keep_empties || last_split < str.size) {
+		str8_list_push(arena, &list, str8_substr(str, last_split, str.size));
+	}
+	return list;
 }
 
 auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8 {
@@ -411,8 +455,10 @@ auto dk::utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode {
 				}
 				default: break;
 			}
-			result.codepoint = codepoint >> final_shift[length];
-			result.advance = length;
+			if (is_valid) {
+				result.codepoint = codepoint >> final_shift[length];
+				result.advance = length;
+			}
 		}
 	}
 	return result;
