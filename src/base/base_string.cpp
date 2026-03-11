@@ -378,29 +378,70 @@ auto dk::str8_array_from_list(Arena *arena, String8List list) noexcept -> String
 // https://nullprogram.com/blog/2017/10/06/
 // https://git.mr4th.com/mr4th-public/mr4th/src/branch/main/src/base/base_big_functions.c#L696
 auto dk::utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode {
-	(void)str;
-	(void)max;
-	u8 constexpr utf8_lengths[] = {
+	u8 constexpr lengths[] = {
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 		0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0
 	};
+	u8 constexpr first_byte_mask[] = { 0, 0x7F, 0x1F, 0x0F, 0x07 };
+	u8 constexpr final_shift[] = { 0, 18, 12, 6, 0 };
 	
-
-
-	return {};
+	// NOTE(Dedrick): Replacement character '?'.
+	StringDecode result = { 0xFFFD, 1 };
+	if (max > 0) {
+		u8 const byte = str[0];
+		u8 const length = lengths[byte >> 3];
+		if (0 < length && length <= max) {
+			u32 codepoint = (byte & first_byte_mask[length]) << 18;
+			b8 is_valid = true;
+			switch (length) {
+				case 4: {
+					if ((str[3] & 0xC0) != 0x80) { is_valid = false; break; }
+					codepoint |= (str[3] & 0x3F);
+					[[fallthrough]];
+				}
+				case 3: {
+					if ((str[2] & 0xC0) != 0x80) { is_valid = false; break; }
+					codepoint |= (str[2] & 0x3F) << 6;
+					[[fallthrough]];
+				}
+				case 2: {
+					if ((str[1] & 0xC0) != 0x80) { is_valid = false; break; }
+					codepoint |= (str[1] & 0x3F) << 12;
+					[[fallthrough]];
+				}
+				default: break;
+			}
+			result.codepoint = codepoint >> final_shift[length];
+			result.advance = length;
+		}
+	}
+	return result;
 }
 
 auto dk::utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode {
-	(void)str;
-	(void)max;
-
-	return {};
+	// NOTE(Dedrick): Replacement character '?'.
+	StringDecode result = { 0xFFFD, 1 };
+	u16 const x = str[0];
+	if (0xD800 > x || x > 0xDFFF) {
+		result.codepoint = x;
+	}
+	else if (max >= 2) {
+		u16 const y = str[1];
+		if (0xD800 <= x && x < 0xDC00 &&
+			0xDC00 <= y && y < 0xE000) {
+				u16 const hi = x - 0xD800;
+				u16 const lo = y - 0xDC00;
+				result.codepoint = ((hi << 10) | lo) + 0x10000;
+				result.advance = 2;
+			}
+	}
+	return result;
 }
 
 auto dk::utf8_encode(u8 *out, u32 codepoint) noexcept -> u32 {
 	u32 advance = 0;
 	if (codepoint <= 0x7F) {
-		out[0] = static_cast<u8>(codepoint);
+		out[0] = static_cast<u8>(codepoint & 0xFF);
 		advance = 1;
 	}
 	else if (codepoint <= 0x7FF) {
@@ -444,13 +485,51 @@ auto dk::utf16_encode(u16 *out, u32 codepoint) noexcept -> u32 {
 }
 
 auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
-	(void)arena;
-	(void)str;
-	return {};
+	String8 result = {};
+	if (str.size > 0) {
+		u64 const max_size = str.size * 3 + 1;
+		u8 *const out_start = arena_push_array<u8>(arena, max_size);
+		u8 *out = out_start;
+		
+		u16 const *in = str.data;
+		u16 const *const in_end = in + str.size;
+		
+		while (in < in_end) {
+			StringDecode const decode = utf16_decode(in, in_end - in);
+			in += decode.advance;
+			out += utf8_encode(out, decode.codepoint);
+		}
+		*out = '\0';
+
+		u64 const actual_size = out - out_start;
+		arena_pop(arena, max_size - (actual_size + 1));
+		result.data = out_start;
+		result.size = actual_size;
+	}
+	return result;
 }
 
 auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
-	(void)arena;
-	(void)str;
-	return {};
+	String16 result = {};
+	if (str.size > 0) {
+		u64 const max_size = str.size * 2 + 1;
+		u16 *const out_start = arena_push_array<u16>(arena, max_size);
+		u16 *out = out_start;
+		
+		u8 const *in = str.data;
+		u8 const *const in_end = in + str.size;
+		
+		while (in < in_end) {
+			StringDecode const decode = utf8_decode(in, in_end - in);
+			in += decode.advance;
+			out += utf16_encode(out, decode.codepoint);
+		}
+		*out = '\0';
+
+		u64 const actual_size = out - out_start;
+		arena_pop(arena, (max_size - (actual_size + 1)) * sizeof(u16));
+		result.data = out_start;
+		result.size = actual_size;
+	}
+	return result;
 }
