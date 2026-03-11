@@ -16,12 +16,12 @@ auto dk::String16::operator[](u64 index) const noexcept -> u16 const & {
 
 auto dk::String8Array::operator[](u64 index) noexcept -> String8 & {
 	DK_ASSERT(index < count);
-	return data[count];
+	return data[index];
 }
 
 auto dk::String8Array::operator[](u64 index) const noexcept -> String8 const & {
 	DK_ASSERT(index < count);
-	return data[count];
+	return data[index];
 }
 
 auto dk::char_is_upper(u8 c) noexcept -> b8 {
@@ -148,7 +148,7 @@ auto dk::str8_find_needle(String8 str, u64 start_pos, String8 needle, StringMatc
 		u8 const haystack_char = case_insensitive ? char_to_lower(str[i]) : str[i];
 		if (haystack_char == needle_first) {
 			String8 const substr = str8_substr(str, i, i + needle.size);
-			if (str8_equals(substr, needle, flags) == 0) {
+			if (str8_equals(substr, needle, flags)) {
 				return i;
 			}
 		}
@@ -315,14 +315,14 @@ auto dk::str8_list_push_front(Arena *arena, String8List *list, String8 str) noex
 	str8_list_push_node_front(list, node);
 }
 
-auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims) noexcept -> String8List {
+auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List {
 	(void)arena;
 	(void)str;
 	(void)delims;
 	return {};
 }
 
-auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count) noexcept -> String8List {
+auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count, StringSplitFlags flags) noexcept -> String8List {
 	(void)arena;
 	(void)str;
 	(void)delims;

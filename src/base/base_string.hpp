@@ -53,6 +53,12 @@ namespace dk {
 		STRING_MATCH_FLAG_SLASH_INSENSITIVE = 1u << 1
 	};
 
+	using StringSplitFlags = u32;
+	enum : u32 {
+		STRING_SPLIT_FLAG_NONE = 0,
+		STRING_SPLIT_FLAG_KEEP_EMPTIES
+	};
+
 	struct StringDecode {
 		u32 codepoint;
 		u32 advance;
@@ -110,8 +116,8 @@ namespace dk {
 	auto str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> void;
 	auto str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> void;
 
-	auto str8_list_split_by_char(Arena *arena, String8 str, String8 delims) noexcept -> String8List;
-	auto str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count) noexcept -> String8List;
+	auto str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List;
+	auto str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count, StringSplitFlags flags) noexcept -> String8List;
 	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8;
 
 	auto str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array;
