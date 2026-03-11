@@ -2,10 +2,12 @@
 
 #define NOMINMAX
 #include <Windows.h>
+#include <shellapi.h>
 #undef min
 #undef max
 
 #pragma comment(lib, "bcrypt")
+#pragma comment(lib, "shell32")
 
 namespace dk {
 	struct PLT_Win32_Context {
@@ -99,11 +101,37 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 		info->pid = GetCurrentProcessId();
 	}
 
-	dk::ThreadContext *thread_context = dk::thread_context_alloc();
+	dk::ThreadContext *const thread_context = dk::thread_context_alloc();
 	dk::thread_context_select(thread_context);
 
-	// TODO(Dedrick): Parse CommandLineW, pass it to entry point.
-	int const result = entry_point(0, nullptr);
+	int argc = 0;
+	LPWSTR *argvw = CommandLineToArgvW(GetCommandLineW(), &argc);
+	if (argvw == nullptr) {
+		return 0;
+	}
+
+	// TODO(Dedrick): Clean this up. Use string functions.
+	dk::ArenaParams const args_arena_params = {
+		.reserve_size = dk::mega_bytes(1),
+		.commit_size = dk::kilo_bytes(32)
+	};
+	dk::Arena *args_arena = dk::arena_alloc(&args_arena_params);
+
+	char **argv = dk::arena_push_array<char *>(args_arena, argc + 1);
+	for (int i = 0; i < argc; ++i) {
+		dk::String16 const arg16 = {
+			.data = reinterpret_cast<dk::u16 const *>(argvw[i]),
+			.size = static_cast<dk::u64>(lstrlenW(argvw[i]))
+		};
+		dk::String8 const arg8 = dk::str8_from_16(args_arena, arg16);
+		argv[i] = const_cast<char *>(reinterpret_cast<char const *>(arg8.data));
+	}
+	argv[argc] = nullptr;
+	LocalFree(static_cast<void *>(argvw));
+
+	int const result = entry_point(argc, argv);
+
+	dk::arena_release(args_arena);
 
 	dk::thread_context_select(nullptr);
 	dk::thread_context_release(thread_context);
