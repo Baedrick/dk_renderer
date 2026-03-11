@@ -119,10 +119,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 
 	char **argv = dk::arena_push_array<char *>(args_arena, argc + 1);
 	for (int i = 0; i < argc; ++i) {
-		dk::String16 const arg16 = {
-			.data = reinterpret_cast<dk::u16 const *>(argvw[i]),
-			.size = static_cast<dk::u64>(lstrlenW(argvw[i]))
-		};
+		dk::String16 const arg16 = dk::str16_cstring(reinterpret_cast<dk::u16 const *>(argvw[i]));
 		dk::String8 const arg8 = dk::str8_from_16(args_arena, arg16);
 		argv[i] = const_cast<char *>(reinterpret_cast<char const *>(arg8.data));
 	}
