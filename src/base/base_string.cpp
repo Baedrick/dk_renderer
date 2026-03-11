@@ -52,10 +52,28 @@ auto dk::char_to_forward_slash(u8 c) noexcept -> u8 {
 	return c == '\\' ? '/' : c;
 }
 
-auto dk::cstring_length(char const *cstr) noexcept -> u64 {
+auto dk::cstring8_length(u8 const *cstr) noexcept -> u64 {
 	u64 length = 0;
-	for (; cstr[length] != '\0'; ++length) {}
+	if (cstr != nullptr) {
+		for (; cstr[length] != '\0'; ++length) {}
+	}
 	return length;
+}
+
+auto dk::cstring16_length(u16 const *cstr) noexcept -> u64 {
+	u64 length = 0;
+	if (cstr != nullptr) {
+		for (; cstr[length] != '\0'; ++length) {}
+	}
+	return length;
+}
+
+auto dk::str8_cstring(u8 const *cstr) noexcept -> String8 {
+	return { .data = cstr, .size = cstring8_length(cstr) };
+}
+
+auto dk::str16_cstring(u16 const *cstr) noexcept -> String16 {
+	return { .data = cstr, .size = cstring16_length(cstr) };
 }
 
 auto dk::str8_substr(String8 str, u64 begin, u64 end) noexcept -> String8 {

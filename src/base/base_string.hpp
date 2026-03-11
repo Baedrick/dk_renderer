@@ -72,7 +72,8 @@ namespace dk {
 	auto char_to_lower(u8 c) noexcept -> u8;
 	auto char_to_forward_slash(u8 c) noexcept -> u8;
 
-	auto cstring_length(char const *cstr) noexcept -> u64;
+	auto cstring8_length(u8 const *cstr) noexcept -> u64;
+	auto cstring16_length(u16 const *cstr) noexcept -> u64;
 
 	constexpr auto str8(u8 const *str, u64 size) noexcept -> String8 {
 		return { .data = str, .size = size };
@@ -84,6 +85,15 @@ namespace dk {
 	auto str8_literal(char const (&cstr)[N]) noexcept -> String8 {
 		return { .data = reinterpret_cast<u8 const *>(cstr), .size = N - 1 };
 	}
+	auto str8_cstring(u8 const *cstr) noexcept -> String8;
+
+	constexpr auto str16(u16 const *str, u64 size) noexcept -> String16 {
+		return { .data = str, .size = size };
+	}
+	constexpr auto str16_range(u16 const *begin, u16 const *end) noexcept -> String16 {
+		return { .data = begin, .size = static_cast<u64>(end - begin) };
+	}
+	auto str16_cstring(u16 const *cstr) noexcept -> String16;
 
 	auto str8_substr(String8 str, u64 begin, u64 end) noexcept -> String8;
 	auto str8_substr_size(String8 str, u64 begin, u64 size) noexcept -> String8;
