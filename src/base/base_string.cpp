@@ -68,6 +68,22 @@ auto dk::cstring16_length(u16 const *cstr) noexcept -> u64 {
 	return length;
 }
 
+auto dk::str8(u8 const *str, u64 size) noexcept -> String8 {
+	return { .data = str, .size = size };
+}
+
+auto dk::str8_range(u8 const *begin, u8 const *end) noexcept -> String8 {
+	return { .data = begin, .size = static_cast<u64>(end - begin) };
+}
+
+auto dk::str16(u16 const *str, u64 size) noexcept -> String16 {
+	return { .data = str, .size = size };
+}
+
+auto dk::str16_range(u16 const *begin, u16 const *end) noexcept -> String16 {
+	return { .data = begin, .size = static_cast<u64>(end - begin) };
+}
+
 auto dk::str8_cstring(u8 const *cstr) noexcept -> String8 {
 	return { .data = cstr, .size = cstring8_length(cstr) };
 }
