@@ -19,8 +19,15 @@ namespace dk {
 		PLT_ACCESS_FLAG_APPEND = 1u << 2
 	};
 
+	using PLT_FileFlags = u32;
+	enum : u32 {
+		PLT_FILE_FLAG_NONE = 0,
+		PLT_FILE_FLAG_DIRECTORY = 1u << 0
+	};
+
 	struct PLT_FileAttributes {
 		u64 size;
+		PLT_FileFlags flags;
 	};
 
 	struct PLT_Handle {
@@ -47,4 +54,5 @@ namespace dk {
 	auto plt_file_close(PLT_Handle file) noexcept -> void;
 	auto plt_file_read(PLT_Handle file, u64 begin, u64 end, void *out_data) noexcept -> u64;
 	auto plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) noexcept -> u64;
+	auto plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes;
 }

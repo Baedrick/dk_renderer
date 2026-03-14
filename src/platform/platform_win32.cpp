@@ -18,6 +18,10 @@ namespace dk {
 	PLT_Win32_Context plt_win32_context;
 }
 
+auto dk::plt_handle_invalid() noexcept -> PLT_Handle {
+	return { reinterpret_cast<uintptr_t>(INVALID_HANDLE_VALUE) };
+}
+
 auto dk::plt_get_system_info() noexcept -> PLT_SystemInfo * {
 	return &plt_win32_context.system_info;
 }
@@ -61,6 +65,7 @@ auto dk::plt_release(void *ptr, u64 size) noexcept -> void {
 auto dk::plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Handle {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const path16 = str16_from_8(scratch.arena, path);
+	PLT_Handle result = plt_handle_invalid();
 
 	DWORD access_flags = 0;
 	DWORD creation_disposition = OPEN_EXISTING;
@@ -70,7 +75,6 @@ auto dk::plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Hand
 	if (flags & PLT_ACCESS_FLAG_WRITE) { creation_disposition = CREATE_ALWAYS; }
 	if (flags & PLT_ACCESS_FLAG_APPEND) { creation_disposition = OPEN_ALWAYS; access_flags |= FILE_APPEND_DATA; }
 
-	PLT_Handle result = plt_handle_invalid();
 	HANDLE const file = CreateFileW(
 		reinterpret_cast<WCHAR const *>(path16.data),
 		access_flags,
@@ -83,20 +87,110 @@ auto dk::plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Hand
 	if (file != INVALID_HANDLE_VALUE) {
 		result.v = reinterpret_cast<uintptr_t>(file);
 	}
+	// TODO(Dedrick): Append to errors.
 	scratch_end(scratch);
 	return result;
 }
 
 auto dk::plt_file_close(PLT_Handle file) noexcept -> void {
-
+	if (file == plt_handle_invalid()) {
+		return;
+	}
+	HANDLE const handle = reinterpret_cast<HANDLE>(file.v);
+	DK_ASSERT(handle != INVALID_HANDLE_VALUE);
+	CloseHandle(handle);
 }
 
 auto dk::plt_file_read(PLT_Handle file, u64 begin, u64 end, void *out_data) noexcept -> u64 {
+	if (file == plt_handle_invalid()) {
+		return 0;
+	}
+	HANDLE const handle = reinterpret_cast<HANDLE>(file.v);
+	u8 *dst = static_cast<u8 *>(out_data);
 
+	// NOTE(Dedrick): Clamp range by file size.
+	u64 size = 0;
+	GetFileSizeEx(handle, reinterpret_cast<LARGE_INTEGER *>(&size));
+	u64 const clamped_begin = min<u64>(begin,size);
+	u64 const clamped_end = min<u64>(end, size);
+	u64 const to_read = clamped_end > clamped_begin ? clamped_end - clamped_begin : 0;
+
+	u64 total_read_size = 0;
+	u64 current_offset = clamped_begin;
+	while (total_read_size < to_read) {
+		u64 const remaining = to_read - total_read_size;
+		DWORD const read_size = static_cast<DWORD>(min<u64>(remaining, 0xFFFFFFFF));
+		// NOTE(Dedrick): Use overlapped structure reads to avoid
+		// calls to SetFilePointer (syscall) and is multithreading safe.
+		DWORD bytes_read = 0;
+		OVERLAPPED overlapped = {};
+		overlapped.Offset = static_cast<DWORD>(current_offset & 0xFFFFFFFF);
+		overlapped.OffsetHigh = static_cast<DWORD>((current_offset >> 32) & 0xFFFFFFFF);
+		ReadFile(handle, dst + total_read_size, read_size, &bytes_read, &overlapped);
+		current_offset += bytes_read;
+		total_read_size += bytes_read;
+		if (bytes_read != read_size) {
+			break;
+		}
+	}
+	return total_read_size;
 }
 
 auto dk::plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) noexcept -> u64 {
+	if (file == plt_handle_invalid()) {
+		return 0;
+	}
+	HANDLE const handle = reinterpret_cast<HANDLE>(file.v);
+	u8 const *src = static_cast<u8 const *>(data);
 
+	u64 const to_write = end > begin ? end - begin : 0;
+
+	u64 total_write_size = 0;
+	u64 current_offset = begin;
+	while (total_write_size < to_write) {
+		u64 const remaining = to_write - total_write_size;
+		DWORD const write_size = static_cast<DWORD>(min<u64>(remaining, mega_bytes(1)));
+		// NOTE(Dedrick): Use overlapped structure reads to avoid
+		// calls to SetFilePointer (syscall) and is multithreading safe.
+		DWORD bytes_written = 0;
+		OVERLAPPED overlapped = {};
+		overlapped.Offset = static_cast<DWORD>(current_offset & 0xFFFFFFFF);
+		overlapped.OffsetHigh = static_cast<DWORD>((current_offset >> 32) & 0xFFFFFFFF);
+		if (!WriteFile(handle, src + total_write_size, write_size, &bytes_written, &overlapped)) {
+			break;
+		}
+		total_write_size += bytes_written;
+		current_offset += bytes_written;
+	}
+	return total_write_size;
+}
+
+namespace dk::_ {
+auto plt_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
+	PLT_FileFlags flags = PLT_FILE_FLAG_NONE;
+	if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+		flags |= PLT_FILE_FLAG_DIRECTORY;
+	}
+	return flags;
+}
+}
+
+auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes {
+	if (file == plt_handle_invalid()) {
+		PLT_FileAttributes result = {};
+		return result;
+	}
+	PLT_FileAttributes attr = {};
+	HANDLE const handle = reinterpret_cast<HANDLE>(file.v);
+	BY_HANDLE_FILE_INFORMATION info = {};
+	BOOL const info_good = GetFileInformationByHandle(handle, &info);
+	if (info_good) {
+		u64 const size_lo = info.nFileSizeLow;
+		u64 const size_hi = info.nFileSizeHigh;
+		attr.size = size_hi | (size_lo << 32);
+		attr.flags = _::plt_file_flags_from_dw_file_attributes(info.dwFileAttributes);
+	}
+	return attr;
 }
 
 extern auto entry_point(int argc, char **argv) noexcept -> int;
