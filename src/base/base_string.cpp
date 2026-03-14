@@ -568,8 +568,8 @@ auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
 	String8 result = {};
 	if (str.size > 0) {
 		u64 const max_size = str.size * 3 + 1;
-		u8 *const out_start = arena_push_array<u8>(arena, max_size);
-		u8 *out = out_start;
+		u8 *const out_begin = arena_push_array<u8>(arena, max_size);
+		u8 *out = out_begin;
 		
 		u16 const *in = str.data;
 		u16 const *const in_end = in + str.size;
@@ -581,9 +581,9 @@ auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
 		}
 		*out = '\0';
 
-		u64 const actual_size = out - out_start;
+		u64 const actual_size = out - out_begin;
 		arena_pop(arena, max_size - (actual_size + 1));
-		result.data = out_start;
+		result.data = out_begin;
 		result.size = actual_size;
 	}
 	return result;
@@ -593,8 +593,8 @@ auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
 	String16 result = {};
 	if (str.size > 0) {
 		u64 const max_size = str.size * 2 + 1;
-		u16 *const out_start = arena_push_array<u16>(arena, max_size);
-		u16 *out = out_start;
+		u16 *const out_begin = arena_push_array<u16>(arena, max_size);
+		u16 *out = out_begin;
 		
 		u8 const *in = str.data;
 		u8 const *const in_end = in + str.size;
@@ -606,9 +606,9 @@ auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
 		}
 		*out = '\0';
 
-		u64 const actual_size = out - out_start;
+		u64 const actual_size = out - out_begin;
 		arena_pop(arena, (max_size - (actual_size + 1)) * sizeof(u16));
-		result.data = out_start;
+		result.data = out_begin;
 		result.size = actual_size;
 	}
 	return result;
