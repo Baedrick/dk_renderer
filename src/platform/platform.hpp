@@ -55,4 +55,7 @@ namespace dk {
 	auto plt_file_read(PLT_Handle file, u64 begin, u64 end, void *out_data) noexcept -> u64;
 	auto plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) noexcept -> u64;
 	auto plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes;
+
+	auto plt_now_microseconds() noexcept -> u64;
+	auto plt_sleep(u64 milliseconds) noexcept -> void;
 }

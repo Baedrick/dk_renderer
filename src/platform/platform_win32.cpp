@@ -18,6 +18,16 @@ namespace dk {
 	PLT_Win32_Context plt_win32_context;
 }
 
+namespace dk::_ {
+	auto plt_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
+		PLT_FileFlags flags = PLT_FILE_FLAG_NONE;
+		if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+			flags |= PLT_FILE_FLAG_DIRECTORY;
+		}
+		return flags;
+	}
+}
+
 auto dk::plt_handle_invalid() noexcept -> PLT_Handle {
 	return { reinterpret_cast<uintptr_t>(INVALID_HANDLE_VALUE) };
 }
@@ -165,16 +175,6 @@ auto dk::plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) n
 	return total_write_size;
 }
 
-namespace dk::_ {
-auto plt_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
-	PLT_FileFlags flags = PLT_FILE_FLAG_NONE;
-	if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-		flags |= PLT_FILE_FLAG_DIRECTORY;
-	}
-	return flags;
-}
-}
-
 auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes {
 	if (file == plt_handle_invalid()) {
 		PLT_FileAttributes result = {};
@@ -191,6 +191,19 @@ auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttribute
 		attr.flags = _::plt_file_flags_from_dw_file_attributes(info.dwFileAttributes);
 	}
 	return attr;
+}
+
+auto dk::plt_now_microseconds() noexcept -> u64 {
+	u64 result = 0;
+	LARGE_INTEGER ticks = {};
+	if (QueryPerformanceCounter(&ticks)) {
+		result = (ticks.QuadPart * 1'000'000) / plt_win32_context.perf_frequency;
+	}
+	return result;
+}
+
+auto dk::plt_sleep(u64 milliseconds) noexcept -> void {
+	Sleep(milliseconds);
 }
 
 extern auto entry_point(int argc, char **argv) noexcept -> int;
