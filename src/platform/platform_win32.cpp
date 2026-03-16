@@ -203,7 +203,7 @@ auto dk::plt_now_microseconds() noexcept -> u64 {
 }
 
 auto dk::plt_sleep(u64 milliseconds) noexcept -> void {
-	Sleep(milliseconds);
+	Sleep(static_cast<DWORD>(milliseconds));
 }
 
 extern auto entry_point(int argc, char **argv) noexcept -> int;

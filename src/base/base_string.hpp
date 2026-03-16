@@ -104,6 +104,8 @@ namespace dk {
 	auto str8_to_upper(Arena *arena, String8 str) noexcept -> String8;
 	auto str8_to_lower(Arena *arena, String8 str) noexcept -> String8;
 
+	auto str8_indent(Arena *arena, String8 str) noexcept -> String8;
+
 	auto str8_cat(Arena *arena, String8 s1, String8 s2) noexcept -> String8;
 	auto str8_copy(Arena *arena, String8 str) noexcept -> String8;
 	auto str8fv(Arena *arena, char const *fmt, va_list args) noexcept -> String8;

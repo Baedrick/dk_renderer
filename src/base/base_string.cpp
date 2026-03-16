@@ -2,6 +2,7 @@
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "thirdparty/stb/stb_sprintf.h"
+#include "base_string.hpp"
 #undef STB_SPRINTF_IMPLEMENTATION
 
 auto dk::String8::operator[](u64 index) const noexcept -> u8 const & {
@@ -223,6 +224,51 @@ auto dk::str8_to_lower(Arena *arena, String8 str) noexcept -> String8 {
 	}
 	s[str.size] = '\0';
 	return { .data = s, .size = str.size };
+}
+
+auto dk::str8_indent(Arena *arena, String8 str) noexcept -> String8 {
+	u8 constexpr indentation_bytes[] = "                                                                                                                                ";
+	TempArena const scratch = scratch_begin(&arena, 1);
+	String8List indented_strings = {};
+	u64 depth = 0;
+	u64 next_depth = 0;
+	u64 line_begin_offset = 0;
+	for (u64 offset = 0; offset <= str.size; ++offset) {
+		u8 const byte = offset < str.size ? str[offset] : '\0';
+		switch (byte) {
+			case '{': case '[': case '(': {
+				next_depth += 1;
+				next_depth = max<u64>(0, next_depth);
+				break;
+			}
+			case '}': case ']': case ')': {
+				next_depth -= 1;
+				next_depth = max<u64>(0, next_depth);
+				depth = next_depth;
+				break;
+			}
+			case '\n': case '\0': {
+				String8 const line = str8_trim_whitespace(str8_substr(str, line_begin_offset, offset));
+				if (line.size > 0) {
+					str8_list_pushf(
+						scratch.arena,
+						&indented_strings,
+						"%.*s%.*s\n", static_cast<int>(depth * 2), indentation_bytes, DK_STR8_VARG(line)
+					);
+				}
+				if (line.size == 0 && indented_strings.node_count > 0 && offset < str.size) {
+					str8_list_pushf(scratch.arena, &indented_strings, "\n");
+				}
+				line_begin_offset = offset + 1;
+				depth = next_depth;
+				break;
+			}
+			default: break;
+		}
+	}
+	String8 const result = str8_list_join(arena, indented_strings, nullptr);
+	scratch_end(scratch);
+	return result;
 }
 
 auto dk::str8_cat(Arena *arena, String8 s1, String8 s2) noexcept -> String8 {
