@@ -110,15 +110,15 @@ namespace dk {
 	}
 
 	template <typename T>
-	auto forward_list_stack_push(T **first, T *node) noexcept -> void {
-		node->next = *first;
-		*first = node;
+	auto forward_list_stack_push(T **top, T *node) noexcept -> void {
+		node->next = *top;
+		*top = node;
 	}
 
 	template <typename T>
-	auto forward_list_stack_pop(T **first) noexcept -> void {
-		if (*first != nullptr) {
-			*first = (*first)->next;
+	auto forward_list_stack_pop(T **top) noexcept -> void {
+		if (*top != nullptr) {
+			*top = (*top)->next;
 		}
 	}
 }

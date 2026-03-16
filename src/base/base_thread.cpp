@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-namespace {
-	thread_local dk::ThreadContext *thread_context_local = nullptr;
+namespace dk {
+	thread_local ThreadContext *thread_context_local = nullptr;
 }
 
 auto dk::thread_context_alloc() noexcept -> ThreadContext * {
