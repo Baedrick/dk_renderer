@@ -32,6 +32,7 @@ namespace dk {
 	auto log_frame_end(Arena *arena) noexcept -> LogFrameResult;
 
 	auto log_msg(LogKind kind, String8 str) noexcept -> void;
+	auto log_msgfv(LogKind kind, char const *fmt, va_list args) noexcept -> void;
 	auto log_msgf(LogKind kind, char const *fmt, ...) noexcept -> void;
 
 #define log_info(s) dk_log_msg(LOG_KIND_INFO, (s))

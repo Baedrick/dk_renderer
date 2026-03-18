@@ -55,13 +55,19 @@ auto dk::log_msg(LogKind kind, String8 str) noexcept -> void {
 	}
 }
 
-auto dk::log_msgf(LogKind kind, char const *fmt, ...) noexcept -> void {
+auto dk::log_msgfv(LogKind kind, char const *fmt, va_list args) noexcept -> void {
 	if (log_context_local != nullptr) {
 		TempArena const scratch = scratch_begin(nullptr, 0);
+		log_msg(kind, str8fv(scratch.arena, fmt, args));
+		scratch_end(scratch);
+	}
+}
+
+auto dk::log_msgf(LogKind kind, char const *fmt, ...) noexcept -> void {
+	if (log_context_local != nullptr) {
 		va_list args;
 		va_start(args, fmt);
-		log_msg(kind, str8fv(scratch.arena, fmt, args));
+		log_msgfv(kind, fmt, args);
 		va_end(args);
-		scratch_end(scratch);
 	}
 }
