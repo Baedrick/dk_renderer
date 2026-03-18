@@ -24,6 +24,13 @@ namespace dk {
 		LogFrame *stack;
 	};
 
+	struct LogScope {
+		LogScope(String8 str) noexcept;
+		~LogScope();
+		LogScope(LogScope const &) = delete;
+		auto operator=(LogScope const &) -> LogScope & = delete;
+	};
+
 	auto log_alloc() noexcept -> LogContext *;
 	auto log_release(LogContext *context) noexcept -> void;
 	auto log_select(LogContext *context) noexcept -> void;
@@ -34,9 +41,11 @@ namespace dk {
 	auto log_msg(LogKind kind, String8 str) noexcept -> void;
 	auto log_msgfv(LogKind kind, char const *fmt, va_list args) noexcept -> void;
 	auto log_msgf(LogKind kind, char const *fmt, ...) noexcept -> void;
-
-#define log_info(s) dk_log_msg(LOG_KIND_INFO, (s))
-#define log_infof(...) dk_log_msgf(LOG_KIND_INFO, __VA_ARGS__)
-#define log_user_error(s) dk_log_msg(LOG_KIND_USER_ERROR, (s))
-#define log_user_errorf(...) dk_log_msgf(LOG_KIND_USER_ERROR, __VA_ARGS__)
 }
+
+#define DK_LOG_INFO(s)          dk::log_msg(dk::LOG_KIND_INFO, (s))
+#define DK_LOG_INFOF(...)       dk::log_msgf(dk::LOG_KIND_INFO, __VA_ARGS__)
+#define DK_LOG_USER_ERROR(s)    dk::log_msg(dk::LOG_KIND_USER_ERROR, (s))
+#define DK_LOG_USER_ERRORF(...) dk::dk_log_msgf(dk::LOG_KIND_USER_ERROR, __VA_ARGS__)
+
+#define DK_LOG_INFO_SCOPE(s)    dk::LogScope DK_GLUE(_log_scope_, __LINE__)(s)

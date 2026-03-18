@@ -230,20 +230,20 @@ auto dk::str8_indent(Arena *arena, String8 str) noexcept -> String8 {
 	u8 constexpr indentation_bytes[] = "                                                                                                                                ";
 	TempArena const scratch = scratch_begin(&arena, 1);
 	String8List indented_strings = {};
-	u64 depth = 0;
-	u64 next_depth = 0;
+	s64 depth = 0;
+	s64 next_depth = 0;
 	u64 line_begin_offset = 0;
 	for (u64 offset = 0; offset <= str.size; ++offset) {
 		u8 const byte = offset < str.size ? str[offset] : '\0';
 		switch (byte) {
-			case '{': case '[': case '(': {
+			case '{': {
 				next_depth += 1;
-				next_depth = max<u64>(0, next_depth);
+				next_depth = max<s64>(0, next_depth);
 				break;
 			}
-			case '}': case ']': case ')': {
+			case '}': {
 				next_depth -= 1;
-				next_depth = max<u64>(0, next_depth);
+				next_depth = max<s64>(0, next_depth);
 				depth = next_depth;
 				break;
 			}

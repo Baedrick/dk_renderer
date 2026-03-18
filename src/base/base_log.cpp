@@ -1,7 +1,16 @@
+#include "base_log.hpp"
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 namespace dk {
 	thread_local LogContext *log_context_local = nullptr;
+}
+
+dk::LogScope::LogScope(String8 str) noexcept {
+	DK_LOG_INFOF("%.*s:\n{\n", DK_STR8_VARG(str));
+}
+
+dk::LogScope::~LogScope() {
+	DK_LOG_INFOF("}\n");
 }
 
 auto dk::log_alloc() noexcept -> LogContext * {
