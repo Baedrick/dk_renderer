@@ -5,12 +5,13 @@ namespace dk {
 	thread_local LogContext *log_context_local = nullptr;
 }
 
-dk::LogScope::LogScope(String8 str) noexcept {
-	DK_LOG_INFOF("%.*s:\n{\n", DK_STR8_VARG(str));
+dk::LogScope::LogScope(LogKind kind, String8 str) noexcept
+	: kind_(kind) {
+	log_msgf(kind_, "%.*s:\n{\n", DK_STR8_VARG(str));
 }
 
 dk::LogScope::~LogScope() {
-	DK_LOG_INFOF("}\n");
+	log_msgf(kind_, "}\n");
 }
 
 auto dk::log_alloc() noexcept -> LogContext * {

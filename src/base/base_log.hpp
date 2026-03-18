@@ -25,10 +25,11 @@ namespace dk {
 	};
 
 	struct LogScope {
-		LogScope(String8 str) noexcept;
+		LogScope(LogKind kind, String8 str) noexcept;
 		~LogScope();
 		LogScope(LogScope const &) = delete;
 		auto operator=(LogScope const &) -> LogScope & = delete;
+		LogKind kind_;
 	};
 
 	auto log_alloc() noexcept -> LogContext *;
@@ -48,4 +49,4 @@ namespace dk {
 #define DK_LOG_USER_ERROR(s)    dk::log_msg(dk::LOG_KIND_USER_ERROR, (s))
 #define DK_LOG_USER_ERRORF(...) dk::dk_log_msgf(dk::LOG_KIND_USER_ERROR, __VA_ARGS__)
 
-#define DK_LOG_INFO_SCOPE(s)    dk::LogScope DK_GLUE(_log_scope_, __LINE__)(s)
+#define DK_LOG_INFO_SCOPE(s)    dk::LogScope DK_GLUE(_log_scope_, __LINE__)(dk::LOG_KIND_INFO, (s))
