@@ -29,7 +29,7 @@
 #if !defined(NDEBUG)
 #	define DK_ASSERT(x) DK_ASSERT_ALWAYS(x)
 #else
-#	define DK_ASSERT(x) (void)(x)
+#	define DK_ASSERT(x) ((void)sizeof(x))
 #endif
 
 #if defined(DK_COMPILER_MSVC)
@@ -49,6 +49,12 @@
 #	define DK_ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #	define DK_ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #endif
+
+#define DK_STRINGIFY_(x) #x
+#define DK_STRINGIFY(x) DK_STRINGIFY_(x)
+
+#define DK_GLUE_(a, b) a##b
+#define DK_GLUE(a, b) DK_GLUE_(a, b)
 
 namespace dk {
 	using b8 = bool;
