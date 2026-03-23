@@ -44,7 +44,7 @@ namespace dk {
 		.flags = ARENA_DEFAULT_FLAGS
 	};
 
-	auto arena_alloc(ArenaParams const *params) noexcept -> Arena *;
+	auto arena_alloc(ArenaParams const *params = &ARENA_DEFAULT_PARAMS) noexcept -> Arena *;
 	auto arena_release(Arena *arena) noexcept -> void;
 
 	auto arena_push_bytes(Arena *arena, u64 size, u64 align) noexcept -> void *;

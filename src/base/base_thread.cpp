@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 namespace dk {
-	thread_local ThreadContext *thread_context_local = nullptr;
+	thread_local ThreadContext *local_thread_context = nullptr;
 }
 
 auto dk::thread_context_alloc() noexcept -> ThreadContext * {
-	Arena *arena = arena_alloc(&ARENA_DEFAULT_PARAMS);
+	Arena *arena = arena_alloc();
 	ThreadContext *thread_context = arena_push<ThreadContext>(arena);
 	thread_context->scratch_arenas[0] = arena;
-	thread_context->scratch_arenas[1] = arena_alloc(&ARENA_DEFAULT_PARAMS);
+	thread_context->scratch_arenas[1] = arena_alloc();
 	return thread_context;
 }
 
@@ -19,11 +19,11 @@ auto dk::thread_context_release(ThreadContext *context) noexcept -> void {
 }
 
 auto dk::thread_context_select(ThreadContext *context) noexcept -> void {
-	thread_context_local = context;
+	local_thread_context = context;
 }
 
 auto dk::thread_context_selected() noexcept -> ThreadContext * {
-	return thread_context_local;
+	return local_thread_context;
 }
 
 auto dk::thread_context_get_scratch(Arena **conflicts, u64 count) noexcept -> Arena * {
