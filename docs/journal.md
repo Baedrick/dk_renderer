@@ -1,14 +1,29 @@
-### 2026-03-27: 
-
 ### 2026-03-18: Logging
-I worked on a deferred logging system that works with the existing memory model.
-The goal is to create a thread-safe hierarchial logging system, 
+I implemented a deferred logging system that prioritizes performance and clarity
+by avoiding the overhead of immediate I/O. Unlike traditional loggers that flush
+to the console or disk as events occur, frequently triggering expensive context
+switches to kernel mode, I’ve adopted a design heavily inspired by the RAD
+Debugger (raddbugger). Log messages are accumulated into per-thread arena
+buffers throughout the frame and are only consolidated into a single string at
+the frame's end. This allows for a single, efficient flush to the operating
+system or a UI overlay. I also implemented hierarchical log scopes using RAII;
+this allows the system to automatically handle indentation and visual depth,
+making it much easier to trace the execution flow and pinpoint exactly where a
+log was emitted within a complex call stack.
 
 ### 2026-03-16: Platform time querying
-I added simple high-resolution time querying into the engine. This will be used
-for computing delta time (time it took to simulate one frame). I think I want to
-use an external library for profiling like Tracy. I do not think that I'll need
-local time conversion utilities for the time being.
+I implemented high-resolution time querying in the platform layer to provide the
+precision needed for calculating delta time and maintaining a consistent
+simulation step. On Win32, I’m utilizing `QueryPerformanceCounter` and
+`QueryPerformanceFrequency` to get microsecond-accurate timestamps. While these
+primitives could form the basis of a custom profiling system, I’ve decided to
+integrate Tracy when I tackle a profiling system. Having used Tracy in previous
+projects, I’ve found its instrumentation and visualization to be excellent; it’s
+a mature tool that will save me from reinventing the wheel when I need to find
+bottlenecks later. I’ve also intentionally avoided implementing datetime or
+calendar utilities. For a graphics engine, knowing how long a frame took is the
+primary concern; I’d rather skip the intricacies of timezones and formatting
+until there’s a genuine reason to tackle them.
 
 ### 2026-03-14: Platform file reading & writing
 I wrote file reading and writing functionalities for Win32. The design I had in
