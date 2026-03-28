@@ -3,8 +3,7 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <shellapi.h>
-#undef min
-#undef max
+#include <bcrypt.h>
 
 #pragma comment(lib, "bcrypt")
 #pragma comment(lib, "shell32")

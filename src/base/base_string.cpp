@@ -2,7 +2,6 @@
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "thirdparty/stb/stb_sprintf.h"
-#include "base_string.hpp"
 #undef STB_SPRINTF_IMPLEMENTATION
 
 auto dk::String8::operator[](u64 index) const noexcept -> u8 const & {

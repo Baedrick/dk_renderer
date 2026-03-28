@@ -22,6 +22,7 @@ cd /D "%~dp0"
 :: - debug: build in debug
 :: - release: build in release
 :: - asan: enable address sanitizer
+:: - profile: enable address sanitizer
 
 :: --- Environment -------------------------------------------------------------
 where /Q cl.exe || (
@@ -43,6 +44,7 @@ if "%release%"=="1" set debug=0 && echo [release mode]
 
 set compile_flags=
 if "%asan%"=="1"    set compile_flags=%compile_flags% -fsanitize=address && echo [asan enabled]
+if "%profile%"=="1" set compile_flags=%compile_flags% -DDK_PROFILE_ENABLE && echo [profiling enabled]
 
 if "%all%"=="1" (
     echo [building all targets]
@@ -50,7 +52,7 @@ if "%all%"=="1" (
 )
 
 :: --- Compile/Link Time Definitions -------------------------------------------
-set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++20 /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
+set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++20 /EHsc /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
 set cl_debug=   call cl /Od /MTd /D_DEBUG /RTC1 %cl_common%
 set cl_release= call cl /O2 /MT /DNDEBUG %cl_common%
 set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /SUBSYSTEM:WINDOWS /pdbaltpath:%%%%_PDB%%%%
