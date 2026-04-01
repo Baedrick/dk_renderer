@@ -3,27 +3,80 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <shellapi.h>
+#include <processthreadsapi.h>
 #include <bcrypt.h>
 
-#pragma comment(lib, "bcrypt")
 #pragma comment(lib, "shell32")
+#pragma comment(lib, "kernel32")
+#pragma comment(lib, "bcrypt")
 
 namespace dk {
-	struct PLT_Win32_Context {
+	struct PLT_W32_Thread {
+		PLT_ThreadFunction *func;
+		void *params;
+		HANDLE handle;
+		DWORD tid;
+	};
+
+	enum PLT_W32_EntityKind {
+		PLT_W32_ENTITY_NULL = 0,
+		PLT_W32_ENTITY_THREAD
+	};
+
+	struct PLT_W32_Entity {
+		PLT_W32_Entity *next;
+		PLT_W32_EntityKind kind;
+		union {
+			PLT_W32_Thread thread;
+		};
+	};
+
+	struct PLT_W32_Context {
 		PLT_SystemInfo system_info;
 		PLT_ProcessInfo process_info;
 		u64 perf_frequency;
-	};
-	PLT_Win32_Context plt_win32_context;
-}
 
-namespace dk::_ {
-	auto plt_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
+		CRITICAL_SECTION entity_mutex;
+		Arena *entity_arena;
+		PLT_W32_Entity *entity_free;
+	} plt_w32_context;
+
+	auto plt_w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
 		PLT_FileFlags flags = PLT_FILE_FLAG_NONE;
 		if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
 			flags |= PLT_FILE_FLAG_DIRECTORY;
 		}
 		return flags;
+	}
+
+	auto plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity * {
+		PLT_W32_Entity *result = nullptr;
+		EnterCriticalSection(&plt_w32_context.entity_mutex);
+		{
+			result = plt_w32_context.entity_free;
+			if (result == nullptr) {
+				forward_list_stack_pop(&plt_w32_context.entity_free);
+			} else {
+				result = arena_push<PLT_W32_Entity>(plt_w32_context.entity_arena);
+			}
+			std::memset(result, 0, sizeof(PLT_W32_Entity));
+		}
+		LeaveCriticalSection(&plt_w32_context.entity_mutex);
+		result->kind = kind;
+		return result;
+	}
+
+	auto plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void {
+		entity->kind = PLT_W32_ENTITY_NULL;
+		EnterCriticalSection(&plt_w32_context.entity_mutex);
+		forward_list_stack_push(&plt_w32_context.entity_free, entity);
+		LeaveCriticalSection(&plt_w32_context.entity_mutex);
+	}
+
+	auto plt_w32_thread_entry(void *params) noexcept -> DWORD {
+		(void)params;
+		DK_ASSERT_ALWAYS(false); // function not implemented
+		return 0;
 	}
 }
 
@@ -32,11 +85,11 @@ auto dk::plt_handle_invalid() noexcept -> PLT_Handle {
 }
 
 auto dk::plt_get_system_info() noexcept -> PLT_SystemInfo * {
-	return &plt_win32_context.system_info;
+	return &plt_w32_context.system_info;
 }
 
 auto dk::plt_get_process_info() noexcept -> PLT_ProcessInfo * {
-	return &plt_win32_context.process_info;
+	return &plt_w32_context.process_info;
 }
 
 auto dk::plt_get_entropy(void *data, u64 size) noexcept -> void {
@@ -187,7 +240,7 @@ auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttribute
 		u64 const size_lo = info.nFileSizeLow;
 		u64 const size_hi = info.nFileSizeHigh;
 		attr.size = size_hi | (size_lo << 32);
-		attr.flags = _::plt_file_flags_from_dw_file_attributes(info.dwFileAttributes);
+		attr.flags = plt_w32_file_flags_from_dw_file_attributes(info.dwFileAttributes);
 	}
 	return attr;
 }
@@ -196,13 +249,59 @@ auto dk::plt_now_microseconds() noexcept -> u64 {
 	u64 result = 0;
 	LARGE_INTEGER ticks = {};
 	if (QueryPerformanceCounter(&ticks)) {
-		result = (ticks.QuadPart * 1'000'000) / plt_win32_context.perf_frequency;
+		result = (ticks.QuadPart * 1'000'000) / plt_w32_context.perf_frequency;
 	}
 	return result;
 }
 
 auto dk::plt_sleep(u64 milliseconds) noexcept -> void {
 	Sleep(static_cast<DWORD>(milliseconds));
+}
+
+auto dk::plt_set_thread_name(String8 name) noexcept -> void {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HRESULT const hr = SetThreadDescription(
+		GetCurrentThread(),
+		reinterpret_cast<WCHAR const *>(name.data)
+	);
+	DK_ASSERT(SUCCEEDED(hr));
+	scratch_end(scratch);
+}
+
+auto dk::plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> PLT_Handle {
+	PLT_Handle result = plt_handle_invalid();
+	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_THREAD);
+	if (entity != nullptr) {
+		entity->thread.func = func;
+		entity->thread.params = params;
+		entity->thread.handle = CreateThread(nullptr, 0, plt_w32_thread_entry, entity, 0, &entity->thread.tid);
+		result.v = reinterpret_cast<uintptr_t>(entity);
+	}
+	return result;
+}
+
+auto dk::plt_thread_join(PLT_Handle thread) noexcept -> void {
+	if (thread == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(thread.v);
+	if (entity->thread.handle != INVALID_HANDLE_VALUE) {
+		WaitForSingleObject(entity->thread.handle, INFINITE);
+		CloseHandle(entity->thread.handle);
+	}
+	plt_w32_entity_release(entity);
+}
+
+auto dk::plt_thread_detach(PLT_Handle thread) noexcept -> void {
+	if (thread == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(thread.v);
+	if (entity->thread.handle != INVALID_HANDLE_VALUE) {
+		CloseHandle(entity->thread.handle);
+	}
+	plt_w32_entity_release(entity);
 }
 
 extern auto entry_point(int argc, char **argv) noexcept -> int;
@@ -221,22 +320,22 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 	}
 
 	{
-		dk::plt_win32_context.perf_frequency = 1;
+		dk::plt_w32_context.perf_frequency = 1;
 		LARGE_INTEGER freq{};
 		if (QueryPerformanceFrequency(&freq)) {
-			dk::plt_win32_context.perf_frequency = freq.QuadPart;
+			dk::plt_w32_context.perf_frequency = freq.QuadPart;
 		}
 	}
 	{
 		SYSTEM_INFO sys_info = {};
 		GetSystemInfo(&sys_info);
 
-		dk::PLT_SystemInfo *info = &dk::plt_win32_context.system_info;
+		dk::PLT_SystemInfo *info = &dk::plt_w32_context.system_info;
 		info->logical_processor_count = static_cast<dk::u32>(sys_info.dwNumberOfProcessors);
 		info->page_size = sys_info.dwPageSize;
 	}
 	{
-		dk::PLT_ProcessInfo *info = &dk::plt_win32_context.process_info;
+		dk::PLT_ProcessInfo *info = &dk::plt_w32_context.process_info;
 		info->pid = GetCurrentProcessId();
 	}
 

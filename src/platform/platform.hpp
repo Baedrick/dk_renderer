@@ -3,6 +3,10 @@
 #pragma once
 
 namespace dk {
+	struct PLT_Handle {
+		u64 v;
+	};
+
 	struct PLT_SystemInfo {
 		u64 page_size;
 		u32 logical_processor_count;
@@ -30,9 +34,7 @@ namespace dk {
 		PLT_FileFlags flags;
 	};
 
-	struct PLT_Handle {
-		u64 v;
-	};
+	using PLT_ThreadFunction = void (void *params);
 
 	auto operator==(PLT_Handle a, PLT_Handle b) noexcept -> b8;
 	auto operator!=(PLT_Handle a, PLT_Handle b) noexcept -> b8;
@@ -58,4 +60,9 @@ namespace dk {
 
 	auto plt_now_microseconds() noexcept -> u64;
 	auto plt_sleep(u64 milliseconds) noexcept -> void;
+
+	auto plt_set_thread_name(String8 name) noexcept -> void;
+	auto plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> PLT_Handle;
+	auto plt_thread_join(PLT_Handle thread) noexcept -> void;
+	auto plt_thread_detach(PLT_Handle thread) noexcept -> void;
 }
