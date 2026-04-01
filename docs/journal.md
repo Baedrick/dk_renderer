@@ -1,3 +1,16 @@
+### 2026-03-28: Profiler integration
+I integrated Tracy profiler to provide high-fidelity instrumentation and
+visualization for identifying performance bottlenecks. To maintain consistency
+with my unity build setup, I have included the necessary Tracy source code
+directly into the project and base layer. The macro DK_PROFILE_ENABLE keeps
+profiling gated to keep the overhead out of shipping builds.
+
+I've intentionally avoided building an abstraction layer or generic profiling
+wrapper at this stage. Since I have no immediate plan to swap Tracy for another
+tool, a wrapper would only introduce unnecessary boilerplate and "what-if"
+complexity. By using Tracy's macros directly, I maintain a clear, one-to-one
+mapping between the instrumentation in the source and results in the profiler.
+
 ### 2026-03-18: Logging
 I implemented a deferred logging system that prioritizes performance and clarity
 by avoiding the overhead of immediate I/O. Unlike traditional loggers that flush

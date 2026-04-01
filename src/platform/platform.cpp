@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-auto dk::PLT_Handle::operator==(PLT_Handle o) const noexcept -> b8 {
-	return v == o.v;
+auto dk::operator==(PLT_Handle a, PLT_Handle b) noexcept -> b8 {
+	return a.v == b.v;
 }
 
-auto dk::PLT_Handle::operator!=(PLT_Handle o) const noexcept -> b8 {
-	return !(*this == o);
+auto dk::operator!=(PLT_Handle a, PLT_Handle b) noexcept -> b8 {
+	return !(a == b);
 }
 
 #ifdef DK_PLATFORM_WIN32

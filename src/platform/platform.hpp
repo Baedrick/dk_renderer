@@ -32,10 +32,10 @@ namespace dk {
 
 	struct PLT_Handle {
 		u64 v;
-
-		auto operator==(PLT_Handle o) const noexcept -> b8;
-		auto operator!=(PLT_Handle o) const noexcept -> b8;
 	};
+
+	auto operator==(PLT_Handle a, PLT_Handle b) noexcept -> b8;
+	auto operator!=(PLT_Handle a, PLT_Handle b) noexcept -> b8;
 
 	auto plt_handle_invalid() noexcept -> PLT_Handle;
 
