@@ -18,9 +18,24 @@ namespace dk {
 		DWORD tid;
 	};
 
+	struct PLT_W32_Mutex {
+		CRITICAL_SECTION handle;
+	};
+
+	struct PLT_W32_RWMutex {
+		SRWLOCK handle;
+	};
+
+	struct PLT_W32_ConditionalVariable {
+		CONDITION_VARIABLE handle;
+	};
+
 	enum PLT_W32_EntityKind {
 		PLT_W32_ENTITY_NULL = 0,
-		PLT_W32_ENTITY_THREAD
+		PLT_W32_ENTITY_THREAD,
+		PLT_W32_ENTITY_MUTEX,
+		PLT_W32_ENTITY_RW_MUTEX,
+		PLT_W32_ENTITY_CONDITIONAL_VARIABLE
 	};
 
 	struct PLT_W32_Entity {
@@ -28,6 +43,9 @@ namespace dk {
 		PLT_W32_EntityKind kind;
 		union {
 			PLT_W32_Thread thread;
+			PLT_W32_Mutex mutex;
+			PLT_W32_RWMutex rw_mutex;
+			PLT_W32_ConditionalVariable cond_var;
 		};
 	};
 
@@ -54,7 +72,7 @@ namespace dk {
 		EnterCriticalSection(&plt_w32_context.entity_mutex);
 		{
 			result = plt_w32_context.entity_free;
-			if (result == nullptr) {
+			if (result != nullptr) {
 				forward_list_stack_pop(&plt_w32_context.entity_free);
 			} else {
 				result = arena_push<PLT_W32_Entity>(plt_w32_context.entity_arena);
@@ -74,8 +92,14 @@ namespace dk {
 	}
 
 	auto plt_w32_thread_entry(void *params) noexcept -> DWORD {
-		(void)params;
-		DK_ASSERT_ALWAYS(false); // function not implemented
+		PLT_W32_Entity *const entity = static_cast<PLT_W32_Entity *>(params);
+		DK_ASSERT(entity->kind == PLT_W32_ENTITY_THREAD);
+		PLT_ThreadFunction *const func = entity->thread.func;
+		void *const func_params = entity->thread.params;
+		ThreadContext *thread_context = thread_context_alloc();
+		thread_context_select(thread_context);
+		func(func_params);
+		thread_context_release(thread_context);
 		return 0;
 	}
 }
@@ -263,7 +287,7 @@ auto dk::plt_set_thread_name(String8 name) noexcept -> void {
 	String16 const name16 = str16_from_8(scratch.arena, name);
 	HRESULT const hr = SetThreadDescription(
 		GetCurrentThread(),
-		reinterpret_cast<WCHAR const *>(name.data)
+		reinterpret_cast<WCHAR const *>(name16.data)
 	);
 	DK_ASSERT(SUCCEEDED(hr));
 	scratch_end(scratch);
@@ -273,6 +297,7 @@ auto dk::plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> P
 	PLT_Handle result = plt_handle_invalid();
 	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_THREAD);
 	if (entity != nullptr) {
+		// TODO(Dedrick): Error handling.
 		entity->thread.func = func;
 		entity->thread.params = params;
 		entity->thread.handle = CreateThread(nullptr, 0, plt_w32_thread_entry, entity, 0, &entity->thread.tid);
@@ -286,7 +311,8 @@ auto dk::plt_thread_join(PLT_Handle thread) noexcept -> void {
 		return;
 	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(thread.v);
-	if (entity->thread.handle != INVALID_HANDLE_VALUE) {
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_THREAD);
+	if (entity->thread.handle != nullptr) {
 		WaitForSingleObject(entity->thread.handle, INFINITE);
 		CloseHandle(entity->thread.handle);
 	}
@@ -298,10 +324,49 @@ auto dk::plt_thread_detach(PLT_Handle thread) noexcept -> void {
 		return;
 	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(thread.v);
-	if (entity->thread.handle != INVALID_HANDLE_VALUE) {
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_THREAD);
+	if (entity->thread.handle != nullptr) {
 		CloseHandle(entity->thread.handle);
 	}
 	plt_w32_entity_release(entity);
+}
+
+auto dk::plt_mutex_alloc() noexcept -> PLT_Handle {
+	PLT_Handle result = plt_handle_invalid();
+	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_MUTEX);
+	if (entity != nullptr) {
+		InitializeCriticalSection(&entity->mutex.handle);
+		result.v = reinterpret_cast<uintptr_t>(entity);
+	}
+	return result;
+}
+
+auto dk::plt_mutex_release(PLT_Handle mutex) noexcept -> void {
+	if (mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_MUTEX);
+	DeleteCriticalSection(&entity->mutex.handle);
+	plt_w32_entity_release(entity);
+}
+
+auto dk::plt_mutex_scope_enter(PLT_Handle mutex) noexcept -> void {
+	if (mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_MUTEX);
+	EnterCriticalSection(&entity->mutex.handle);
+}
+
+auto dk::plt_mutex_scope_leave(PLT_Handle mutex) noexcept -> void {
+	if (mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_MUTEX);
+	LeaveCriticalSection(&entity->mutex.handle);
 }
 
 extern auto entry_point(int argc, char **argv) noexcept -> int;
@@ -348,8 +413,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 		return 0;
 	}
 
-	// TODO(Dedrick): Clean this up. Use string functions.
-	dk::ArenaParams const args_arena_params = {
+	dk::ArenaParams constexpr args_arena_params = {
 		.reserve_size = dk::mega_bytes(1),
 		.commit_size = dk::kilo_bytes(32)
 	};
@@ -364,7 +428,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 	argv[argc] = nullptr;
 	LocalFree(static_cast<void *>(argvw));
 
+	InitializeCriticalSection(&dk::plt_w32_context.entity_mutex);
+	dk::plt_w32_context.entity_arena = dk::arena_alloc();
+
 	int const result = entry_point(argc, argv);
+
+	dk::arena_release(dk::plt_w32_context.entity_arena);
+	DeleteCriticalSection(&dk::plt_w32_context.entity_mutex);
 
 	dk::arena_release(args_arena);
 

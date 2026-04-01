@@ -65,4 +65,9 @@ namespace dk {
 	auto plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> PLT_Handle;
 	auto plt_thread_join(PLT_Handle thread) noexcept -> void;
 	auto plt_thread_detach(PLT_Handle thread) noexcept -> void;
+
+	auto plt_mutex_alloc() noexcept -> PLT_Handle;
+	auto plt_mutex_release(PLT_Handle mutex) noexcept -> void;
+	auto plt_mutex_scope_enter(PLT_Handle mutex) noexcept -> void;
+	auto plt_mutex_scope_leave(PLT_Handle mutex) noexcept -> void;
 }
