@@ -70,4 +70,11 @@ namespace dk {
 	auto plt_mutex_release(PLT_Handle mutex) noexcept -> void;
 	auto plt_mutex_scope_enter(PLT_Handle mutex) noexcept -> void;
 	auto plt_mutex_scope_leave(PLT_Handle mutex) noexcept -> void;
+
+	auto plt_rw_mutex_alloc() noexcept -> PLT_Handle;
+	auto plt_rw_mutex_release(PLT_Handle rw_mutex) noexcept -> void;
+	auto plt_rw_mutex_scope_enter_w(PLT_Handle rw_mutex) noexcept -> void;
+	auto plt_rw_mutex_scope_leave_w(PLT_Handle rw_mutex) noexcept -> void;
+	auto plt_rw_mutex_scope_enter_r(PLT_Handle rw_mutex) noexcept -> void;
+	auto plt_rw_mutex_scope_leave_r(PLT_Handle rw_mutex) noexcept -> void;
 }

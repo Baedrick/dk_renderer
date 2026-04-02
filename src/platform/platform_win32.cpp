@@ -369,6 +369,61 @@ auto dk::plt_mutex_scope_leave(PLT_Handle mutex) noexcept -> void {
 	LeaveCriticalSection(&entity->mutex.handle);
 }
 
+auto dk::plt_rw_mutex_alloc() noexcept -> PLT_Handle {
+	PLT_Handle result = plt_handle_invalid();
+	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_RW_MUTEX);
+	if (entity != nullptr) {
+		InitializeSRWLock(&entity->rw_mutex.handle);
+		result.v = reinterpret_cast<uintptr_t>(entity);
+	}
+	return result;
+}
+
+auto dk::plt_rw_mutex_release(PLT_Handle rw_mutex) noexcept -> void {
+	if (rw_mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
+	plt_w32_entity_release(entity);
+}
+
+auto dk::plt_rw_mutex_scope_enter_w(PLT_Handle rw_mutex) noexcept -> void {
+	if (rw_mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
+	AcquireSRWLockExclusive(&entity->rw_mutex.handle);
+}
+
+auto dk::plt_rw_mutex_scope_leave_w(PLT_Handle rw_mutex) noexcept -> void {
+	if (rw_mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
+	ReleaseSRWLockExclusive(&entity->rw_mutex.handle);
+}
+
+auto dk::plt_rw_mutex_scope_enter_r(PLT_Handle rw_mutex) noexcept -> void {
+	if (rw_mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
+	AcquireSRWLockShared(&entity->rw_mutex.handle);
+}
+
+auto dk::plt_rw_mutex_scope_leave_r(PLT_Handle rw_mutex) noexcept -> void {
+	if (rw_mutex == plt_handle_invalid()) {
+		return;
+	}
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
+	ReleaseSRWLockShared(&entity->rw_mutex.handle);
+}
+
 extern auto entry_point(int argc, char **argv) noexcept -> int;
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_show_cmd) {
