@@ -77,4 +77,12 @@ namespace dk {
 	auto plt_rw_mutex_scope_leave_w(PLT_Handle rw_mutex) noexcept -> void;
 	auto plt_rw_mutex_scope_enter_r(PLT_Handle rw_mutex) noexcept -> void;
 	auto plt_rw_mutex_scope_leave_r(PLT_Handle rw_mutex) noexcept -> void;
+
+	auto plt_cond_var_alloc() noexcept -> PLT_Handle;
+	auto plt_cond_var_release(PLT_Handle cond_var) noexcept -> void;
+	auto plt_cond_var_wait(PLT_Handle cond_var, PLT_Handle mutex, u64 end_time_us) noexcept -> b8;
+	auto plt_cond_var_wait_rw_w(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8;
+	auto plt_cond_var_wait_rw_r(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8;
+	auto plt_cond_var_signal(PLT_Handle cond_var) noexcept -> void;
+	auto plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void;
 }

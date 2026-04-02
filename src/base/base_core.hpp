@@ -71,6 +71,9 @@ namespace dk {
 	static_assert(sizeof(f32) == 4);
 	static_assert(sizeof(f64) == 8);
 
+	constexpr u64 U64_MAX = 0xFFFFFFFFFFFFFFFF;
+	constexpr u64 U64_MIN = 0;
+
 	constexpr auto kilo_bytes(u64 x) noexcept -> u64 { return x << 10; }
 	constexpr auto mega_bytes(u64 x) noexcept -> u64 { return x << 20; }
 	constexpr auto giga_bytes(u64 x) noexcept -> u64 { return x << 30; }
