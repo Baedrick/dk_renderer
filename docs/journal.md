@@ -1,3 +1,18 @@
+### 2026-04-03: Thread Primitives
+I implemented the foundational threading and synchronization primitives in the
+platform layer, including thread creation, mutexes, reader-writer locks, and
+condition variables. I’ve intentionally omitted semaphores; mutexes and condition
+variables provide sufficient control for producer-consumer patterns, and I can
+move toward lock-free algorithms if I eventually need more granular performance.
+
+For managing primitive allocations, I’m using a "fat struct" approach where all
+synchronization objects are represented by a unified entity stored in an
+arena-backed free list. This simplifies the handle system and provides a
+consistent backing store. While I could eventually split these into specialized
+arrays or use a reader-writer lock for the allocator to improve performance, the
+current design prioritizes architectural clarity and ease of debugging for the
+engine's scale.
+
 ### 2026-03-28: Profiler integration
 I integrated Tracy profiler to provide high-fidelity instrumentation and
 visualization for identifying performance bottlenecks. To maintain consistency
