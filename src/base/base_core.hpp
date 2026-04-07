@@ -7,7 +7,7 @@
 #include <cstring>
 
 #if defined(_WIN32)
-#   define DK_PLATFORM_WIN32
+#	define DK_PLATFORM_WIN32
 #else
 #	error "Unknown platform"
 #endif
@@ -20,6 +20,9 @@
 
 #if defined(DK_COMPILER_MSVC)
 #	include <intrin.h>
+#endif
+
+#if defined(DK_COMPILER_MSVC)
 #	define DK_TRAP() __debugbreak()
 #else
 #	error "Unknown trap intrinsic for this compiler"
@@ -87,6 +90,24 @@ namespace dk {
 		*a = *b;
 		*b = tmp;
 	}
+
+	auto atomic_u64_load(u64 *ptr) noexcept -> u64;
+	auto atomic_u64_inc_fetch(u64 *ptr) noexcept -> u64;
+	auto atomic_u64_dec_fetch(u64 *ptr) noexcept -> u64;
+	auto atomic_u64_add_fetch(u64 *ptr, u64 val) noexcept -> u64;
+	auto atomic_u64_fetch_exchange(u64 *ptr, u64 val) noexcept -> u64;
+	auto atomic_u64_fetch_compare_exchange(u64 *ptr, u64 expected, u64 desired) noexcept -> u64;
+
+	auto atomic_u32_load(u32 *ptr) noexcept -> u32;
+	auto atomic_u32_inc_fetch(u32 *ptr) noexcept -> u32;
+	auto atomic_u32_dec_fetch(u32 *ptr) noexcept -> u32;
+	auto atomic_u32_add_fetch(u32 *ptr, u32 val) noexcept -> u32;
+	auto atomic_u32_fetch_exchange(u32 *ptr, u32 val) noexcept -> u32;
+	auto atomic_u32_fetch_compare_exchange(u32 *ptr, u32 expected, u32 desired) noexcept -> u32;
+
+	auto atomic_ptr_load(void **ptr) noexcept -> void *;
+	auto atomic_ptr_exchange(void **ptr, void *val) noexcept -> void *;
+	auto atomic_ptr_fetch_compare_exchange(void **ptr, void *expected, void *desired) noexcept -> void *;
 
 	template <typename T>
 	constexpr auto is_pow2(T x) noexcept -> b8 {
