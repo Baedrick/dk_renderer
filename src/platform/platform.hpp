@@ -86,3 +86,9 @@ namespace dk {
 	auto plt_cond_var_signal(PLT_Handle cond_var) noexcept -> void;
 	auto plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void;
 }
+
+#ifdef DK_PLATFORM_WIN32
+#	include "platform_win32.hpp"
+#else
+#	error "Platform layer not implemented for this platform."
+#endif

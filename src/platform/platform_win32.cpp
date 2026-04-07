@@ -1,107 +1,53 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-#define NOMINMAX
-#include <Windows.h>
-#include <shellapi.h>
-#include <processthreadsapi.h>
-#include <bcrypt.h>
+dk::PLT_W32_Context dk::plt_w32_context;
 
-#pragma comment(lib, "shell32")
-#pragma comment(lib, "kernel32")
-#pragma comment(lib, "bcrypt")
+auto dk::plt_w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
+	PLT_FileFlags flags = PLT_FILE_FLAG_NONE;
+	if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+		flags |= PLT_FILE_FLAG_DIRECTORY;
+	}
+	return flags;
+}
 
-namespace dk {
-	struct PLT_W32_Thread {
-		PLT_ThreadFunction *func;
-		void *params;
-		HANDLE handle;
-		DWORD tid;
-	};
-
-	struct PLT_W32_Mutex {
-		CRITICAL_SECTION handle;
-	};
-
-	struct PLT_W32_RWMutex {
-		SRWLOCK handle;
-	};
-
-	struct PLT_W32_ConditionalVariable {
-		CONDITION_VARIABLE handle;
-	};
-
-	enum PLT_W32_EntityKind {
-		PLT_W32_ENTITY_NULL = 0,
-		PLT_W32_ENTITY_THREAD,
-		PLT_W32_ENTITY_MUTEX,
-		PLT_W32_ENTITY_RW_MUTEX,
-		PLT_W32_ENTITY_CONDITIONAL_VARIABLE
-	};
-
-	struct PLT_W32_Entity {
-		PLT_W32_Entity *next;
-		PLT_W32_EntityKind kind;
-		union {
-			PLT_W32_Thread thread;
-			PLT_W32_Mutex mutex;
-			PLT_W32_RWMutex rw_mutex;
-			PLT_W32_ConditionalVariable cond_var;
-		};
-	};
-
-	struct PLT_W32_Context {
-		PLT_SystemInfo system_info;
-		PLT_ProcessInfo process_info;
-		u64 perf_frequency;
-
-		CRITICAL_SECTION entity_mutex;
-		Arena *entity_arena;
-		PLT_W32_Entity *entity_free;
-	} plt_w32_context;
-
-	auto plt_w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags {
-		PLT_FileFlags flags = PLT_FILE_FLAG_NONE;
-		if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-			flags |= PLT_FILE_FLAG_DIRECTORY;
+auto dk::plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity * {
+	PLT_W32_Entity *result = nullptr;
+	EnterCriticalSection(&plt_w32_context.entity_mutex);
+	{
+		result = plt_w32_context.entity_free;
+		if (result != nullptr) {
+			forward_list_stack_pop(&plt_w32_context.entity_free);
+		} else {
+			result = arena_push<PLT_W32_Entity>(plt_w32_context.entity_arena);
 		}
-		return flags;
+		std::memset(result, 0, sizeof(PLT_W32_Entity));
 	}
+	LeaveCriticalSection(&plt_w32_context.entity_mutex);
+	result->kind = kind;
+	return result;
+}
 
-	auto plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity * {
-		PLT_W32_Entity *result = nullptr;
-		EnterCriticalSection(&plt_w32_context.entity_mutex);
-		{
-			result = plt_w32_context.entity_free;
-			if (result != nullptr) {
-				forward_list_stack_pop(&plt_w32_context.entity_free);
-			} else {
-				result = arena_push<PLT_W32_Entity>(plt_w32_context.entity_arena);
-			}
-			std::memset(result, 0, sizeof(PLT_W32_Entity));
-		}
-		LeaveCriticalSection(&plt_w32_context.entity_mutex);
-		result->kind = kind;
-		return result;
-	}
+auto dk::plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void {
+	entity->kind = PLT_W32_ENTITY_NULL;
+	EnterCriticalSection(&plt_w32_context.entity_mutex);
+	forward_list_stack_push(&plt_w32_context.entity_free, entity);
+	LeaveCriticalSection(&plt_w32_context.entity_mutex);
+}
 
-	auto plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void {
-		entity->kind = PLT_W32_ENTITY_NULL;
-		EnterCriticalSection(&plt_w32_context.entity_mutex);
-		forward_list_stack_push(&plt_w32_context.entity_free, entity);
-		LeaveCriticalSection(&plt_w32_context.entity_mutex);
-	}
+auto dk::plt_w32_main_thread_entry(int argc, char **argv) noexcept -> int {
 
-	auto plt_w32_thread_entry(void *params) noexcept -> DWORD {
-		PLT_W32_Entity *const entity = static_cast<PLT_W32_Entity *>(params);
-		DK_ASSERT(entity->kind == PLT_W32_ENTITY_THREAD);
-		PLT_ThreadFunction *const func = entity->thread.func;
-		void *const func_params = entity->thread.params;
-		ThreadContext *thread_context = thread_context_alloc();
-		thread_context_select(thread_context);
-		func(func_params);
-		thread_context_release(thread_context);
-		return 0;
-	}
+}
+
+auto dk::plt_w32_thread_entry(void *params) noexcept -> DWORD {
+	PLT_W32_Entity *const entity = static_cast<PLT_W32_Entity *>(params);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_THREAD);
+	PLT_ThreadFunction *const func = entity->thread.func;
+	void *const func_params = entity->thread.params;
+	ThreadContext *thread_context = thread_context_alloc();
+	thread_context_select(thread_context);
+	func(func_params);
+	thread_context_release(thread_context);
+	return 0;
 }
 
 auto dk::plt_handle_invalid() noexcept -> PLT_Handle {

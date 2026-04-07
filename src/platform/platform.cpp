@@ -10,4 +10,6 @@ auto dk::operator!=(PLT_Handle a, PLT_Handle b) noexcept -> b8 {
 
 #ifdef DK_PLATFORM_WIN32
 #	include "platform_win32.cpp"
+#else
+#	error "Platform layer not implemented for this platform."
 #endif
