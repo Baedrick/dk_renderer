@@ -35,7 +35,9 @@ auto dk::plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void {
 }
 
 auto dk::plt_w32_main_thread_entry(int argc, char **argv) noexcept -> int {
-
+	(void)argc;
+	(void)argv;
+	return 0;
 }
 
 auto dk::plt_w32_thread_entry(void *params) noexcept -> DWORD {

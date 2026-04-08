@@ -74,8 +74,11 @@ namespace dk {
 	static_assert(sizeof(f32) == 4);
 	static_assert(sizeof(f64) == 8);
 
-	constexpr u64 U64_MAX = 0xFFFFFFFFFFFFFFFF;
-	constexpr u64 U64_MIN = 0;
+	u32 constexpr U32_MAX = 0xFFFFFFFF;
+	u64 constexpr U32_MIN = 0;
+
+	u64 constexpr U64_MAX = 0xFFFFFFFFFFFFFFFF;
+	u64 constexpr U64_MIN = 0;
 
 	constexpr auto kilo_bytes(u64 x) noexcept -> u64 { return x << 10; }
 	constexpr auto mega_bytes(u64 x) noexcept -> u64 { return x << 20; }
@@ -91,23 +94,34 @@ namespace dk {
 		*b = tmp;
 	}
 
-	auto atomic_u64_load(u64 *ptr) noexcept -> u64;
-	auto atomic_u64_inc_fetch(u64 *ptr) noexcept -> u64;
-	auto atomic_u64_dec_fetch(u64 *ptr) noexcept -> u64;
-	auto atomic_u64_add_fetch(u64 *ptr, u64 val) noexcept -> u64;
-	auto atomic_u64_fetch_exchange(u64 *ptr, u64 val) noexcept -> u64;
-	auto atomic_u64_fetch_compare_exchange(u64 *ptr, u64 expected, u64 desired) noexcept -> u64;
+	template <typename Dst, typename Src>
+	auto bit_cast(Src src) noexcept -> Dst {
+		static_assert(sizeof(Src) == sizeof(Dst));
+		Dst dst = {};
+		std::memcpy(&dst, &src, sizeof(Src));
+		return dst;
+	}
 
-	auto atomic_u32_load(u32 *ptr) noexcept -> u32;
-	auto atomic_u32_inc_fetch(u32 *ptr) noexcept -> u32;
-	auto atomic_u32_dec_fetch(u32 *ptr) noexcept -> u32;
-	auto atomic_u32_add_fetch(u32 *ptr, u32 val) noexcept -> u32;
-	auto atomic_u32_fetch_exchange(u32 *ptr, u32 val) noexcept -> u32;
-	auto atomic_u32_fetch_compare_exchange(u32 *ptr, u32 expected, u32 desired) noexcept -> u32;
+	auto atomic_u64_load(u64 const volatile *ptr) noexcept -> u64;
+	auto atomic_u64_store(u64 volatile *ptr, u64 val) noexcept -> void;
+	auto atomic_u64_inc_fetch(u64 volatile *ptr) noexcept -> u64;
+	auto atomic_u64_dec_fetch(u64 volatile *ptr) noexcept -> u64;
+	auto atomic_u64_add_fetch(u64 volatile *ptr, u64 val) noexcept -> u64;
+	auto atomic_u64_fetch_exchange(u64 volatile *ptr, u64 val) noexcept -> u64;
+	auto atomic_u64_fetch_compare_exchange(u64 volatile *ptr, u64 expected, u64 desired) noexcept -> u64;
 
-	auto atomic_ptr_load(void **ptr) noexcept -> void *;
-	auto atomic_ptr_exchange(void **ptr, void *val) noexcept -> void *;
-	auto atomic_ptr_fetch_compare_exchange(void **ptr, void *expected, void *desired) noexcept -> void *;
+	auto atomic_u32_load(u32 const volatile *ptr) noexcept -> u32;
+	auto atomic_u32_store(u32 volatile *ptr, u32 val) noexcept -> void;
+	auto atomic_u32_inc_fetch(u32 volatile *ptr) noexcept -> u32;
+	auto atomic_u32_dec_fetch(u32 volatile *ptr) noexcept -> u32;
+	auto atomic_u32_add_fetch(u32 volatile *ptr, u32 val) noexcept -> u32;
+	auto atomic_u32_fetch_exchange(u32 volatile *ptr, u32 val) noexcept -> u32;
+	auto atomic_u32_fetch_compare_exchange(u32 volatile *ptr, u32 expected, u32 desired) noexcept -> u32;
+
+	auto atomic_ptr_load(void *const volatile *ptr) noexcept -> void *;
+	auto atomic_ptr_store(void *volatile *ptr, void *val) noexcept -> void;
+	auto atomic_ptr_exchange(void *volatile *ptr, void *val) noexcept -> void *;
+	auto atomic_ptr_fetch_compare_exchange(void *volatile *ptr, void *expected, void *desired) noexcept -> void *;
 
 	template <typename T>
 	constexpr auto is_pow2(T x) noexcept -> b8 {
