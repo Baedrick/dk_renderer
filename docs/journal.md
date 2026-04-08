@@ -1,3 +1,11 @@
+### 2026-04-08: Atomic Operations
+I spent some time familiarizing myself with atomic operations to implement them
+as the foundation for lock-free algorithms within the engine. My immediate use
+case is high-throughput inter-thread communication, such as a lock-free ring
+buffer. Circumventing OS-level mutexes in hot paths eliminates the overhead
+of context switches. This ensures the CPU spends its time executing useful
+work rather than stalling on locks.
+
 ### 2026-04-03: Thread Primitives
 I implemented the foundational threading and synchronization primitives in the
 platform layer, including thread creation, mutexes, reader-writer locks, and
