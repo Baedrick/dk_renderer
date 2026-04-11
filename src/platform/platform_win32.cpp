@@ -217,6 +217,25 @@ auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttribute
 	return attr;
 }
 
+auto dk::plt_make_directory(String8 path) noexcept -> b8 {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const path16 = str16_from_8(scratch.arena, path);
+	b8 result = false;
+	WIN32_FILE_ATTRIBUTE_DATA attributes = {};
+	GetFileAttributesExW(
+		reinterpret_cast<WCHAR const *>(path16.data),
+		GetFileExInfoStandard,
+		&attributes
+	);
+	if (attributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+		result = true;
+	} else if (CreateDirectoryW(reinterpret_cast<WCHAR const *>(path16.data), 0)) {
+		result = true;
+	}
+	scratch_end(scratch);
+	return result;
+}
+
 auto dk::plt_now_microseconds() noexcept -> u64 {
 	u64 result = 0;
 	LARGE_INTEGER ticks = {};
