@@ -96,6 +96,62 @@ auto dk::plt_release(void *ptr, u64 size) noexcept -> void {
 	VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
+auto dk::plt_shared_memory_acquire_new(u64 size, String8 name) noexcept -> PLT_Handle {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HANDLE const file = CreateFileMappingW(
+		INVALID_HANDLE_VALUE,
+		0,
+		PAGE_READWRITE,
+		static_cast<u32>((size & 0xFFFFFFFF00000000) >> 32),
+		static_cast<u32>(size & 0x00000000FFFFFFFF),
+		reinterpret_cast<WCHAR const *>(name16.data)
+	);
+	PLT_Handle result = { reinterpret_cast<uintptr_t>(file) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::plt_shared_memory_acquire_existing(String8 name) noexcept -> PLT_Handle {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HANDLE const file = OpenFileMappingW(
+		FILE_MAP_ALL_ACCESS,
+		0,
+		reinterpret_cast<WCHAR const *>(name16.data)
+	);
+	PLT_Handle result = { reinterpret_cast<uintptr_t>(file) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::plt_shared_memory_release(PLT_Handle handle) noexcept -> void {
+	HANDLE const file = reinterpret_cast<HANDLE>(handle.v);
+	CloseHandle(file);
+}
+
+auto dk::plt_shared_memory_map(PLT_Handle handle, u64 begin, u64 end) noexcept -> void * {
+	HANDLE const file = reinterpret_cast<HANDLE>(handle.v);
+	u64 const offset = begin;
+	u64 const size = end - begin;
+	void *ptr = MapViewOfFile(
+		file,
+		FILE_MAP_ALL_ACCESS,
+		static_cast<u32>((offset & 0xFFFFFFFF00000000) >> 32),
+		static_cast<u32>(offset & 0x00000000FFFFFFFF),
+		size
+	);
+	return ptr;
+}
+
+auto dk::plt_shared_memory_unmap(PLT_Handle handle, void *ptr, u64 begin, u64 end) noexcept -> void {
+	// NOTE(Dedrick): Range not used, not necessary on Windows.
+	(void)handle;
+	(void)begin;
+	(void)end;
+	UnmapViewOfFile(ptr);
+}
+
 auto dk::plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Handle {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const path16 = str16_from_8(scratch.arena, path);

@@ -52,6 +52,12 @@ namespace dk {
 	auto plt_decommit(void *ptr, u64 size) noexcept -> b8;
 	auto plt_release(void *ptr, u64 size) noexcept -> void;
 
+	auto plt_shared_memory_acquire_new(u64 size, String8 name) noexcept -> PLT_Handle;
+	auto plt_shared_memory_acquire_existing(String8 name) noexcept -> PLT_Handle;
+	auto plt_shared_memory_release(PLT_Handle handle) noexcept -> void;
+	auto plt_shared_memory_map(PLT_Handle handle, u64 begin, u64 end) noexcept -> void *;
+	auto plt_shared_memory_unmap(PLT_Handle handle, void *ptr, u64 begin, u64 end) noexcept -> void;
+
 	auto plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Handle;
 	auto plt_file_close(PLT_Handle file) noexcept -> void;
 	auto plt_file_read(PLT_Handle file, u64 begin, u64 end, void *out_data) noexcept -> u64;
