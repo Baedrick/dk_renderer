@@ -96,7 +96,7 @@ auto dk::plt_release(void *ptr, u64 size) noexcept -> void {
 	VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
-auto dk::plt_shared_memory_acquire_new(u64 size, String8 name) noexcept -> PLT_Handle {
+auto dk::plt_shared_memory_create(u64 size, String8 name) noexcept -> PLT_Handle {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);
 	HANDLE const file = CreateFileMappingW(
@@ -112,7 +112,7 @@ auto dk::plt_shared_memory_acquire_new(u64 size, String8 name) noexcept -> PLT_H
 	return result;
 }
 
-auto dk::plt_shared_memory_acquire_existing(String8 name) noexcept -> PLT_Handle {
+auto dk::plt_shared_memory_open(String8 name) noexcept -> PLT_Handle {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);
 	HANDLE const file = OpenFileMappingW(
@@ -125,7 +125,7 @@ auto dk::plt_shared_memory_acquire_existing(String8 name) noexcept -> PLT_Handle
 	return result;
 }
 
-auto dk::plt_shared_memory_release(PLT_Handle handle) noexcept -> void {
+auto dk::plt_shared_memory_close(PLT_Handle handle) noexcept -> void {
 	HANDLE const file = reinterpret_cast<HANDLE>(handle.v);
 	CloseHandle(file);
 }
@@ -146,10 +146,11 @@ auto dk::plt_shared_memory_map(PLT_Handle handle, u64 begin, u64 end) noexcept -
 
 auto dk::plt_shared_memory_unmap(PLT_Handle handle, void *ptr, u64 begin, u64 end) noexcept -> void {
 	// NOTE(Dedrick): Range not used, not necessary on Windows.
-	(void)handle;
 	(void)begin;
 	(void)end;
-	UnmapViewOfFile(ptr);
+	if (handle != plt_handle_invalid()) {
+		UnmapViewOfFile(ptr);
+	}
 }
 
 auto dk::plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Handle {
