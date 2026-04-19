@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "thirdparty/rgfw/RGFW.h"
+
 namespace dk {
 	struct PLT_Handle {
 		u64 v;
@@ -35,6 +37,11 @@ namespace dk {
 	};
 
 	using PLT_ThreadFunction = void (void *params);
+
+	struct PLT_FileDialogFilter {
+		String8 display_name; ///< e.g. "Text files"
+		String8 extensions; ///< e.g. "txt,text"
+	};
 
 	auto operator==(PLT_Handle a, PLT_Handle b) noexcept -> b8;
 	auto operator!=(PLT_Handle a, PLT_Handle b) noexcept -> b8;
@@ -95,6 +102,11 @@ namespace dk {
 	auto plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void;
 
 	auto plt_show_in_file_browser(String8 path) noexcept -> void;
+
+	auto plt_file_dialog_pick_file(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8;
+	auto plt_file_dialog_pick_multiple_files(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8List;
+	auto plt_file_dialog_save(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index) noexcept -> String8;
+	auto plt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) noexcept -> String8;
 }
 
 #ifdef DK_PLATFORM_WIN32

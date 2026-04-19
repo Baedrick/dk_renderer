@@ -577,6 +577,98 @@ auto dk::plt_show_in_file_browser(String8 path) noexcept -> void {
 	scratch_end(scratch);
 }
 
+auto dk::plt_w32_create_filter_specs(Arena *arena, PLT_FileDialogFilter const *filters, u64 filter_count, UINT *out_count) -> COMDLG_FILTERSPEC * {
+	if (filter_count == 0) {
+		*out_count = 0;
+		return nullptr;
+	}
+
+	COMDLG_FILTERSPEC *const filter_spec = arena_push_array<COMDLG_FILTERSPEC>(arena, filter_count + 1);
+	String8 const delim = str8_literal(",");
+	String8JoinParams const join_params = { .separator = str8_literal(";") };
+
+	// NOTE(Dedrick): IFileDialog expects extension filters in the format: "*.txt;*.text".
+	for (u64 i = 0; i < filter_count; ++i) {
+		String8List const exts = str8_list_split_by_char(arena, filters[i].extensions, delim, STRING_SPLIT_FLAG_NONE);
+		String8List fmt_exts = {};
+		for (String8Node const *node = exts.first; node != nullptr; node = node->next) {
+			str8_list_pushf(arena, &fmt_exts, "*.%.*s", static_cast<s32>(node->string.size), node->string.data);
+		}
+		String8 const ext_filter = str8_list_join(arena, fmt_exts, &join_params);
+		String8 const display_name = str8f(
+			arena,
+			"%.*s (%.*s)",
+			static_cast<s32>(filters[i].display_name.size), filters[i].display_name.data,
+			static_cast<s32>(ext_filter.size), ext_filter.data
+		);
+		filter_spec[i].pszName = reinterpret_cast<WCHAR const *>(str16_from_8(arena, display_name).data);
+		filter_spec[i].pszSpec = reinterpret_cast<WCHAR const *>(str16_from_8(arena, ext_filter).data);
+	}
+	filter_spec[filter_count].pszName = L"All Files (*.*)";
+	filter_spec[filter_count].pszSpec = L"*.*";
+
+	*out_count = static_cast<UINT>(filter_count + 1);
+	return filter_spec;
+}
+
+auto dk::plt_file_dialog_pick_file(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8 {
+	using Microsoft::WRL::ComPtr;
+
+	String8 result = {};
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	ComPtr<IFileDialog> dialog = {};
+	if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&dialog)))) {
+		FILEOPENDIALOGOPTIONS options = {};
+		dialog->GetOptions(&options);
+		dialog->SetOptions(options | PLT_W32_FILE_DIALOG_DEFAULT_FLAGS);
+
+		UINT filter_spec_count = 0;
+		COMDLG_FILTERSPEC const *const filter_spec = plt_w32_create_filter_specs(
+			scratch.arena, filters, filter_count, &filter_spec_count
+		);
+		if (filter_spec_count > 0) {
+			dialog->SetFileTypes(filter_spec_count, filter_spec);
+		}
+
+		HWND const parent_hwnd = parent != nullptr
+			? static_cast<HWND>(RGFW_window_getHWND(const_cast<RGFW_window *>(parent)))
+			: nullptr;
+		if (SUCCEEDED(dialog->Show(parent_hwnd))) {
+			ComPtr<IShellItem> selected_item{};
+			if (SUCCEEDED(dialog->GetResult(&selected_item))) {
+				PWSTR path = nullptr;
+				if (SUCCEEDED(selected_item->GetDisplayName(SIGDN_FILESYSPATH, &path))) {
+					if (path != nullptr) {
+						String16 const path16 = {
+							.data = reinterpret_cast<u16 *>(path),
+							.size = static_cast<u64>(lstrlenW(path))
+						};
+						result = path_normalize_from_str8(arena, str8_from_16(scratch.arena, path16));
+						CoTaskMemFree(path);
+					}
+				}
+			}
+		}
+	}
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::plt_file_dialog_pick_multiple_files(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8List {
+	using Microsoft::WRL::ComPtr;
+	
+}
+
+auto dk::plt_file_dialog_save(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index) noexcept -> String8 {
+	using Microsoft::WRL::ComPtr;
+	
+}
+
+auto dk::plt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) noexcept -> String8 {
+	using Microsoft::WRL::ComPtr;
+
+}
+
 extern auto entry_point(int argc, char **argv) noexcept -> int;
 
 auto dk::plt_w32_main_thread_entry(int argc, WCHAR **wargv) noexcept -> int {
