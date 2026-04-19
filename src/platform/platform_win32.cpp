@@ -562,6 +562,27 @@ auto dk::plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void {
 	WakeAllConditionVariable(&entity->cond_var.handle);
 }
 
+auto dk::plt_show_in_file_browser(String8 path) noexcept -> void {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String8 const path_copy = str8_copy(scratch.arena, path);
+	for (u64 i = 0; i < path_copy.size; ++i) {
+		if (path_copy[i] == '/') {
+			const_cast<u8 *>(path_copy.data)[i] = '\\';
+		}
+	}
+	String16 const path16 = str16_from_8(scratch.arena, path_copy);
+	SFGAOF flags = 0;
+	PIDLIST_ABSOLUTE list = nullptr;
+	if (path16.size > 0 &&
+		SUCCEEDED(SHParseDisplayName(reinterpret_cast<WCHAR const *>(path16.data), nullptr, &list, 0, &flags))
+	) {
+		HRESULT const hr = SHOpenFolderAndSelectItems(list, 0, nullptr, 0);
+		CoTaskMemFree(list);
+		(void)hr;
+	}
+	scratch_end(scratch);
+}
+
 extern auto entry_point(int argc, char **argv) noexcept -> int;
 
 // TODO(Dedrick): Write main entry point through winmain.

@@ -5,6 +5,7 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <shellapi.h>
+#include <ShlObj_core.h>
 #include <processthreadsapi.h>
 #include <bcrypt.h>
 

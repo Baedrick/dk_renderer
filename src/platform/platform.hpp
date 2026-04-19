@@ -93,6 +93,8 @@ namespace dk {
 	auto plt_cond_var_wait_rw_r(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8;
 	auto plt_cond_var_signal(PLT_Handle cond_var) noexcept -> void;
 	auto plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void;
+
+	auto plt_show_in_file_browser(String8 path) noexcept -> void;
 }
 
 #ifdef DK_PLATFORM_WIN32
