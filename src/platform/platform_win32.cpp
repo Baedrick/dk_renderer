@@ -34,12 +34,6 @@ auto dk::plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void {
 	LeaveCriticalSection(&plt_w32_context.entity_mutex);
 }
 
-auto dk::plt_w32_main_thread_entry(int argc, char **argv) noexcept -> int {
-	(void)argc;
-	(void)argv;
-	return 0;
-}
-
 auto dk::plt_w32_thread_entry(void *params) noexcept -> DWORD {
 	PLT_W32_Entity *const entity = static_cast<PLT_W32_Entity *>(params);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_THREAD);
@@ -585,13 +579,7 @@ auto dk::plt_show_in_file_browser(String8 path) noexcept -> void {
 
 extern auto entry_point(int argc, char **argv) noexcept -> int;
 
-// TODO(Dedrick): Write main entry point through winmain.
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_show_cmd) {
-	(void)instance;
-	(void)prev_instance;
-	(void)lp_cmd_line;
-	(void)n_show_cmd;
-
+auto dk::plt_w32_main_thread_entry(int argc, WCHAR **wargv) noexcept -> int {
 	if (AttachConsole(ATTACH_PARENT_PROCESS)) {
 		std::FILE *fp = nullptr;
 		(void)freopen_s(&fp, "CONOUT$", "w", stdout);
@@ -600,61 +588,67 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_lin
 	}
 
 	{
-		dk::plt_w32_context.perf_frequency = 1;
+		plt_w32_context.perf_frequency = 1;
 		LARGE_INTEGER freq{};
 		if (QueryPerformanceFrequency(&freq)) {
-			dk::plt_w32_context.perf_frequency = freq.QuadPart;
+			plt_w32_context.perf_frequency = freq.QuadPart;
 		}
 	}
 	{
 		SYSTEM_INFO sys_info = {};
 		GetSystemInfo(&sys_info);
 
-		dk::PLT_SystemInfo *info = &dk::plt_w32_context.system_info;
-		info->logical_processor_count = static_cast<dk::u32>(sys_info.dwNumberOfProcessors);
+		PLT_SystemInfo *info = &plt_w32_context.system_info;
+		info->logical_processor_count = static_cast<u32>(sys_info.dwNumberOfProcessors);
 		info->page_size = sys_info.dwPageSize;
 	}
 	{
-		dk::PLT_ProcessInfo *info = &dk::plt_w32_context.process_info;
+		PLT_ProcessInfo *info = &plt_w32_context.process_info;
 		info->pid = GetCurrentProcessId();
 	}
 
-	dk::ThreadContext *const thread_context = dk::thread_context_alloc();
-	dk::thread_context_select(thread_context);
+	ThreadContext *const thread_context = thread_context_alloc();
+	thread_context_select(thread_context);
 
-	int argc = 0;
-	LPWSTR *argvw = CommandLineToArgvW(GetCommandLineW(), &argc);
-	if (argvw == nullptr) {
-		return 0;
-	}
-
-	dk::ArenaParams constexpr args_arena_params = {
-		.reserve_size = dk::mega_bytes(1),
-		.commit_size = dk::kilo_bytes(32)
+	ArenaParams constexpr args_arena_params = {
+		.reserve_size = mega_bytes(1),
+		.commit_size = kilo_bytes(32)
 	};
-	dk::Arena *args_arena = dk::arena_alloc(&args_arena_params);
+	Arena *args_arena = arena_alloc(&args_arena_params);
 
-	char **argv = dk::arena_push_array<char *>(args_arena, argc + 1);
+	char **argv = arena_push_array<char *>(args_arena, argc + 1);
 	for (int i = 0; i < argc; ++i) {
-		dk::String16 const arg16 = dk::str16_cstring(reinterpret_cast<dk::u16 const *>(argvw[i]));
-		dk::String8 const arg8 = dk::str8_from_16(args_arena, arg16);
+		String16 const arg16 = str16_cstring(reinterpret_cast<u16 const *>(wargv[i]));
+		String8 const arg8 = str8_from_16(args_arena, arg16);
 		argv[i] = const_cast<char *>(reinterpret_cast<char const *>(arg8.data));
 	}
 	argv[argc] = nullptr;
-	LocalFree(static_cast<void *>(argvw));
 
-	InitializeCriticalSection(&dk::plt_w32_context.entity_mutex);
-	dk::plt_w32_context.entity_arena = dk::arena_alloc();
+	InitializeCriticalSection(&plt_w32_context.entity_mutex);
+	plt_w32_context.entity_arena = arena_alloc();
 
 	int const result = entry_point(argc, argv);
 
-	dk::arena_release(dk::plt_w32_context.entity_arena);
-	DeleteCriticalSection(&dk::plt_w32_context.entity_mutex);
+	arena_release(plt_w32_context.entity_arena);
+	DeleteCriticalSection(&plt_w32_context.entity_mutex);
 
-	dk::arena_release(args_arena);
+	arena_release(args_arena);
 
-	dk::thread_context_select(nullptr);
-	dk::thread_context_release(thread_context);
+	thread_context_select(nullptr);
+	thread_context_release(thread_context);
 
+	return result;
+}
+
+// TODO(Dedrick): Add compile switch for console builds.
+int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prev_instance, PWSTR lp_cmd_line, int n_show_cmd) {
+	(void)instance;
+	(void)prev_instance;
+	(void)lp_cmd_line;
+	(void)n_show_cmd;
+
+	CoInitializeEx(0, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	int const result = dk::plt_w32_main_thread_entry(__argc, __wargv);
+	CoUninitialize();
 	return result;
 }

@@ -9,6 +9,7 @@
 #include <processthreadsapi.h>
 #include <bcrypt.h>
 
+#pragma comment(lib, "ole32")
 #pragma comment(lib, "shell32")
 #pragma comment(lib, "kernel32")
 #pragma comment(lib, "bcrypt")
@@ -69,6 +70,6 @@ namespace dk {
 	auto plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity *;
 	auto plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void;
 
-	auto plt_w32_main_thread_entry(int argc, char **argv) noexcept -> int;
+	auto plt_w32_main_thread_entry(int argc, WCHAR **wargv) noexcept -> int;
 	auto plt_w32_thread_entry(void *params) noexcept -> DWORD;
 }
