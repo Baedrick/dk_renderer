@@ -614,9 +614,8 @@ auto dk::plt_w32_main_thread_entry(int argc, WCHAR **wargv) noexcept -> int {
 		.reserve_size = mega_bytes(1),
 		.commit_size = kilo_bytes(32)
 	};
-	Arena *args_arena = arena_alloc(&args_arena_params);
-
-	char **argv = arena_push_array<char *>(args_arena, argc + 1);
+	Arena *const args_arena = arena_alloc(&args_arena_params);
+	char **const argv = arena_push_array<char *>(args_arena, argc + 1);
 	for (int i = 0; i < argc; ++i) {
 		String16 const arg16 = str16_cstring(reinterpret_cast<u16 const *>(wargv[i]));
 		String8 const arg8 = str8_from_16(args_arena, arg16);
