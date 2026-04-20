@@ -105,7 +105,7 @@ namespace dk {
 
 	auto plt_file_dialog_pick_file(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8;
 	auto plt_file_dialog_pick_multiple_files(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8List;
-	auto plt_file_dialog_save(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index) noexcept -> String8;
+	auto plt_file_dialog_save(Arena *arena, RGFW_window const *parent, String8 default_name, PLT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index) noexcept -> String8;
 	auto plt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) noexcept -> String8;
 }
 
