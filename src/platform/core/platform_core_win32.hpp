@@ -4,9 +4,6 @@
 
 #define NOMINMAX
 #include <Windows.h>
-#include <wrl/client.h>
-#include <shellapi.h>
-#include <ShlObj_core.h>
 #include <processthreadsapi.h>
 #include <bcrypt.h>
 
@@ -54,11 +51,6 @@ namespace dk {
 		};
 	};
 
-	FILEOPENDIALOGOPTIONS constexpr PLT_W32_FILE_DIALOG_COMMON_FLAGS =
-		FOS_PATHMUSTEXIST
-		| FOS_FORCEFILESYSTEM
-		| FOS_NOCHANGEDIR;
-
 	struct PLT_W32_Context {
 		PLT_SystemInfo system_info;
 		PLT_ProcessInfo process_info;
@@ -76,8 +68,6 @@ namespace dk {
 	auto plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity *;
 	auto plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void;
 
-	auto plt_w32_create_filter_specs(Arena *arena, PLT_FileDialogFilter const *filters, u64 filter_count, UINT *out_count) -> COMDLG_FILTERSPEC *;
-
-	auto plt_w32_main_thread_entry(int argc, WCHAR **wargv) noexcept -> int;
-	auto plt_w32_thread_entry(void *params) noexcept -> DWORD;
+	auto plt_w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> int;
+	auto plt_w32_thread_entry_caller(void *params) noexcept -> DWORD;
 }
