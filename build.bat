@@ -52,10 +52,10 @@ if "%all%"=="1" (
 )
 
 :: --- Compile/Link Time Definitions -------------------------------------------
-set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++20 /EHsc /Zc:__cplusplus /Fo..\.tmp\ %compile_flags%
+set cl_common=  /I..\src\ /nologo /FC /Z7 /W4 /WX /std:c++20 /EHsc /Zc:__cplusplus /Fo..\.tmp\ -D_CRT_SECURE_NO_WARNINGS %compile_flags%
 set cl_debug=   call cl /Od /MTd /D_DEBUG /RTC1 %cl_common%
 set cl_release= call cl /O2 /MT /DNDEBUG %cl_common%
-set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /SUBSYSTEM:WINDOWS /pdbaltpath:%%%%_PDB%%%%
+set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /pdbaltpath:%%%%_PDB%%%%
 set cl_out=     /out:
 set cl_linker=  
 
