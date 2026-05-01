@@ -11472,8 +11472,6 @@ RGFW_key RGFW_physicalToMappedKey(RGFW_key key) {
         case VK_PAUSE:    return RGFW_keyPause;
         default: return RGFW_keyNULL;
     }
-
-    return RGFW_keyNULL;
 }
 
 RGFW_bool RGFW_window_fetchSize(RGFW_window* win, i32* w, i32* h) {
