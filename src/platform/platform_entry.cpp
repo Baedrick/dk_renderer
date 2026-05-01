@@ -1,9 +1,11 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
+
 #ifdef DK_PLATFORM_GRAPHICAL
 	plt_gfx_init();
 #endif
+
 	int const result = entry_point(argc, argv);
 	return result;
 }

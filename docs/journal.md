@@ -1,3 +1,20 @@
+### 2026-05-01: Platform Core & Graphics Separation
+I separated the platform layer into core systems and graphical interfaces. This
+distinction allows the engine to support both graphical applications, like the
+viewer, and console applications, like the asset compiler, without running
+unnecessary code like COM initialization for console applications. I also
+refactored the platform entry point to use a shared initialization path,
+ensuring common codebase setup is executed before branching into specific
+application logic.
+
+### 2026-04-20: File & Window Dialogs
+I ported Win32 file dialog functions to integrate with the engine's memory
+model and string structures from my other project. The translation process
+highlighted the need for further path manipulation utilities, such as
+normalization, which I am leaving for a future update. I also implemented a
+native graphical dialog box for error reporting to the user, although I may just
+use IMGUI for all of the viewer's user interface.
+
 ### 2026-04-08: Atomic Operations
 I spent some time familiarizing myself with atomic operations to implement them
 as the foundation for lock-free algorithms within the engine. My immediate use
