@@ -101,6 +101,8 @@ namespace dk {
 	auto plt_cond_var_signal(PLT_Handle cond_var) noexcept -> void;
 	auto plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void;
 
+	auto plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void;
+
 	auto plt_show_in_file_browser(String8 path) noexcept -> void;
 
 	auto plt_file_dialog_pick_file(Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8;

@@ -556,6 +556,22 @@ auto dk::plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void {
 	WakeAllConditionVariable(&entity->cond_var.handle);
 }
 
+auto dk::plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const title16 = str16_from_8(scratch.arena, title);
+	String16 const message16 = str16_from_8(scratch.arena, message);
+	HWND const parent_hwnd = parent != nullptr
+		? static_cast<HWND>(RGFW_window_getHWND(const_cast<RGFW_window *>(parent)))
+		: nullptr;
+	MessageBoxW(
+		parent_hwnd,
+		reinterpret_cast<WCHAR const *>(message16.data),
+		reinterpret_cast<WCHAR const *>(title16.data),
+		MB_OK | (error ? MB_ICONERROR : 0)
+	);
+	scratch_end(scratch);
+}
+
 auto dk::plt_show_in_file_browser(String8 path) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String8 const path_copy = str8_copy(scratch.arena, path);
