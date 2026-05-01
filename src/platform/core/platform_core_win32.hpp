@@ -7,7 +7,6 @@
 #include <processthreadsapi.h>
 #include <bcrypt.h>
 
-#pragma comment(lib, "ole32")
 #pragma comment(lib, "shell32")
 #pragma comment(lib, "kernel32")
 #pragma comment(lib, "bcrypt")

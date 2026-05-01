@@ -6,6 +6,8 @@
 #include <shellapi.h>
 #include <ShlObj_core.h>
 
+#pragma comment(lib, "ole32")
+
 namespace dk {
 	FILEOPENDIALOGOPTIONS constexpr PLT_W32_FILE_DIALOG_COMMON_FLAGS =
 		FOS_PATHMUSTEXIST
