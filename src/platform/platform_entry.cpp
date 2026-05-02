@@ -2,7 +2,7 @@
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 
-#ifdef DK_PLATFORM_GRAPHICAL
+#ifdef DK_BUILD_PLATFORM_GRAPHICAL
 	plt_gfx_init();
 #endif
 

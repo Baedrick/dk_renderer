@@ -3,7 +3,7 @@
 #pragma once
 
 #include "core/platform_core.hpp"
-#ifdef DK_PLATFORM_GRAPHICAL
+#ifdef DK_BUILD_PLATFORM_GRAPHICAL
 #	include "gfx/platform_gfx.hpp"
 #endif
 #include "platform_entry.hpp"
@@ -14,7 +14,7 @@
 #	error "Platform core layer not implemented for this platform."
 #endif
 
-#ifdef DK_PLATFORM_GRAPHICAL
+#ifdef DK_BUILD_PLATFORM_GRAPHICAL
 #	ifdef DK_PLATFORM_WIN32
 #		include "gfx/platform_gfx_win32.hpp"
 #	else

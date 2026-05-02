@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-#define DK_PLATFORM_GRAPHICAL
+#define DK_BUILD_PLATFORM_GRAPHICAL
 
 #include "base/base.hpp"
 #include "platform/platform.hpp"

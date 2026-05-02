@@ -616,7 +616,7 @@ auto dk::plt_w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> i
 	return result;
 }
 
-#ifdef DK_PLATFORM_GRAPHICAL
+#ifdef DK_BUILD_PLATFORM_GRAPHICAL
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prev_instance, PWSTR lp_cmd_line, int n_show_cmd) {
 	(void)instance;
 	(void)prev_instance;
