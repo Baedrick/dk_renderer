@@ -165,4 +165,26 @@ namespace dk {
 			*top = (*top)->next;
 		}
 	}
+
+	template <typename T>
+	auto forward_list_queue_push(T **first, T **last, T *node) noexcept -> void {
+		node->next = nullptr;
+		if (*first == nullptr) {
+			*first = *last = node;
+		}
+		else {
+			(*last)->next = node;
+			*last = node;
+		}
+	}
+
+	template <typename T>
+	auto forward_list_queue_pop(T **first, T **last, T *node) noexcept -> void {
+		if (*first == *last) {
+			*first = *last = nullptr;
+		}
+		else {
+			*first = (*first)->next;
+		}
+	}
 }
