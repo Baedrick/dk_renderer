@@ -2,6 +2,10 @@
 
 #pragma once
 
+#ifndef DK_PLATFORM_GFX_INCLUDED
+#	define DK_PLATFORM_GFX_INCLUDED
+#endif
+
 #define RGFW_OPENGL
 #include "thirdparty/rgfw/RGFW.h"
 

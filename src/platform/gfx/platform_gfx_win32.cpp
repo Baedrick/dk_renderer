@@ -2,6 +2,8 @@
 
 auto dk::plt_gfx_init() noexcept -> void {
 	
+
+	// TODO(Dedrick): DPI Awareness.
 }
 
 auto dk::plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void {

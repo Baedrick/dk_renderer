@@ -6,7 +6,6 @@
 #ifdef DK_BUILD_PLATFORM_GRAPHICAL
 #	include "gfx/platform_gfx.hpp"
 #endif
-#include "platform_entry.hpp"
 
 #ifdef DK_PLATFORM_WIN32
 #	include "core/platform_core_win32.hpp"

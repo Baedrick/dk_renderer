@@ -2,7 +2,7 @@
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 
-#ifdef DK_BUILD_PLATFORM_GRAPHICAL
+#ifdef DK_PLATFORM_GFX_INCLUDED
 	plt_gfx_init();
 #endif
 
@@ -10,7 +10,7 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	return result;
 }
 
-auto dk::thread_entry_point(PLT_ThreadFunction *func, void *func_params) noexcept -> void {
+auto dk::thread_entry_point(void (*func)(void *params), void *func_params) noexcept -> void {
 	ThreadContext *thread_context = thread_context_alloc();
 	thread_context_select(thread_context);
 	func(func_params);

@@ -5,5 +5,5 @@ extern auto entry_point(int argc, char **argv) noexcept -> int;
 
 namespace dk {
 	auto main_thread_entry_point(int argc, char **argv) noexcept -> int;
-	auto thread_entry_point(PLT_ThreadFunction *func, void *func_params) noexcept -> void;
+	auto thread_entry_point(void (*func)(void *params), void *func_params) noexcept -> void;
 }
