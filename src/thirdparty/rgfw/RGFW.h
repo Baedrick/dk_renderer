@@ -1,3 +1,7 @@
+// NOTE(Dedrick): This has been modified to support a linked list of RGFW_window
+// for the graphical platform layer. This is NOT an unmodified copy of the
+// original RGFW 2.0.0-dev code.
+
 /*
 *
 *	RGFW 2.0.0-dev
@@ -3012,6 +3016,11 @@ typedef struct RGFW_windowInternal {
 } RGFW_windowInternal;
 
 struct RGFW_window {
+	// NOTE(Dedrick): Additions for platform graphical layer vvv
+	RGFW_window *next;
+	RGFW_window *prev;
+	// NOTE(Dedrick): Additions for platform graphical layer ^^^
+
 	RGFW_window_src src; /*!< src window data */
 	RGFW_windowInternal internal; /*!< internal window data that is not specific to the OS */
 	void* userPtr; /* ptr for user data */
