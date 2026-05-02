@@ -7,6 +7,11 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 #endif
 
 	int const result = entry_point(argc, argv);
+
+#ifdef DK_PLATFORM_GFX_INCLUDED
+	plt_gfx_shutdown();
+#endif
+
 	return result;
 }
 

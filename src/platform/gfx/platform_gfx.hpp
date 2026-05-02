@@ -6,11 +6,17 @@
 #	define DK_PLATFORM_GFX_INCLUDED
 #endif
 
+#define RGFW_NATIVE
 #define RGFW_OPENGL
+#define RGFW_SNPRINTF stb_snprintf
 #include "thirdparty/rgfw/RGFW.h"
 
 namespace dk {
 	auto plt_gfx_init() noexcept -> void;
+	auto plt_gfx_shutdown() noexcept -> void;
+
+	auto plt_window_open(char const *title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window *;
+	auto plt_window_close(RGFW_window *window) noexcept -> void;
 
 	auto plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void;
 

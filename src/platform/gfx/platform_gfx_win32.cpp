@@ -1,9 +1,39 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-auto dk::plt_gfx_init() noexcept -> void {
-	
+dk::PLT_W32_GfxContext *dk::plt_w32_gfx_context;
 
-	// TODO(Dedrick): DPI Awareness.
+auto dk::plt_gfx_init() noexcept -> void {
+	Arena *arena = arena_alloc();
+	plt_w32_gfx_context = arena_push<PLT_W32_GfxContext>(arena);
+	plt_w32_gfx_context->arena = arena;
+
+	// NOTE(Dedrick): Set DPI awareness. Should be set in application manifest. Sob :(
+	using w32_SetProcessDpiAwarenessContext = BOOL (void *value);
+	w32_SetProcessDpiAwarenessContext *SetProcessDpiAwarenessContext_func = nullptr;
+	HMODULE const user32 = LoadLibraryA("user32.dll");
+	if (user32 != nullptr) {
+		SetProcessDpiAwarenessContext_func =
+			reinterpret_cast<w32_SetProcessDpiAwarenessContext *>(
+				GetProcAddress(user32, "SetProcessDpiAwarenessContext")
+			);
+		FreeLibrary(user32);
+	}
+	if (SetProcessDpiAwarenessContext_func != nullptr) {
+		void *const w32_DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = reinterpret_cast<void *>(-4);
+		SetProcessDpiAwarenessContext_func(w32_DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	}
+}
+
+auto dk::plt_gfx_shutdown() noexcept -> void {
+	arena_release(plt_w32_gfx_context->arena);
+}
+
+auto dk::plt_window_open(char const *title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window * {
+
+}
+
+auto dk::plt_window_close(RGFW_window *window) noexcept -> void {
+
 }
 
 auto dk::plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void {
