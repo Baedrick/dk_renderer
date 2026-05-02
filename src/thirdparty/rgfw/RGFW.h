@@ -1,6 +1,7 @@
-// NOTE(Dedrick): This has been modified to support a linked list of RGFW_window
-// for the graphical platform layer. This is NOT an unmodified copy of the
-// original RGFW 2.0.0-dev code.
+// NOTE(Dedrick): This has been modified to support the codebase. This is NOT an
+// unmodified copy of the original RGFW 2.0.0-dev code. Changes are:
+// 1. Added pointers for RGFW_window to construct a linked list for the
+//    graphical platform layer.
 
 /*
 *
