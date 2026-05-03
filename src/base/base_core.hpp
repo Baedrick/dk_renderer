@@ -179,12 +179,69 @@ namespace dk {
 	}
 
 	template <typename T>
-	auto forward_list_queue_pop(T **first, T **last, T *node) noexcept -> void {
+	auto forward_list_queue_pop(T **first, T **last) noexcept -> void {
 		if (*first == *last) {
 			*first = *last = nullptr;
 		}
 		else {
 			*first = (*first)->next;
 		}
+	}
+
+	template <typename T>
+	auto list_insert_after(T **first, T **last, T*pos, T *node) noexcept -> void {
+		if (*first == nullptr) {
+			*first = *last = node;
+			node->next = nullptr;
+			node->prev = nullptr;
+		}
+		else if (pos == nullptr) {
+			node->next = *first;
+			(*first)->prev = node;
+			*first = node;
+			node->prev = nullptr;
+		}
+		else if (pos == *last) {
+			(*last)->next = node;
+			node->prev = *last;
+			*last = node;
+			node->next = nullptr;
+		}
+		else {
+			if (pos->next != nullptr) {
+				pos->next->prev = node;
+			}
+			node->next = pos->next;
+			pos->next = node;
+			node->prev = pos;
+		}
+	}
+
+	template <typename T>
+	auto list_push_front(T **first, T **last, T *node) noexcept -> void {
+		list_insert_after(first, last, nullptr, node);
+	}
+
+	template <typename T>
+	auto list_push_back(T **first, T **last, T *node) noexcept -> void {
+		list_insert_after(first, last, *last, node);
+	}
+
+	template <typename T>
+	auto list_remove(T **first, T **last, T *node) noexcept -> void {
+		if (node == *first) {
+			*first = node->next;
+		}
+		if (node == *last) {
+			*last = node->prev;
+		}
+		if (node->prev != nullptr) {
+			node->prev->next = node->next;
+		}
+		if (node->next != nullptr) {
+			node->next->prev = node->prev;
+		}
+		node->next = nullptr;
+		node->prev = nullptr;
 	}
 }
