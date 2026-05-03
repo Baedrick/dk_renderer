@@ -2,6 +2,28 @@
 
 dk::PLT_W32_GfxContext *dk::plt_w32_gfx_context;
 
+auto dk::plt_w32_window_alloc() noexcept -> RGFW_window * {
+	RGFW_window *result = plt_w32_gfx_context->free_window;
+	if (result != nullptr) {
+		forward_list_stack_pop(&plt_w32_gfx_context->free_window);
+		std::memset(result, 0, sizeof(RGFW_window));
+	}
+	else {
+		result = arena_push<RGFW_window>(plt_w32_gfx_context->arena);
+	}
+	list_push_back(
+		&plt_w32_gfx_context->first_window,
+		&plt_w32_gfx_context->last_window,
+		result
+	);
+	return result;
+}
+
+auto dk::plt_w32_window_release(RGFW_window *window) noexcept -> void {
+	list_remove(&plt_w32_gfx_context->first_window, &plt_w32_gfx_context->last_window, window);
+	forward_list_stack_push(&plt_w32_gfx_context->free_window, window);
+}
+
 auto dk::plt_gfx_init() noexcept -> void {
 	Arena *arena = arena_alloc();
 	plt_w32_gfx_context = arena_push<PLT_W32_GfxContext>(arena);
@@ -28,12 +50,18 @@ auto dk::plt_gfx_shutdown() noexcept -> void {
 	arena_release(plt_w32_gfx_context->arena);
 }
 
-auto dk::plt_window_open(char const *title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window * {
-
+auto dk::plt_window_open(String8 title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window * {
+	RGFW_window *window = plt_w32_window_alloc();
+	window = RGFW_createWindowPtr(reinterpret_cast<char const *>(title.data), x, y, w, h, flags, window);
+	return window;
 }
 
 auto dk::plt_window_close(RGFW_window *window) noexcept -> void {
-
+	if (window == nullptr) {
+		return;
+	}
+	RGFW_window_closePtr(window);
+	plt_w32_window_release(window);
 }
 
 auto dk::plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void {
