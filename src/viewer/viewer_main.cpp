@@ -4,9 +4,11 @@
 
 #include "base/base.hpp"
 #include "platform/platform.hpp"
+#include "viewer/viewer.hpp"
 
 #include "base/base.cpp"
 #include "platform/platform.cpp"
+#include "viewer/viewer.cpp"
 
 auto entry_point(int argc, char **argv) noexcept -> int {
 	(void)argc;
