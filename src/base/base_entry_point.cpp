@@ -1,14 +1,21 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
+	plt_set_thread_name(str8_literal("main_thread"));
 
-#ifdef DK_PLATFORM_GFX_INCLUDED
+#if defined(DK_PLATFORM_GFX_INCLUDED)
 	plt_gfx_init();
+#endif
+#if defined(DK_RHI_INCLUDED)
+	rhi_init();
 #endif
 
 	int const result = entry_point(argc, argv);
 
-#ifdef DK_PLATFORM_GFX_INCLUDED
+#if defined(DK_RHI_INCLUDED)
+	rhi_shutdown();
+#endif
+#if defined(DK_PLATFORM_GFX_INCLUDED)
 	plt_gfx_shutdown();
 #endif
 
