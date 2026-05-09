@@ -2,7 +2,9 @@
 
 #pragma once
 
-#define NOMINMAX
+#ifndef NOMINMAX
+#	define NOMINMAX
+#endif
 #include <Windows.h>
 #include <processthreadsapi.h>
 #include <bcrypt.h>
