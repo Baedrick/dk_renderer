@@ -2,12 +2,12 @@
 
 #pragma once
 
-#ifdef DK_PROFILE_ENABLE
+#if defined(DK_PROFILE_ENABLE)
 #	define TRACY_ENABLE
-#	ifdef DK_COMPILER_MSVC
+#	if defined(DK_COMPILER_MSVC)
 #		define TracyFunction __FUNCSIG__
 #	endif
-#	ifdef DK_PLATFORM_WIN32
+#	if defined(DK_PLATFORM_WIN32)
 #		ifndef NOMINMAX
 #			define NOMINMAX
 #		endif
