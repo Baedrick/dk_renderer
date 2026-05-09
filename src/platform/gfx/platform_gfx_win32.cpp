@@ -111,8 +111,8 @@ auto dk::plt_w32_create_filter_specs(
 
 	TempArena const scratch = scratch_begin(&arena, 1);
 	COMDLG_FILTERSPEC *const filter_spec = arena_push_array<COMDLG_FILTERSPEC>(arena, filter_count + 1);
-	String8 const delims = str8_literal(",");
-	String8JoinParams const join_params = { .separator = str8_literal(";") };
+	String8 const delims = ","_str8;
+	String8JoinParams const join_params = { .separator = ";"_str8 };
 
 	// NOTE(Dedrick): IFileDialog expects extension filters in the format: "*.txt;*.text".
 	for (u64 i = 0; i < filter_count; ++i) {
@@ -263,7 +263,7 @@ auto dk::plt_file_dialog_save(
 		);
 		if (filter_spec_count > 0) {
 			dialog->SetFileTypes(filter_spec_count, filter_spec);
-			String8 const delims = str8_literal(",");
+			String8 const delims = ","_str8;
 			String8List const exts = str8_list_split_by_char(scratch.arena, filters[0].extensions, delims, STRING_SPLIT_FLAG_NONE);
 			if (exts.first != nullptr) {
 				String16 const ext16 = str16_from_8(scratch.arena, exts.first->string);

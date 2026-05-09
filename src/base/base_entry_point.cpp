@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
-	plt_set_thread_name(str8_literal("main_thread"));
+	plt_set_thread_name("main_thread"_str8);
 
 #if defined(DK_PLATFORM_GFX_INCLUDED)
 	plt_gfx_init();

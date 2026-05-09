@@ -75,10 +75,7 @@ namespace dk {
 	auto cstring8_length(u8 const *cstr) noexcept -> u64;
 	auto cstring16_length(u16 const *cstr) noexcept -> u64;
 
-	template <u64 N>
-	auto str8_literal(char const (&cstr)[N]) noexcept -> String8 {
-		return { .data = reinterpret_cast<u8 const *>(cstr), .size = N - 1 };
-	}
+	auto operator ""_str8(char const *cstr, u64 size) noexcept -> String8;
 
 	// NOTE(Dedrick): Usage printf("My String: %.*s\n", DK_STR8_VARG(my_string));
 	#define DK_STR8_VARG(s) static_cast<int>((s).size), reinterpret_cast<char const *>((s).data)

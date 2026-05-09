@@ -2,6 +2,7 @@
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "thirdparty/stb/stb_sprintf.h"
+#include "base_string.hpp"
 #undef STB_SPRINTF_IMPLEMENTATION
 
 auto dk::String8::operator[](u64 index) const noexcept -> u8 const & {
@@ -66,6 +67,10 @@ auto dk::cstring16_length(u16 const *cstr) noexcept -> u64 {
 		for (; cstr[length] != '\0'; ++length) {}
 	}
 	return length;
+}
+
+auto dk::operator""_str8(char const *cstr, u64 size) noexcept -> String8 {
+	return { .data = reinterpret_cast<u8 const *>(cstr), .size = size };
 }
 
 auto dk::str8(u8 const *str, u64 size) noexcept -> String8 {

@@ -7,7 +7,7 @@ auto dk::vw_init(int /*argc*/, char **/*argv*/) noexcept -> void {
 	Arena *arena = arena_alloc();
 	vw_context = arena_push<VW_Context>(arena);
 	vw_context->arena = arena;
-	vw_context->window = plt_window_open(str8_literal("RGFW"), 0, 0, 800, 600, RGFW_windowCenter);
+	vw_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
 }
 
 auto dk::vw_frame() noexcept -> b8 {
