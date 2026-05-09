@@ -658,3 +658,12 @@ auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
 	}
 	return result;
 }
+
+auto dk::u64_hash_from_seed_str8(u64 seed, String8 str) noexcept -> u64 {
+	u64 const result = u64_hash_from_seed_data(seed, str.data, str.size);
+	return result;
+}
+auto dk::u64_hash_from_str8(String8 str) noexcept -> u64 {
+	u64 const result = u64_hash_from_seed_str8(5381, str);
+	return result;
+}

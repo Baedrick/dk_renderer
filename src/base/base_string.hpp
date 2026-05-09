@@ -137,4 +137,7 @@ namespace dk {
 
 	auto str8_from_16(Arena *arena, String16 str) noexcept -> String8;
 	auto str16_from_8(Arena *arena, String8 str) noexcept -> String16;
+
+	auto u64_hash_from_seed_str8(u64 seed, String8 str) noexcept -> u64;
+	auto u64_hash_from_str8(String8 str) noexcept -> u64;
 }
