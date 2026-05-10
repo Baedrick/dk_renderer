@@ -1,0 +1,98 @@
+### Timeline
+- 30 December 2027
+- 19 Feb 2027 (Career Fair)
+    - Minimum viable product to show potential employers.
+    - Must have everything planned implemented but doesn't need to be polished.
+- 22 Mar 2027 (Capstone Presentation & Thesis)
+    - Polish from feedback during career fair.
+    - Slides and thesis written for work done.
+
+### Templates
+- [ ][Must Have] 
+- [ ][Should Have] 
+- [ ][Nice To Have] 
+
+### Toy Viewer
+- [ ][Must Have] Application command/event list
+- [ ][Must Have] Inter-Process Communication with Toy Compiler
+- [x][Must Have] Top level functions for init, update, and shutdown
+- [x][Must Have] Update build script to have viewer as a build target
+
+### Toy Compiler
+- [ ][Must Have] Inter-Process Communication with Toy Viewer
+- [ ][Must Have] Top level functions for init, update, and shutdown
+
+### Codebase
+- [ ][Must Have] Process launching, joining, pipe reading
+- [ ][Must Have] Command line argument parsing for entry point
+- [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
+- [ ][Must Have] Hello Triangle to validate graphics code
+- [ ][Must Have] Import Dear ImGui
+- [ ][Must Have] Ring buffer for Inter-Process Communication
+- [ ][Must Have] Command line argument parsing for entry point
+- [ ][Must Have] Path helpers and normalization
+- [ ][Must Have] Render Graph for automatic ordering of passes
+- [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
+- [ ][Should Have] Render Graph resource aliasing and allocation
+- [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
+- [x][Must Have] Change string8 literal constructor to a user defined literal
+- [x][Must Have] String hashing helpers
+- [x][Must Have] Add byte hashing functions
+- [x][Must Have] Import xxHash v0.8.3
+- [x][Must Have] Set up OpenGL function loading in RHI layer
+- [x][Must Have] Render Hardware Interface layer stubs
+- [x][Must Have] Import glad v2.0.8 for opengl function loading
+- [x][Must Have] Fix tracy incorrectly allowing windows.h to define min and max
+- [x][Must Have] Window allocation in platform graphical layer
+- [x][Must Have] List queue helpers: push front, push back, insert, remove
+- [x][Must Have] Forward list queue helpers
+- [x][Must Have] Modify RGFW with window pointers for intrusive list
+- [x][Must Have] Move common entry point to base layer
+- [x][Must Have] Update build script for msvc to select entry for console/window builds
+- [x][Must Have] Split win32 platform layer into core and graphical implementation
+- [x][Must Have] Win32 platform layer message box for graphical messages
+- [x][Must Have] Win32 platform layer file dialog open, open multiple, save, pick folder
+- [x][Must Have] Move WinMain initialization to common win32 entry point for initialization
+- [x][Must Have] Win32 platform layer show in file browser
+- [x][Must Have] Import RGFW v2.0.0-dev for window abstraction library
+- [x][Must Have] Win32 platform layer shared memory creation for Inter-Process Communication
+- [x][Must Have] Win32 platform layer directory creation
+- [x][Must Have] Atomic intrinsic functions for common types (u32, u64, pointers)
+- [x][Must Have] Mutex creation, locking, and release
+- [x][Must Have] Conditional variable creation, waiting, signalling, release
+- [x][Must Have] Read write mutex creation, locking, and release
+- [x][Must Have] Mutex creation, locking, and release
+- [x][Must Have] Win32 platform layer thread entry point
+- [x][Must Have] Thread creation, joining, detaching, and entry for Win32 platform layer
+- [x][Must Have] Update readme with AI usage declaration
+- [x][Must Have] Add profiling functions to base layer
+- [x][Must Have] Import and set up tracy profiler v13.1
+- [x][Must Have] Clean up code variable naming consistency
+- [x][Must Have] Support variadic arguments for log formatting
+- [x][Must Have] Logging context and log scopes for defer logging of information and errors
+- [x][Must Have] Glue and stringify macros for log scopes
+- [x][Must Have] String indentation formatting
+- [x][Must Have] Win32 platform layer high resolution time querying/measuring
+- [x][Must Have] Clean up string and ensure code naming is consistent
+- [x][Must Have] Win32 file reading, writing, and querying of file attributes
+- [x][Must Have] Platform file reading interface
+- [x][Must Have] Win32 WinMain wide char argument parsing and conversion for common entry point
+- [x][Must Have] String splitting and joining
+- [x][Must Have] String utf8 and utf16 conversion functions
+- [x][Must Have] String access operator overloading
+- [x][Must Have] Update copyright notices to be more concise (less characters)
+- [x][Must Have] Update build script to support build targets for building multiple applications
+- [x][Must Have] String formatting and integer conversion
+- [x][Must Have] Import stb_snprintf for string formatting
+- [x][Must Have] String constructors, stylization, matching, slicing
+- [x][Must Have] Character (char) classification and conversion functions
+- [x][Must Have] Add thread local scratch arenas
+- [x][Must Have] Thread context allocation and selection for scratch arenas
+- [x][Must Have] Add address sanitizer functions for memory allocations
+- [x][Must Have] Arena allocator default parameters for allocation
+- [x][Must Have] Arena allocators with chaining and uses virtual memory allocation
+- [x][Must Have] Win32 platform layer virtual memory allocation
+- [x][Must Have] Update build script to build using c++20 for designated initializers
+- [x][Must Have] Move main from viewer compile file to platform layer for common code initialization
+- [x][Must Have] Create stub files and core defines for the base layer
+- [x][Must Have] Batch script for building as unity build
