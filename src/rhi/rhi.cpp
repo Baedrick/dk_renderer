@@ -1,13 +1,9 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-#define GLAD_GL_IMPLEMENTATION
-#include "thirdparty/glad/gl.h"
-#undef GLAD_GL_IMPLEMENTATION
+#include "rhi_core.cpp"
 
-auto dk::rhi_init() noexcept -> void {
-	gladLoaderLoadGL();
-}
-
-auto dk::rhi_shutdown() noexcept -> void {
-
-}
+#if defined(DK_RHI_BACKEND_OPENGL)
+#	include "rhi_opengl.cpp"
+#else
+#	error "RHI backend not specified."
+#endif

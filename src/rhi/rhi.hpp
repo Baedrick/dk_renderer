@@ -6,12 +6,13 @@
 #	define DK_RHI_INCLUDED
 #endif
 
-// TODO(Dedrick): Move OpenGL implementation to its own
-// backend file. This is a render hardware interface.
-#include "thirdparty/glad/gl.h"
+// TODO(Dedrick): Mechanism for choosing backend during compile.
+#define DK_RHI_BACKEND_OPENGL
 
-namespace dk {
-	auto rhi_init() noexcept -> void;
-	auto rhi_shutdown() noexcept -> void;
-}
+#include "rhi_core.hpp"
 
+#if defined(DK_RHI_BACKEND_OPENGL)
+#	include "rhi_opengl.hpp"
+#else
+#	error "RHI backend not specified."
+#endif

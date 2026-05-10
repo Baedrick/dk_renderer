@@ -36,6 +36,7 @@
 - [ ][Should Have] Render Graph resource aliasing and allocation
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] Move RHI OpenGL to its own file
 - [x][Must Have] Change string8 literal constructor to a user defined literal
 - [x][Must Have] String hashing helpers
 - [x][Must Have] Add byte hashing functions
