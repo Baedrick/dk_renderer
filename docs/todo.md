@@ -24,15 +24,14 @@
 
 ### Codebase
 - [ ][Must Have] Process launching, joining, pipe reading
-- [ ][Must Have] Command line argument parsing for entry point
 - [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
 - [ ][Must Have] Hello Triangle to validate graphics code
 - [ ][Must Have] Import Dear ImGui
 - [ ][Must Have] Ring buffer for Inter-Process Communication
-- [ ][Must Have] Command line argument parsing for entry point
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
 - [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
+- [ ][Should Have] Command line argument parsing for entry point
 - [ ][Should Have] Render Graph resource aliasing and allocation
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
