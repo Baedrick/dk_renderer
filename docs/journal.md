@@ -1,11 +1,41 @@
 ### 2026-05-10: Hashing
+I implemented hashing utilities to support fast, non-cryptographic hashing of
+arbitrary data blocks and strings. This is a prerequisite for building custom
+hash tables later in the engine's development. Rather than writing an algorithm
+from scratch or relying on the STL, I chose to integrate the xxHash library. Its
+reputation for extreme speed and low collision rates aligns with my performance
+goals. Furthermore, its single-header design made the integration process
+trivial; it drops cleanly into the codebase without introducing complex build
+dependencies, or unnecessary abstraction layers. This ensures my codebase and
+build script remains easy to reason about, given that its just a unity build.
 
+### 2026-05-10: OpenGL and Render Hardware Interface (RHI)
+I am currently holding off on implementing a full Render Hardware Interface (RHI)
+because I do not yet know the exact requirements my GPU-driven rendering pipeline
+will demand. Building abstractions too early often leads to unnecessary complexity
+and "what-if" code. However, when the time comes, I plan to model the interface
+heavily after WebGPU. Its design is sane, and maps well to modern graphics APIs.
+Furthermore, Sebastien Aaltonen is also designing his RHI around WebGPU concepts.
+Following his approach provides me with an implicit mentor, which is invaluable
+since I don't have a senior graphics programmer in my immediate circle to learn
+from.
 
-### 2026-05-10: OpenGL, RHI, and Viewer layer
-
+One notable deviation from WebGPU will be the need for persistent mapping. I know
+that my engine will require persistent memory mapping for high-performance data
+transfers to the GPU, a feature WebGPU currently lacks. I will have to design a
+custom solution for this within the RHI when I eventually tackle it. For now,
+the viewer layer will interact with OpenGL directly to keep things simple while
+I prototype.
 
 ### 2026-05-03: Opening & Closing a Window
-
+I implemented the ability to open and close windows in my rendering engine.
+Rather than relying on a heavy framework like GLFW, I integrated RGFW. Its
+lightweight, single-header nature makes it trivial to drop into the project.
+Crucially, it allows me to easily modify the source code to support my custom
+arena memory allocation strategy . Furthermore, unlike GLFW, which forces a
+callback-driven architecture that complicates state management, RGFW exposes a
+simple even queue. This allows me to poll for events within the main loop,
+keeping the control flow simple and idiomatic to the rest of the codebase.
 
 ### 2026-05-01: Platform Core & Graphics Separation
 I separated the platform layer into core systems and graphical interfaces. This
