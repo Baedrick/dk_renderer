@@ -8,6 +8,5 @@
 #include "base_string.hpp"
 #include "base_profile.hpp"
 #include "base_thread_context.hpp"
-#include "base_command_args.hpp"
 #include "base_log.hpp"
 #include "base_entry_point.hpp"

@@ -2,6 +2,16 @@
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	plt_set_thread_name("main_thread"_str8);
+	TempArena const scratch = scratch_begin(nullptr, 0);
+
+	String8List cmd_args_strings = {};
+	for (int arg_index = 0; arg_index < argc; ++arg_index) {
+		str8_list_push(
+			scratch.arena,
+			&cmd_args_strings,
+			str8_cstring(reinterpret_cast<u8 *>(argv[arg_index]))
+		);
+	}
 
 #if defined(DK_PLATFORM_GFX_INCLUDED)
 	plt_gfx_init();
@@ -10,7 +20,7 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	rhi_init();
 #endif
 
-	int const result = entry_point(argc, argv);
+	int const result = entry_point(cmd_args_strings);
 
 #if defined(DK_RHI_INCLUDED)
 	rhi_shutdown();
@@ -19,6 +29,7 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	plt_gfx_shutdown();
 #endif
 
+	scratch_end(scratch);
 	return result;
 }
 

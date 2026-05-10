@@ -12,7 +12,7 @@ namespace dk {
 
 	extern VW_Context *vw_context;
 
-	auto vw_init(int argc, char **argv) noexcept -> void;
+	auto vw_init(String8List args) noexcept -> void;
 	auto vw_frame() noexcept -> b8;
 	auto vw_shutdown() noexcept -> void;
 }

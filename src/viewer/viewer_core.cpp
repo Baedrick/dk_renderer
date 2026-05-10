@@ -2,7 +2,7 @@
 
 dk::VW_Context *dk::vw_context;
 
-auto dk::vw_init(int /*argc*/, char **/*argv*/) noexcept -> void {
+auto dk::vw_init(String8List /*args*/) noexcept -> void {
 	ZoneScoped;
 	Arena *arena = arena_alloc();
 	vw_context = arena_push<VW_Context>(arena);

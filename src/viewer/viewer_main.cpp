@@ -12,8 +12,8 @@
 #include "rhi/rhi.cpp"
 #include "viewer/viewer.cpp"
 
-auto entry_point(int argc, char **argv) noexcept -> int {
-	dk::vw_init(argc, argv);
+auto entry_point(dk::String8List args) noexcept -> int {
+	dk::vw_init(args);
 	for (dk::b8 quit = false; !quit; ) {
 		quit = dk::vw_frame();
 		FrameMark;
