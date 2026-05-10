@@ -1,3 +1,12 @@
+### 2026-05-10: Hashing
+
+
+### 2026-05-10: OpenGL, RHI, and Viewer layer
+
+
+### 2026-05-03: Opening & Closing a Window
+
+
 ### 2026-05-01: Platform Core & Graphics Separation
 I separated the platform layer into core systems and graphical interfaces. This
 distinction allows the engine to support both graphical applications, like the
