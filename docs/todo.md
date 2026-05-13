@@ -24,6 +24,7 @@
 
 ### Codebase
 - [ ][Must Have] Process launching, joining, pipe reading
+- [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
 - [ ][Must Have] Hello Triangle to validate graphics code
 - [ ][Must Have] Import Dear ImGui
