@@ -33,6 +33,7 @@
 - [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
 - [ ][Should Have] Command line argument parsing for entry point
 - [ ][Should Have] Render Graph resource aliasing and allocation
+- [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [x][Must Have] Move RHI OpenGL to its own file
