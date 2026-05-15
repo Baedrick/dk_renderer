@@ -1,5 +1,5 @@
 # Toy Renderer
-Physically based toy renderer.
+Real-time, physically based, gpu-driven toy renderer build with OpenGL.
 
 # AI Usage Declaration
 I used Large Language Models (LLMs) as a tool to assist with specific
@@ -15,16 +15,19 @@ documentation for better clarity.
 Beyond these specific uses, I am solely responsible for the project's design,
 architecture, and every line of code in the final implementation.
 
+# Building
+TODO
+
 # Codebase
 The codebase has the following top-level structure.
 ```
 toy-viewer
-|-- docs         # Documents, journals, project management
+|-- docs         # Development logs and planning documentation
 |-- src          # All source code
 |-- build.bat    # Build script
 `-- README.md
 ```
 After setting up the codebase and building, the following directories will
-also exist:
+also exist in the root level of the codebase:
 - `bin`: All build artifacts.
 - `.tmp`: All intermediate files when building.
