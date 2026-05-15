@@ -1,3 +1,16 @@
+### 2026-05-15: Documentation & Project Planning
+The academic semester has begun and this engine is now officially my capstone
+project. Development will continue alongside my internship as required by my
+university curriculum. Part of the project criteria involves demonstrating
+formal planning through roadmapping and rigorous time allocation. While the
+final presentation is several months away, I am choosing to push ahead of the
+schedule to ensure the project is in a showcase-ready state for the university
+career fair. I spent this session updating the project documentation and
+defining specific development milestone goals for grading and visibility for
+potential employers. Work done will be more sporadic moving forward due to the
+concurrent internship, but maintaining a clear roadmap ensures progress remains
+focused during available windows.
+
 ### 2026-05-10: Hashing
 I implemented hashing utilities to support fast, non-cryptographic hashing of
 arbitrary data blocks and strings. This is a prerequisite for building custom
@@ -184,10 +197,11 @@ asset compiler. Keeping it simple ensures I can focus on code instead of
 fighting the toolchain.
 
 ### 2026-02-24: Repository created
-I am starting a toy viewer, a personal graphics engine and sandbox for getting
-proficiency in GPU-driven renering, that is, offloading culling and draw call
-generation to the GPU. My goal is to move beyond academic theory and appraoch
-this like a professional: implement, profile, optimize.
+I am starting a toy viewer as my Capstone Project . It is a personal graphics
+engine and sandbox for getting proficiency in GPU-driven renering, that is,
+offloading culling and draw call generation to the GPU. My goal is to move
+beyond academic theory and appraoch this like a professional: implement,
+profile, optimize.
 
 In school, I was taught to use modern C++ and heavy rely on Object Oriented
 Programming (OOP), template metaprogramming, and the STL. During my team-based
@@ -203,8 +217,8 @@ structs, and calling OpenGL directly rather than hiding it behind leaky wrappers
 
 Once the renderer is stable, I plan to explore higher-level systems like a render
 graph for automatic pass ordering, and real-time global illumination like
-Surfels or Dynamic Diffuse GI (DDGI). These plans are flexible; as a technical
-artist, I want the freedom to follow wherever technical curiosity leads.
+Surfels or Dynamic Diffuse GI (DDGI). These plans are flexible; I want the
+freedom to follow wherever technical curiosity leads.
 
 ### yyyy-mm-dd: Summary
 - Goal
