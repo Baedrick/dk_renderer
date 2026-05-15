@@ -12,6 +12,11 @@
 #include "thirdparty/rgfw/RGFW.h"
 
 namespace dk {
+	struct PLT_FileDialogFilter {
+		String8 display_name; ///< e.g. "Text files"
+		String8 extensions; ///< e.g. "txt,text"
+	};
+
 	auto plt_gfx_init() noexcept -> void;
 	auto plt_gfx_shutdown() noexcept -> void;
 
