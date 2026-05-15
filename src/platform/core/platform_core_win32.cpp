@@ -297,6 +297,18 @@ auto dk::plt_sleep(u64 milliseconds) noexcept -> void {
 	Sleep(static_cast<DWORD>(milliseconds));
 }
 
+auto dk::plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> PLT_Handle {
+	(void)params;
+	return plt_handle_invalid();
+}
+
+auto dk::plt_process_join(PLT_Handle process, u64 end_time_us, u64 *out_exit_code) noexcept -> b8 {
+	(void)process;
+	(void)end_time_us;
+	(void)out_exit_code;
+	return false;
+}
+
 auto dk::plt_set_thread_name(String8 name) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);

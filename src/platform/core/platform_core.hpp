@@ -34,12 +34,12 @@ namespace dk {
 		PLT_FileFlags flags;
 	};
 
-	using PLT_ThreadFunction = void (void *params);
-
-	struct PLT_FileDialogFilter {
-		String8 display_name; ///< e.g. "Text files"
-		String8 extensions; ///< e.g. "txt,text"
+	struct PLT_ProcessLaunchParams {
+		String8List cmd_line;
+		String8 directory;
 	};
+
+	using PLT_ThreadFunction = void (void *params);
 
 	auto operator==(PLT_Handle a, PLT_Handle b) noexcept -> b8;
 	auto operator!=(PLT_Handle a, PLT_Handle b) noexcept -> b8;
@@ -73,6 +73,9 @@ namespace dk {
 
 	auto plt_now_microseconds() noexcept -> u64;
 	auto plt_sleep(u64 milliseconds) noexcept -> void;
+
+	auto plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> PLT_Handle;
+	auto plt_process_join(PLT_Handle process, u64 end_time_us, u64 *out_exit_code) noexcept -> b8;
 
 	auto plt_set_thread_name(String8 name) noexcept -> void;
 	auto plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> PLT_Handle;
