@@ -9,11 +9,13 @@
     - Hello Model via simple forward rendering pass to validate graphics code
       - Damaged Helmet as sample model to validate
     - View imported model resource in ui as a tree of resources (materials, textures, meshes)
+    - Main light shadows
 - 9 Aug 2026 - Milestone 2
     - Focus: GPU-Driven Core & Render Graph
     - General memory allocator for persistent GPU buffer mapping
     - GPU-driven drawing with frustum culling and indirect draw commands
     - Render Graph for automatic pass ordering and synchronization barriers
+    - Skybox/HDRI for the background and ambient light
     - Deferred shading of opaque objects
     - Forward shading of transparent objects
 - 6 December 2026 - Milestone 3
@@ -79,7 +81,8 @@
 
 ### Codebase
 - [ ][Must Have] Draft of readme document with project description, how to build, and goals
-- [ ][Must Have] Process launching, joining, pipe reading
+- [ ][Must Have] Process launching, joining
+- [ ][Must Have] Win32 semaphores for IPC synchronization
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
 - [ ][Must Have] Import Dear ImGui

@@ -14,3 +14,17 @@ documentation for better clarity.
 
 Beyond these specific uses, I am solely responsible for the project's design,
 architecture, and every line of code in the final implementation.
+
+# Codebase
+The codebase has the following top-level structure.
+```
+toy-viewer
+|-- docs         # Documents, journals, project management
+|-- src          # All source code
+|-- build.bat    # Build script
+`-- README.md
+```
+After setting up the codebase and building, the following directories will
+also exist:
+- `bin`: All build artifacts.
+- `.tmp`: All intermediate files when building.
