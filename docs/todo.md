@@ -1,37 +1,94 @@
 ### Timeline
-- 30 December 2027
-- 19 Feb 2027 (Career Fair)
-    - Minimum viable product to show potential employers.
+- 15 June 2026 - Milestone 1
+    - Focus: Project scaffolding, Asset Pipeline, Basic Rendering
+    - Project proposal submission
+    - Build script for both viewer and cooker targets
+    - Process launching, joining, and pipe reading to read the cooker's stdout to viewer's ui
+    - Toy Cooker: Parse basic glTF files and serialize them into a custom binary format
+    - Toy Viewer: Load custom binary format and display viewer
+    - Hello Model via simple forward rendering pass to validate graphics code
+      - Damaged Helmet as sample model to validate
+    - View imported model resource in ui as a tree of resources (materials, textures, meshes)
+- 9 Aug 2026 - Milestone 2
+    - Focus: GPU-Driven Core & Render Graph
+    - General memory allocator for persistent GPU buffer mapping
+    - GPU-driven drawing with frustum culling and indirect draw commands
+    - Render Graph for automatic pass ordering and synchronization barriers
+    - Deferred shading of opaque objects
+    - Forward shading of transparent objects
+- 6 December 2026 - Milestone 3
+    - Focus: Advanced Lighting & Debug Rendering
+    - Implement real-time global illumination (VXGI, DDGI, or Surfels)
+    - Light clustering for efficient shading of multiple light sources
+    - Debug rendering of passes
+- 19 Feb 2027 - Career Fair
+    - Focus: Minimum viable project (MVP) to show potential employers
     - Must have everything planned implemented but doesn't need to be polished.
-- 22 Mar 2027 (Capstone Presentation & Thesis)
+    - Command palette for quick access to rendering configurations and settings.
+- 22 Mar 2027 - Milestone 4
+    - Focus: Academic deliverables
     - Polish from feedback during career fair.
-    - Slides and thesis written for work done.
+    - Draft final thesis, highlighting how classroom knowledge was applied and expanded on.
+    - Prepare presentation slides and rehearse oral demonstration.
 
-### Templates
-- [ ][Must Have] 
-- [ ][Should Have] 
-- [ ][Nice To Have] 
+### Capstone Assessment Domains
+- Quantity and Quality of Technical Work
+  - Candidates are expected to complete a capstone project that is of reasonable
+    complexity, industry relevance, and that allows scope for the candidate to
+    demonstrate the various aspects of software engineering and information security.
+- Application of Knowledge
+  - Candidates are expected to utilize knowledge gained in the classroom, both
+    across a spectrum of modules, as well as in depth within modules to complete
+    their project, in addition to utilizing knowledge beyond the classroom to do so.
+- Analysis and Solution Formulation
+  - Candidates are expected to analyse existing works, and, combined with
+    analysis of the project problem, propose appropriate, detailed approaches
+    and solutions to the problem.
+- Project Management and Individual Initiative
+  - Candidates are expected to practise appropriate time and resource
+    management, and to take initiative and ownership of their project
+- Professional and Interpersonal Conduct
+  - Candidates are expected to keep in contact with their assigned Academic
+    Supervisor and demonstrate strong professionalism in completing their
+    project.
+- Written Communication and Reports
+  - Candidates are expected to demonstrate written communication skills via progress
+    reports at the end of every intermediate trimester, building up to a final
+    project report at the end of the project
+- Oral Presentation and Project Output Showcase
+  - Candidates are expected to demonstrate effective technical presentation
+    skills through the preparation and delivery of a project presentation, and
+    optionally demonstration of the completed works
 
 ### Toy Viewer
+- [ ][Must Have] Piped reading of cooker logs to display
+- [ ][Must Have] Console in UI to show logs
+- [ ][Must Have] View imported model resources in the UI as a tree of resources
+- [ ][Must Have] Hello Model to validate graphics code
+- [ ][Must Have] Hello Triangle to validate graphics code
 - [ ][Must Have] Application command/event list
-- [ ][Must Have] Inter-Process Communication with Toy Compiler
+- [ ][Must Have] Inter-Process Communication with Toy Cooker
+- [ ][Nice To Have] Hot-reloading of cooked model binaries
 - [x][Must Have] Top level functions for init, update, and shutdown
 - [x][Must Have] Update build script to have viewer as a build target
 
-### Toy Compiler
+### Toy Cooker
 - [ ][Must Have] Inter-Process Communication with Toy Viewer
 - [ ][Must Have] Top level functions for init, update, and shutdown
+- [ ][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
+- [ ][Must Have] Draft of readme document with project description, how to build, and goals
 - [ ][Must Have] Process launching, joining, pipe reading
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
-- [ ][Must Have] Hello Triangle to validate graphics code
 - [ ][Must Have] Import Dear ImGui
 - [ ][Must Have] Ring buffer for Inter-Process Communication
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
 - [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
+- [ ][Should Have] Mechanism for manually and automatically choosing rendering backend
+- [ ][Should Have] Light clustering for shading
 - [ ][Should Have] Command line argument parsing for entry point
 - [ ][Should Have] Render Graph resource aliasing and allocation
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
