@@ -81,7 +81,7 @@
 
 ### Codebase
 - [ ][Must Have] Draft of readme document with project description, how to build, and goals
-- [ ][Must Have] Process launching, joining
+- [ ][Must Have] Process launching and joining
 - [ ][Must Have] Win32 semaphores for IPC synchronization
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
