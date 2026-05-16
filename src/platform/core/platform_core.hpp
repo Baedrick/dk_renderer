@@ -14,6 +14,7 @@ namespace dk {
 
 	struct PLT_ProcessInfo {
 		u32 pid;
+		String8List environment;
 	};
 
 	using PLT_AccessFlags = u32;
@@ -34,9 +35,17 @@ namespace dk {
 		PLT_FileFlags flags;
 	};
 
+	using PLT_ProcessLaunchFlags = u32;
+	enum : u32 {
+		PLT_PROCESS_LAUNCH_FLAG_NONE = 0,
+		PLT_PROCESS_LAUNCH_FLAG_INHERIT_ENV = 1u << 0,
+		PLT_PROCESS_LAUNCH_FLAG_NO_WINDOW = 1u << 1,
+	};
+	
 	struct PLT_ProcessLaunchParams {
 		String8List cmd_line;
-		String8 directory;
+		String8 working_path;
+		PLT_ProcessLaunchFlags flags;
 	};
 
 	using PLT_ThreadFunction = void (void *params);
@@ -76,6 +85,7 @@ namespace dk {
 
 	auto plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> PLT_Handle;
 	auto plt_process_join(PLT_Handle process, u64 end_time_us, u64 *out_exit_code) noexcept -> b8;
+	auto plt_process_kill(PLT_Handle process) noexcept -> b8;
 
 	auto plt_set_thread_name(String8 name) noexcept -> void;
 	auto plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> PLT_Handle;

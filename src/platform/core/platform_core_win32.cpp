@@ -322,6 +322,12 @@ auto dk::plt_process_join(PLT_Handle process, u64 end_time_us, u64 *out_exit_cod
 	return false;
 }
 
+auto dk::plt_process_kill(PLT_Handle process) noexcept -> b8 {
+    HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
+    b8 const terminated = TerminateProcess(handle, 999);
+    return terminated;
+}
+
 auto dk::plt_set_thread_name(String8 name) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);
@@ -567,6 +573,28 @@ auto dk::plt_w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> i
 
 	ThreadContext *const thread_context = thread_context_alloc();
 	thread_context_select(thread_context);
+
+	Arena *arena = arena_alloc();
+	{
+		plt_w32_context.arena = arena;
+		PLT_ProcessInfo *info = &plt_w32_context.process_info;
+		{
+			WCHAR *proc_env = GetEnvironmentStringsW();
+			WCHAR *curr = proc_env;
+			while (*curr != L'\0') {
+				WCHAR *end = curr;
+				while (*end != L'\0') {
+					++end;
+				}
+				u64 const size = static_cast<u64>(end - curr);
+				String16 const env16 = str16(reinterpret_cast<u16 *>(curr), size);
+				String8 const env = str8_from_16(arena, env16);
+				str8_list_push(arena, &info->environment, env);
+				curr = end + 1;
+			}
+			FreeEnvironmentStringsW(proc_env);
+		}
+	}
 
 	InitializeCriticalSection(&plt_w32_context.entity_mutex);
 	plt_w32_context.entity_arena = arena_alloc();

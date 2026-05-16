@@ -53,6 +53,8 @@ namespace dk {
 	};
 
 	struct PLT_W32_Context {
+		Arena *arena;
+
 		PLT_SystemInfo system_info;
 		PLT_ProcessInfo process_info;
 		u64 perf_frequency;
