@@ -369,9 +369,6 @@ auto dk::plt_mutex_alloc() noexcept -> PLT_Handle {
 }
 
 auto dk::plt_mutex_release(PLT_Handle mutex) noexcept -> void {
-	if (mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_MUTEX);
 	DeleteCriticalSection(&entity->mutex.handle);
@@ -379,18 +376,12 @@ auto dk::plt_mutex_release(PLT_Handle mutex) noexcept -> void {
 }
 
 auto dk::plt_mutex_scope_enter(PLT_Handle mutex) noexcept -> void {
-	if (mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_MUTEX);
 	EnterCriticalSection(&entity->mutex.handle);
 }
 
 auto dk::plt_mutex_scope_leave(PLT_Handle mutex) noexcept -> void {
-	if (mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_MUTEX);
 	LeaveCriticalSection(&entity->mutex.handle);
@@ -407,45 +398,30 @@ auto dk::plt_rw_mutex_alloc() noexcept -> PLT_Handle {
 }
 
 auto dk::plt_rw_mutex_release(PLT_Handle rw_mutex) noexcept -> void {
-	if (rw_mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
 	plt_w32_entity_release(entity);
 }
 
 auto dk::plt_rw_mutex_scope_enter_w(PLT_Handle rw_mutex) noexcept -> void {
-	if (rw_mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
 	AcquireSRWLockExclusive(&entity->rw_mutex.handle);
 }
 
 auto dk::plt_rw_mutex_scope_leave_w(PLT_Handle rw_mutex) noexcept -> void {
-	if (rw_mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
 	ReleaseSRWLockExclusive(&entity->rw_mutex.handle);
 }
 
 auto dk::plt_rw_mutex_scope_enter_r(PLT_Handle rw_mutex) noexcept -> void {
-	if (rw_mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
 	AcquireSRWLockShared(&entity->rw_mutex.handle);
 }
 
 auto dk::plt_rw_mutex_scope_leave_r(PLT_Handle rw_mutex) noexcept -> void {
-	if (rw_mutex == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_RW_MUTEX);
 	ReleaseSRWLockShared(&entity->rw_mutex.handle);
@@ -462,18 +438,12 @@ auto dk::plt_cond_var_alloc() noexcept -> PLT_Handle {
 }
 
 auto dk::plt_cond_var_release(PLT_Handle cond_var) noexcept -> void {
-	if (cond_var == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 	plt_w32_entity_release(entity);
 }
 
 auto dk::plt_cond_var_wait(PLT_Handle cond_var, PLT_Handle mutex, u64 end_time_us) noexcept -> b8 {
-	if (cond_var == plt_handle_invalid() || mutex == plt_handle_invalid()) {
-		return false;
-	}
 	b8 result = false;
 	u64 const begin_time_us = plt_now_microseconds();
 	if (end_time_us > begin_time_us) {
@@ -496,9 +466,6 @@ auto dk::plt_cond_var_wait(PLT_Handle cond_var, PLT_Handle mutex, u64 end_time_u
 }
 
 auto dk::plt_cond_var_wait_rw_w(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8 {
-	if (cond_var == plt_handle_invalid() || rw_mutex == plt_handle_invalid()) {
-		return false;
-	}
 	b8 result = false;
 	u64 const begin_time_us = plt_now_microseconds();
 	if (end_time_us > begin_time_us) {
@@ -522,9 +489,6 @@ auto dk::plt_cond_var_wait_rw_w(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 en
 }
 
 auto dk::plt_cond_var_wait_rw_r(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8 {
-	if (cond_var == plt_handle_invalid() || rw_mutex == plt_handle_invalid()) {
-		return false;
-	}
 	b8 result = false;
 	u64 const begin_time_us = plt_now_microseconds();
 	if (end_time_us > begin_time_us) {
@@ -548,18 +512,12 @@ auto dk::plt_cond_var_wait_rw_r(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 en
 }
 
 auto dk::plt_cond_var_signal(PLT_Handle cond_var) noexcept -> void {
-	if (cond_var == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 	WakeConditionVariable(&entity->cond_var.handle);
 }
 
 auto dk::plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void {
-	if (cond_var == plt_handle_invalid()) {
-		return;
-	}
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 	WakeAllConditionVariable(&entity->cond_var.handle);
