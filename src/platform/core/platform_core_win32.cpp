@@ -10,6 +10,19 @@ auto dk::plt_w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) no
 	return flags;
 }
 
+auto dk::plt_w32_sleep_ms_from_end_time_us(u64 end_time_us) noexcept -> DWORD {
+	if (end_time_us == U64_MAX) {
+		return INFINITE;
+	}
+	DWORD sleep_ms = 0;
+	u64 const begin_time_us = plt_now_microseconds();
+	if (begin_time_us < end_time_us) {
+		u64 const sleep_us = end_time_us - begin_time_us;
+		sleep_ms = static_cast<DWORD>((sleep_us + 999) / 1000);
+	}
+	return sleep_ms;
+}
+
 auto dk::plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity * {
 	PLT_W32_Entity *result = nullptr;
 	EnterCriticalSection(&plt_w32_context.entity_mutex);
@@ -444,44 +457,34 @@ auto dk::plt_cond_var_release(PLT_Handle cond_var) noexcept -> void {
 }
 
 auto dk::plt_cond_var_wait(PLT_Handle cond_var, PLT_Handle mutex, u64 end_time_us) noexcept -> b8 {
+	DWORD const sleep_ms = plt_w32_sleep_ms_from_end_time_us(end_time_us);
 	b8 result = false;
-	u64 const begin_time_us = plt_now_microseconds();
-	if (end_time_us > begin_time_us) {
+	if (sleep_ms > 0) {
 		PLT_W32_Entity *const entity_cv = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 		DK_ASSERT(entity_cv->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 		PLT_W32_Entity *const entity_mutex = reinterpret_cast<PLT_W32_Entity *>(mutex.v);
 		DK_ASSERT(entity_mutex->kind == PLT_W32_ENTITY_MUTEX);
-		u64 const microseconds_to_wait = end_time_us - begin_time_us;
-		u64 milliseconds_to_wait = microseconds_to_wait / 1000;
-		if (end_time_us == U64_MAX) {
-			milliseconds_to_wait = static_cast<u64>(INFINITE);
-		}
 		result = SleepConditionVariableCS(
 			&entity_cv->cond_var.handle,
 			&entity_mutex->mutex.handle,
-			static_cast<DWORD>(milliseconds_to_wait)
+			sleep_ms
 		) != FALSE;
 	}
 	return result;
 }
 
 auto dk::plt_cond_var_wait_rw_w(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8 {
+	DWORD const sleep_ms = plt_w32_sleep_ms_from_end_time_us(end_time_us);
 	b8 result = false;
-	u64 const begin_time_us = plt_now_microseconds();
-	if (end_time_us > begin_time_us) {
+	if (sleep_ms > 0) {
 		PLT_W32_Entity *const entity_cv = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 		DK_ASSERT(entity_cv->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 		PLT_W32_Entity *const entity_rw_mutex = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 		DK_ASSERT(entity_rw_mutex->kind == PLT_W32_ENTITY_RW_MUTEX);
-		u64 const microseconds_to_wait = end_time_us - begin_time_us;
-		u64 milliseconds_to_wait = microseconds_to_wait / 1000;
-		if (end_time_us == U64_MAX) {
-			milliseconds_to_wait = static_cast<u64>(INFINITE);
-		}
 		result = SleepConditionVariableSRW(
 			&entity_cv->cond_var.handle,
 			&entity_rw_mutex->rw_mutex.handle,
-			static_cast<DWORD>(milliseconds_to_wait),
+			sleep_ms,
 			0
 		) != FALSE;
 	}
@@ -489,22 +492,17 @@ auto dk::plt_cond_var_wait_rw_w(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 en
 }
 
 auto dk::plt_cond_var_wait_rw_r(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8 {
+	DWORD const sleep_ms = plt_w32_sleep_ms_from_end_time_us(end_time_us);
 	b8 result = false;
-	u64 const begin_time_us = plt_now_microseconds();
-	if (end_time_us > begin_time_us) {
+	if (sleep_ms > 0) {
 		PLT_W32_Entity *const entity_cv = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 		DK_ASSERT(entity_cv->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 		PLT_W32_Entity *const entity_rw_mutex = reinterpret_cast<PLT_W32_Entity *>(rw_mutex.v);
 		DK_ASSERT(entity_rw_mutex->kind == PLT_W32_ENTITY_RW_MUTEX);
-		u64 const microseconds_to_wait = end_time_us - begin_time_us;
-		u64 milliseconds_to_wait = microseconds_to_wait / 1000;
-		if (end_time_us == U64_MAX) {
-			milliseconds_to_wait = static_cast<u64>(INFINITE);
-		}
 		result = SleepConditionVariableSRW(
 			&entity_cv->cond_var.handle,
 			&entity_rw_mutex->rw_mutex.handle,
-			static_cast<DWORD>(milliseconds_to_wait),
+			sleep_ms,
 			CONDITION_VARIABLE_LOCKMODE_SHARED
 		) != FALSE;
 	}

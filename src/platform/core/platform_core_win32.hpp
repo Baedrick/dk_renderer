@@ -66,6 +66,8 @@ namespace dk {
 
 	auto plt_w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags;
 
+	auto plt_w32_sleep_ms_from_end_time_us(u64 end_time_us) noexcept -> DWORD;
+
 	auto plt_w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity *;
 	auto plt_w32_entity_release(PLT_W32_Entity *entity) noexcept -> void;
 
