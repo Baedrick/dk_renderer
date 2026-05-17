@@ -59,7 +59,8 @@ cooker_main.cpp
 ```
 If everything worked correctly, there will be a `bin` folder containing all
 artifacts required for the viewer to function. By default, `build.bat` builds
-all build targets in debug mode. See more information in `build.bat`.
+all build targets in debug mode. See more build configuration information in
+`build.bat`.
 
 # Codebase
 The codebase has the following top-level structure.
