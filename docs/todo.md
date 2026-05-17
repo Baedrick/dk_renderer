@@ -77,14 +77,13 @@
 ### Toy Cooker
 - [ ][Must Have] Inter-Process Communication with Toy Viewer
 - [ ][Must Have] Top level functions for init, update, and shutdown
-- [ ][Must Have] Update build script to have cooker as a build target
+- [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
 - [ ][Must Have] Draft of readme document with project description, how to build, and goals
 - [ ][Must Have] Command line argument parsing for entry point
 - [ ][Must Have] Win32 semaphores for IPC synchronization
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
-- [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
 - [ ][Must Have] Import Dear ImGui
 - [ ][Must Have] Ring buffer for Inter-Process Communication
 - [ ][Must Have] Path helpers and normalization
@@ -95,6 +94,7 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] Add glsl shaders to Spir-V compilation as build target
 - [x][Must Have] Dummy window for modern OpenGL context function loading before opening main window
 - [x][Should Have] Mechanism for manually and automatically choosing rendering backend
 - [x][Must Have] Process launching and joining
