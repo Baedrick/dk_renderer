@@ -16,7 +16,40 @@ Beyond these specific uses, I am solely responsible for the project's design,
 architecture, and every line of code in the final implementation.
 
 # Building
-TODO
+To build the binaries from source, you'll need [Microsoft C/C++ Build Tools v17
+(2022) or later](https://aka.ms/vs/17/release/vs_buildtools.exe). The codebase
+only supports compiling and linking with MSVC.
+
+### Build Steps
+Building the codebase is done through the terminal which is configured to call
+MSVC from the commandline. This is done by calling `vcvarsall.bat x64` which is
+included in the Microsoft C/C++ Build Tools. This script is automatically called
+by `x64 Native Tools Command Prompt for VS <year>`. This command prompt can be
+found by searching for `Native` from the Start Menu search.
+
+Ensure that MSVC compiler is accessible from the command line by running:
+```
+cl
+```
+If everything is set up correctly, you should see something like this:
+```
+Microsoft (R) C/C++ Optimizing Compiler Version 19.44.35221 for x64
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+usage: cl [ option... ] filename... [ /link linkoption... ]
+```
+From the terminal, `cd` to the root directory of the repository and run
+`build.bat` script by running the command. For a debug build:
+```
+build
+```
+For a release build:
+```
+build release
+```
+If everything worked correctly, there will be a `bin` folder containing all
+artifacts required for the viewer to function. By default, `build.bat` builds
+all build targets in debug mode. See more information in `build.bat`.
 
 # Codebase
 The codebase has the following top-level structure.
