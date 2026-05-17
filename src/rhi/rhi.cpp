@@ -2,8 +2,8 @@
 
 #include "rhi_core.cpp"
 
-#if defined(DK_RHI_BACKEND_OPENGL)
-#	include "rhi_opengl.cpp"
+#if DK_RHI_BACKEND == DK_RHI_BACKEND_OPENGL
+#	include "opengl/rhi_opengl.cpp"
 #else
 #	error "RHI backend not specified."
 #endif
