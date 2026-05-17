@@ -68,12 +68,10 @@ if not exist .tmp mkdir .tmp
 pushd bin
 if "%all%"=="1" (
     echo [building all targets]
+    set shaders=1
     set cooker=1
     set viewer=1
-    set shaders=1
 )
-if "%viewer%"=="1" set didbuild=1 && %compile% ..\src\viewer\viewer_main.cpp %compile_link% %out%viewer.exe || exit /b 1
-if "%cooker%"=="1" set didbuild=1 && %compile% ..\src\cooker\cooker_main.cpp %compile_link% %out%cooker.exe || exit /b 1
 if "%shaders%"=="1" (
     echo [building shaders]
     set didbuild=1
@@ -81,6 +79,8 @@ if "%shaders%"=="1" (
         %glslang% -G -o "%%~nxf.spv" "%%f" || exit /b 1
     )
 )
+if "%viewer%"=="1" set didbuild=1 && %compile% ..\src\viewer\viewer_main.cpp %compile_link% %out%viewer.exe || exit /b 1
+if "%cooker%"=="1" set didbuild=1 && %compile% ..\src\cooker\cooker_main.cpp %compile_link% %out%cooker.exe || exit /b 1
 popd
 
 if "%didbuild%"=="" (

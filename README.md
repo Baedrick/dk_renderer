@@ -47,6 +47,16 @@ For a release build:
 ```
 build release
 ```
+You should have similar output to the following:
+```
+[release mode]
+[msvc compile]
+[default mode, assuming `all` build]
+[building all targets]
+[building shaders]
+viewer_main.cpp
+cooker_main.cpp
+```
 If everything worked correctly, there will be a `bin` folder containing all
 artifacts required for the viewer to function. By default, `build.bat` builds
 all build targets in debug mode. See more information in `build.bat`.
