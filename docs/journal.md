@@ -1,3 +1,6 @@
+### 2026-05-17: Process Launching, RHI Backend Choosing, and OpenGL Bootstrap
+
+
 ### 2026-05-15: Documentation & Project Planning
 The academic semester has begun and this engine is now officially my capstone
 project. Development will continue alongside my internship as required by my
@@ -40,7 +43,7 @@ custom solution for this within the RHI when I eventually tackle it. For now,
 the viewer layer will interact with OpenGL directly to keep things simple while
 I prototype.
 
-### 2026-05-03: Opening & Closing a Window
+### 2026-05-03: Opening and Closing a Window
 I implemented the ability to open and close windows in my rendering engine.
 Rather than relying on a heavy framework like GLFW, I integrated RGFW. Its
 lightweight, single-header nature makes it trivial to drop into the project.
@@ -59,7 +62,7 @@ refactored the platform entry point to use a shared initialization path,
 ensuring common codebase setup is executed before branching into specific
 application logic.
 
-### 2026-04-20: File & Window Dialogs
+### 2026-04-20: File and Window Dialogs
 I ported Win32 file dialog functions to integrate with the engine's memory
 model and string structures from my other project. The translation process
 highlighted the need for further path manipulation utilities, such as
