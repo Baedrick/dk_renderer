@@ -80,8 +80,8 @@
 - [ ][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [ ][Must Have] Dummy window for modern OpenGL context function loading before opening main window
 - [ ][Must Have] Draft of readme document with project description, how to build, and goals
+- [ ][Must Have] Command line argument parsing for entry point
 - [ ][Must Have] Win32 semaphores for IPC synchronization
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Add glsl shaders to Spir-V compilation as build target
@@ -90,13 +90,13 @@
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
 - [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
-- [ ][Should Have] Mechanism for manually and automatically choosing rendering backend
 - [ ][Should Have] Light clustering for shading
-- [ ][Should Have] Command line argument parsing for entry point
 - [ ][Should Have] Render Graph resource aliasing and allocation
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] Dummy window for modern OpenGL context function loading before opening main window
+- [x][Should Have] Mechanism for manually and automatically choosing rendering backend
 - [x][Must Have] Process launching and joining
 - [x][Must Have] Update readme document with project structure
 - [x][Must Have] Move RHI OpenGL to its own file
