@@ -17,7 +17,7 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	plt_gfx_init();
 #endif
 #if defined(DK_RHI_INCLUDED)
-	rhi_init();
+	rhi_init(cmd_line_strings);
 #endif
 
 	int const result = entry_point(cmd_line_strings);

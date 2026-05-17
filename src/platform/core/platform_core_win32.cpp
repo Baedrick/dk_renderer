@@ -318,11 +318,11 @@ auto dk::plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> P
 	{
 		String8JoinParams join_params = {};
 		join_params.prefix = "\""_str8;
-		join_params.separator = "\" \""_str8;
 		join_params.postfix = "\""_str8;
+		join_params.separator = "\" \""_str8;
 		cmd = str8_list_join(scratch.arena, params->cmd_line, &join_params);
 	}
-	
+
 	String16 const cmd16 = str16_from_8(scratch.arena, cmd);
 	String16 const dir16 = str16_from_8(scratch.arena, params->working_dir);
 	

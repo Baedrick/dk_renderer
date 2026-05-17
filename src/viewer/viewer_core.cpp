@@ -4,10 +4,13 @@ dk::VW_Context *dk::vw_context;
 
 auto dk::vw_init(String8List args) noexcept -> void {
 	ZoneScoped;
+
 	Arena *arena = arena_alloc();
 	vw_context = arena_push<VW_Context>(arena);
 	vw_context->arena = arena;
 	vw_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
+	RGFW_window_setContext_OpenGL(vw_context->window, rhi_ogl_rgfw_context);
+	RGFW_window_makeCurrentContext_OpenGL(vw_context->window);
 
 	b8 is_parent = true;
 	for (String8Node const *node = args.first; node != nullptr; node = node->next) {
@@ -34,6 +37,10 @@ auto dk::vw_frame() noexcept -> b8 {
 			vw_context->quit = true;
 		}
 	}
+	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDrawArrays(1, 0, 3);
+	RGFW_window_swapBuffers_OpenGL(vw_context->window);
 	return vw_context->quit;
 }
 
