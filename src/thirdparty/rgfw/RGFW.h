@@ -2,6 +2,7 @@
 // unmodified copy of the original RGFW 2.0.0-dev code. Changes are:
 // 1. Added pointers for RGFW_window to construct a linked list for the
 //    graphical platform layer.
+// 2. Added declaration and definition for RGFW_window_setContext_OpenGL.
 
 /*
 *
@@ -2370,6 +2371,13 @@ RGFWDEF RGFW_bool RGFW_window_createContextPtr_OpenGL(RGFW_window* win, RGFW_glC
  * @return A pointer to the associated RGFW_glContext, or NULL if none exists or if the context is EGL-based.
 */
 RGFWDEF RGFW_glContext* RGFW_window_getContext_OpenGL(RGFW_window* win);
+
+/**!
+ * @brief Sets the OpenGL context associated with a window.
+ * @param win A pointer to the RGFW_window.
+ * @param ctx A pointer to the RGFW_glContext.
+*/
+RGFWDEF void RGFW_window_setContext_OpenGL(RGFW_window* win, RGFW_glContext* ctx);
 
 /**!
  * @brief Deletes and frees the OpenGL context.
@@ -4931,6 +4939,11 @@ RGFW_glContext* RGFW_window_createContext_OpenGL(RGFW_window* win, RGFW_glHints*
 RGFW_glContext* RGFW_window_getContext_OpenGL(RGFW_window* win) {
 	if (win->src.gfxType & RGFW_windowEGL) return NULL;
 	return win->src.ctx.native;
+}
+
+void RGFW_window_setContext_OpenGL(RGFW_window* win, RGFW_glContext* ctx) {
+	win->src.ctx.native = ctx;
+	win->src.gfxType = RGFW_gfxNativeOpenGL;
 }
 
 void RGFW_window_deleteContext_OpenGL(RGFW_window* win, RGFW_glContext* ctx) {
@@ -15960,4 +15973,3 @@ void RGFW_load_Wayland(void) {
 #if _MSC_VER
 	#pragma warning( pop )
 #endif
-
