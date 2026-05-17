@@ -68,6 +68,7 @@ The codebase has the following top-level structure.
 toy-viewer
 |-- docs         # Development logs and planning documentation
 |-- src          # All source code
+|-- tools        # Tools used for builds
 |-- build.bat    # Build script
 `-- README.md
 ```
