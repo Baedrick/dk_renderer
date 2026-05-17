@@ -14,7 +14,7 @@ namespace dk {
 
 	struct PLT_ProcessInfo {
 		u32 pid;
-		String8List environment;
+		String8 binary_dir;
 	};
 
 	using PLT_AccessFlags = u32;
@@ -38,13 +38,12 @@ namespace dk {
 	using PLT_ProcessLaunchFlags = u32;
 	enum : u32 {
 		PLT_PROCESS_LAUNCH_FLAG_NONE = 0,
-		PLT_PROCESS_LAUNCH_FLAG_INHERIT_ENV = 1u << 0,
-		PLT_PROCESS_LAUNCH_FLAG_NO_WINDOW = 1u << 1,
+		PLT_PROCESS_LAUNCH_FLAG_NO_WINDOW = 1u << 0,
 	};
 	
 	struct PLT_ProcessLaunchParams {
 		String8List cmd_line;
-		String8 working_path;
+		String8 working_dir;
 		PLT_ProcessLaunchFlags flags;
 	};
 

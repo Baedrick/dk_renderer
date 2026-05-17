@@ -2,12 +2,28 @@
 
 dk::VW_Context *dk::vw_context;
 
-auto dk::vw_init(String8List /*args*/) noexcept -> void {
+auto dk::vw_init(String8List args) noexcept -> void {
 	ZoneScoped;
 	Arena *arena = arena_alloc();
 	vw_context = arena_push<VW_Context>(arena);
 	vw_context->arena = arena;
 	vw_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
+
+	b8 is_parent = true;
+	for (String8Node const *node = args.first; node != nullptr; node = node->next) {
+		if (str8_equals("--child"_str8, node->string, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+			is_parent = false;
+		}
+	}
+	if (is_parent) {
+		TempArena const scratch = scratch_begin(nullptr, 0);
+		PLT_ProcessLaunchParams params = {};
+		params.working_dir = plt_get_process_info()->binary_dir;
+		str8_list_push(scratch.arena, &params.cmd_line, "viewer"_str8);
+		str8_list_push(scratch.arena, &params.cmd_line, "--child"_str8);
+		plt_process_launch(&params);
+		scratch_end(scratch);
+	}
 }
 
 auto dk::vw_frame() noexcept -> b8 {

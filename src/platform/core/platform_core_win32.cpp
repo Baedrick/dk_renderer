@@ -311,15 +311,65 @@ auto dk::plt_sleep(u64 milliseconds) noexcept -> void {
 }
 
 auto dk::plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> PLT_Handle {
-	(void)params;
-	return plt_handle_invalid();
+	PLT_Handle result = plt_handle_invalid();
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	
+	String8 cmd = {};
+	{
+		String8JoinParams join_params = {};
+		join_params.prefix = "\""_str8;
+		join_params.separator = "\" \""_str8;
+		join_params.postfix = "\""_str8;
+		cmd = str8_list_join(scratch.arena, params->cmd_line, &join_params);
+	}
+	
+	String16 const cmd16 = str16_from_8(scratch.arena, cmd);
+	String16 const dir16 = str16_from_8(scratch.arena, params->working_dir);
+	
+	DWORD creation_flags = CREATE_UNICODE_ENVIRONMENT;
+	if ((params->flags & PLT_PROCESS_LAUNCH_FLAG_NO_WINDOW) != 0) {
+		creation_flags |= CREATE_NO_WINDOW;
+	}
+	
+	STARTUPINFOW startup_info = {};
+	startup_info.cb = sizeof(STARTUPINFOW);
+	PROCESS_INFORMATION process_info = {};
+	if (CreateProcessW(
+			nullptr,
+			reinterpret_cast<WCHAR *>(const_cast<u16 *>(cmd16.data)),
+			nullptr,
+			nullptr,
+			FALSE,
+			creation_flags,
+			nullptr,
+			reinterpret_cast<WCHAR *>(const_cast<u16 *>(dir16.data)),
+			&startup_info,
+			&process_info
+		)
+	) {
+		result.v = reinterpret_cast<uintptr_t>(process_info.hProcess);
+		CloseHandle(process_info.hThread);
+	}
+	
+	scratch_end(scratch);
+	return result;
 }
 
 auto dk::plt_process_join(PLT_Handle process, u64 end_time_us, u64 *out_exit_code) noexcept -> b8 {
-	(void)process;
-	(void)end_time_us;
-	(void)out_exit_code;
-	return false;
+	HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
+	DWORD const sleep_ms = plt_w32_sleep_ms_from_end_time_us(end_time_us);
+	DWORD const result = WaitForSingleObject(handle, sleep_ms);
+	b8 const process_joined = result == WAIT_OBJECT_0;
+	if (process_joined) {
+		if (out_exit_code != nullptr) {
+			DWORD exit_code = 0;
+			if (GetExitCodeProcess(handle, &exit_code)) {
+				*out_exit_code = exit_code;
+			}
+		}
+		CloseHandle(handle);
+	}
+	return process_joined;
 }
 
 auto dk::plt_process_kill(PLT_Handle process) noexcept -> b8 {
@@ -574,25 +624,18 @@ auto dk::plt_w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> i
 	ThreadContext *const thread_context = thread_context_alloc();
 	thread_context_select(thread_context);
 
-	Arena *arena = arena_alloc();
+	Arena *const arena = arena_alloc();
+	plt_w32_context.arena = arena;
 	{
-		plt_w32_context.arena = arena;
 		PLT_ProcessInfo *info = &plt_w32_context.process_info;
 		{
-			WCHAR *proc_env = GetEnvironmentStringsW();
-			WCHAR *curr = proc_env;
-			while (*curr != L'\0') {
-				WCHAR *end = curr;
-				while (*end != L'\0') {
-					++end;
-				}
-				u64 const size = static_cast<u64>(end - curr);
-				String16 const env16 = str16(reinterpret_cast<u16 *>(curr), size);
-				String8 const env = str8_from_16(arena, env16);
-				str8_list_push(arena, &info->environment, env);
-				curr = end + 1;
-			}
-			FreeEnvironmentStringsW(proc_env);
+			TempArena const scratch = scratch_begin(nullptr, 0);
+			DWORD constexpr size = static_cast<DWORD>(kilo_bytes(32));
+			u16 *const buffer = arena_push_array<u16>(scratch.arena, size);
+			DWORD const length = GetModuleFileNameW(nullptr, reinterpret_cast<WCHAR *>(buffer), size);
+			String8 const path8 = str8_from_16(scratch.arena, str16(buffer, length));
+			info->binary_dir = str8_copy(arena, path_chop_last_slash(path8));
+			scratch_end(scratch);
 		}
 	}
 

@@ -126,6 +126,9 @@ namespace dk {
 	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8;
 
 	auto str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array;
+	
+	auto path_chop_last_slash(String8 path) noexcept -> String8;
+	auto path_skip_last_slash(String8 path) noexcept -> String8;
 
 	auto utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode;
 	auto utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode;

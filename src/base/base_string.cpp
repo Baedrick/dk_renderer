@@ -501,6 +501,35 @@ auto dk::str8_array_from_list(Arena *arena, String8List list) noexcept -> String
 	return array;
 }
 
+auto dk::path_chop_last_slash(String8 path) noexcept -> String8 {
+	u64 slash_idx = path.size;
+	b8 slash_found = false;
+	while (slash_idx --> 0) {
+		if (path[slash_idx] == '/' || path[slash_idx] == '\\') {
+			slash_found = true;
+			break;
+		}
+	}
+	path.size = slash_found ? slash_idx : 0;
+	return path;
+}
+
+auto dk::path_skip_last_slash(String8 path) noexcept -> String8 {
+	u64 slash_idx = path.size;
+	b8 slash_found = false;
+	while (slash_idx --> 0) {
+		if (path[slash_idx] == '/' || path[slash_idx] == '\\') {
+			slash_found = true;
+			break;
+		}
+	}
+	if (slash_found) {
+		path.data += slash_idx + 1;
+		path.size -= slash_idx - 1;
+	}
+	return path;
+}
+
 // NOTE(Dedrick): Based on the following decoder.
 // https://nullprogram.com/blog/2017/10/06/
 // https://git.mr4th.com/mr4th-public/mr4th/src/branch/main/src/base/base_big_functions.c#L696
