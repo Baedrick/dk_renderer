@@ -27,9 +27,10 @@ auto dk::rhi_init(String8List args) noexcept -> void {
 
 	RGFW_window* window = RGFW_createWindow("ogl_dummy_window", 0, 0, 1, 1, RGFW_windowHide);
 	RGFW_glContext *context = RGFW_window_createContext_OpenGL(window, hints);
+	rhi_ogl_rgfw_context = context;
 
 	int const version = gladLoadGL(reinterpret_cast<GLADloadfunc>(RGFW_getProcAddress_OpenGL));
-	printf("GL %d.%d\n", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
+	std::printf("GL %d.%d\n", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
 
 	b8 enable_debug = false;
 	for (String8Node const *node = args.first; node != nullptr; node = node->next) {
@@ -44,8 +45,6 @@ auto dk::rhi_init(String8List args) noexcept -> void {
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(rhi_ogl_debug_message_callback, nullptr);
 	}
-
-	rhi_ogl_rgfw_context = context;
 
 	// NOTE(Dedrick): Intentional leak of dummy window to keep context
 	// alive for OpenGL function loading and application usage.

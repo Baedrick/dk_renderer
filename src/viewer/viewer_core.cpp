@@ -37,9 +37,8 @@ auto dk::vw_frame() noexcept -> b8 {
 			vw_context->quit = true;
 		}
 	}
-	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+	glClearColor(0.3f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glDrawArrays(1, 0, 3);
 	RGFW_window_swapBuffers_OpenGL(vw_context->window);
 	return vw_context->quit;
 }
