@@ -3,7 +3,12 @@
 #include "thirdparty/glad/gl.h"
 
 namespace dk {
-	extern RGFW_glContext *rhi_ogl_rgfw_context;
-	
+	struct RHI_OGL_Context {
+		Arena *arena;
+		b8 debug_context;
+	};
+
+	extern RHI_OGL_Context *rhi_ogl_context;
+
 	auto rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void;
 }

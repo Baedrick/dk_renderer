@@ -13,8 +13,8 @@ cd /D "%~dp0"
 :: Below is a non-exhaustive list of possible ways to use the script:
 :: `build all`
 :: `build all release`
-:: `build viewer debug`
-:: `build viewer asan`
+:: `build dkrend debug`
+:: `build dkrend asan`
 ::
 :: For a full list of possible build targets and their build command lines,
 :: search for @build_targets in this file.
@@ -69,8 +69,8 @@ pushd bin
 if "%all%"=="1" (
     echo [building all targets]
     set shaders=1
-    set cooker=1
-    set viewer=1
+    set dkcook=1
+    set dkrend=1
 )
 if "%shaders%"=="1" (
     echo [building shaders]
@@ -79,11 +79,11 @@ if "%shaders%"=="1" (
         %glslang% -G -o "%%~nxf.spv" "%%f" || exit /b 1
     )
 )
-if "%viewer%"=="1" set didbuild=1 && %compile% ..\src\viewer\viewer_main.cpp %compile_link% %out%viewer.exe || exit /b 1
-if "%cooker%"=="1" set didbuild=1 && %compile% ..\src\cooker\cooker_main.cpp %compile_link% %out%cooker.exe || exit /b 1
+if "%dkcook%"=="1" set didbuild=1 && %compile% ..\src\dkcook\dkcook_main.cpp %compile_link% %out%dkcook.exe || exit /b 1
+if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% %out%dkrend.exe || exit /b 1
 popd
 
 if "%didbuild%"=="" (
-  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build viewer` or `build all`.
+  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build dkrend` or `build all`.
   exit /b 1
 )

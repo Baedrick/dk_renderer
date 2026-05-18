@@ -5,19 +5,19 @@
 #include "base/base.hpp"
 #include "platform/platform.hpp"
 #include "rhi/rhi.hpp"
-#include "viewer/viewer.hpp"
+#include "dkrend/dkrend.hpp"
 
 #include "base/base.cpp"
 #include "platform/platform.cpp"
 #include "rhi/rhi.cpp"
-#include "viewer/viewer.cpp"
+#include "dkrend/dkrend.cpp"
 
 auto entry_point(dk::String8List args) noexcept -> int {
-	dk::vw_init(args);
+	dk::dkr_init(args);
 	for (dk::b8 quit = false; !quit; ) {
-		quit = dk::vw_frame();
+		quit = dk::dkr_frame();
 		FrameMark;
 	}
-	dk::vw_shutdown();
+	dk::dkr_shutdown();
 	return 0;
 }
