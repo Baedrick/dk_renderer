@@ -13,13 +13,48 @@
 dk::RHI_OGL_Context *dk::rhi_ogl_context;
 
 auto dk::rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void {
-	(void)source;
-	(void)type;
-	(void)id;
-	(void)severity;
 	(void)user;
-	DK_LOG_INFOF("[OpenGL] %.*s\n", static_cast<int>(length), message);
-	std::fprintf(stdout, "[OpenGL] %.*s\n", static_cast<int>(length), message);
+	String8 source_str = "Unknown"_str8;
+	String8 type_str = "Unknown"_str8;
+	String8 severity_str = "Unknown"_str8;
+	switch (source) {
+		case GL_DEBUG_SOURCE_API: source_str = "API"_str8; break;
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM: source_str = "Window System"_str8; break;
+		case GL_DEBUG_SOURCE_SHADER_COMPILER: source_str = "Shader Compiler"_str8; break;
+		case GL_DEBUG_SOURCE_THIRD_PARTY: source_str = "Third Party"_str8; break;
+		case GL_DEBUG_SOURCE_APPLICATION: source_str = "Application"_str8; break;
+		case GL_DEBUG_SOURCE_OTHER: source_str = "Other"_str8; break;
+	}
+	switch (type) {
+		case GL_DEBUG_TYPE_ERROR: type_str = "Error"_str8; break;
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: type_str = "Deprecated Behavior"_str8; break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: type_str = "Undefined Behavior"_str8; break;
+		case GL_DEBUG_TYPE_PORTABILITY: type_str = "Portability"_str8; break;
+		case GL_DEBUG_TYPE_PERFORMANCE: type_str = "Performance"_str8; break;
+		case GL_DEBUG_TYPE_MARKER: type_str = "Marker"_str8; break;
+		case GL_DEBUG_TYPE_PUSH_GROUP: type_str = "Push Group"_str8; break;
+		case GL_DEBUG_TYPE_POP_GROUP: type_str = "Pop Group"_str8; break;
+		case GL_DEBUG_TYPE_OTHER: type_str = "Other"_str8; break;
+	}
+	switch (severity) {
+		case GL_DEBUG_SEVERITY_HIGH: severity_str = "High"_str8; break;
+		case GL_DEBUG_SEVERITY_MEDIUM: severity_str = "Medium"_str8; break;
+		case GL_DEBUG_SEVERITY_LOW: severity_str = "Low"_str8; break;
+		case GL_DEBUG_SEVERITY_NOTIFICATION: severity_str = "Notification"_str8; break;
+	}
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String8 const log_msg = str8f(
+		scratch.arena,
+		"[OpenGL] %.*s (%d) of %.*s severity from %.*s: %.*s\n",
+		DK_STR8_VARG(type_str),
+		id,
+		DK_STR8_VARG(severity_str),
+		DK_STR8_VARG(source_str),
+		static_cast<int>(length), message
+	);
+	DK_LOG_INFO(log_msg);
+	std::fwrite(log_msg.data, 1, log_msg.size, stdout);
+	scratch_end(scratch);
 }
 
 auto dk::rhi_init(String8List args) noexcept -> void {
