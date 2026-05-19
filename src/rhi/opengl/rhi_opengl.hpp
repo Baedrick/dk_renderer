@@ -2,10 +2,16 @@
 
 #include "thirdparty/glad/gl.h"
 
+#if defined(DK_PLATFORM_WIN32)
+#	include "rhi_opengl_win32.hpp"
+#else
+#	error "Platform portion of OpenGL rendering backend not defined."
+#endif
+
 namespace dk {
 	struct RHI_OGL_Context {
 		Arena *arena;
-		b8 debug_context;
+		RGFW_glContext *gl_context;
 	};
 
 	extern RHI_OGL_Context *rhi_ogl_context;

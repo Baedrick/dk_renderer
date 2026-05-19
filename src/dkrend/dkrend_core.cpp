@@ -8,7 +8,7 @@ auto dk::dkr_init(String8List args) noexcept -> void {
 	dkr_context = arena_push<DKR_Context>(arena);
 	dkr_context->arena = arena;
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
-	rhi_window_hook(dkr_context->window);
+	rhi_window_equip(dkr_context->window);
 	b8 is_parent = true;
 	for (String8Node const *node = args.first; node != nullptr; node = node->next) {
 		if (str8_equals("--child"_str8, node->string, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
@@ -34,13 +34,16 @@ auto dk::dkr_frame() noexcept -> b8 {
 			dkr_context->quit = true;
 		}
 	}
+	rhi_surface_current_texture(dkr_context->window);
 	glClearColor(0.3f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	RGFW_window_swapBuffers_OpenGL(dkr_context->window);
+	// glDrawArrays(GL_TRIANGLES, 0, 3);
+	rhi_surface_present(dkr_context->window);
 	return dkr_context->quit;
 }
 
 auto dk::dkr_shutdown() noexcept -> void {
 	ZoneScoped;
+	rhi_window_unequip(dkr_context->window);
 	plt_window_close(dkr_context->window);
 }

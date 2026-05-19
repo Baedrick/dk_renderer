@@ -13,6 +13,10 @@ namespace dk {
 	auto rhi_init(String8List args) noexcept -> void;
 	auto rhi_shutdown() noexcept -> void;
 
-	auto rhi_window_hook(RGFW_window *window) noexcept -> void;
-	auto rhi_window_unhook(RGFW_window *window) noexcept -> void;
+	auto rhi_window_equip(RGFW_window *window) noexcept -> void;
+	auto rhi_window_unequip(RGFW_window *window) noexcept -> void;
+
+	// TODO(Dedrick): Needs surface and texture structures.
+	auto rhi_surface_current_texture(RGFW_window *window) noexcept -> RHI_Handle;
+	auto rhi_surface_present(RGFW_window *window) noexcept -> void;
 }
