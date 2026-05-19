@@ -62,8 +62,8 @@
     skills through the preparation and delivery of a project presentation, and
     optionally demonstration of the completed works
 
-### Toy Viewer
-- [ ][Must Have] Piped reading of cooker logs to display
+### dkrend
+- [ ][Must Have] Reading of cooker logs to display
 - [ ][Must Have] Console in UI to show logs
 - [ ][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][Must Have] Hello Model to validate graphics code
@@ -74,14 +74,13 @@
 - [x][Must Have] Top level functions for init, update, and shutdown
 - [x][Must Have] Update build script to have viewer as a build target
 
-### Toy Cooker
+### dkcook
 - [ ][Must Have] Inter-Process Communication with Toy Viewer
 - [ ][Must Have] Top level functions for init, update, and shutdown
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [ ][Must Have] Draft of readme document with project description, how to build, and goals
-- [ ][Must Have] Command line argument parsing for entry point
+- [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] Win32 semaphores for IPC synchronization
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Import Dear ImGui
@@ -94,6 +93,9 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] Command line argument parsing for entry point
+- [x][Must Have] Draft of readme document with how to build
+- [x][Must Have] Fix OpenGL boostrapping for win32
 - [x][Must Have] Add glsl shaders to Spir-V compilation as build target
 - [x][Must Have] Dummy window for modern OpenGL context function loading before opening main window
 - [x][Should Have] Mechanism for manually and automatically choosing rendering backend

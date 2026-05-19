@@ -1,10 +1,19 @@
-### 2026-05-18: Build Script Update
+### 2026-05-20: Command Line Parsing
 
 
-### 2026-05-17: Process Launching, RHI Backend Choosing, and OpenGL Bootstrap
+### 2026-05-19: RHI Backend Choosing and OpenGL Bootstrap (cont.)
 
 
-### 2026-05-15: Documentation & Project Planning
+### 2026-05-18: Rename Build Targets
+
+
+### 2026-05-17: OpenGL Bootstrap
+
+
+### 2026-05-17: Process Launching
+Accidentally created a fork bomb.
+
+### 2026-05-15: Documentation and Project Planning
 The academic semester has begun and this engine is now officially my capstone
 project. Development will continue alongside my internship as required by my
 university curriculum. Part of the project criteria involves demonstrating
