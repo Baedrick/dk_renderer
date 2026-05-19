@@ -12,8 +12,8 @@
 #include "rhi/rhi.cpp"
 #include "dkrend/dkrend.cpp"
 
-auto entry_point(dk::String8List args) noexcept -> int {
-	dk::dkr_init(args);
+auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
+	dk::dkr_init(cmd_line);
 	for (dk::b8 quit = false; !quit; ) {
 		quit = dk::dkr_frame();
 		FrameMark;

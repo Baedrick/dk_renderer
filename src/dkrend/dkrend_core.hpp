@@ -12,7 +12,7 @@ namespace dk {
 
 	extern DKR_Context *dkr_context;
 
-	auto dkr_init(String8List args) noexcept -> void;
+	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
 	auto dkr_frame() noexcept -> b8;
 	auto dkr_shutdown() noexcept -> void;
 }

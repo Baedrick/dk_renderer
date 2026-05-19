@@ -57,19 +57,13 @@ auto dk::rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, G
 	scratch_end(scratch);
 }
 
-auto dk::rhi_init(String8List args) noexcept -> void {
+auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	Arena *arena = arena_alloc();
 	rhi_ogl_context = arena_push<RHI_OGL_Context>(arena);
 	rhi_ogl_context->arena = arena;
 
-	b8 debug_mode = false;
-	for (String8Node const *node = args.first; node != nullptr; node = node->next) {
-		if (str8_equals("--opengl_debug"_str8, node->string, STRING_MATCH_FLAG_NONE)) {
-			debug_mode = true;
-			break;
-		}
-	}
+	b8 debug_mode = cmd_line_has_flag(cmd_line, "opengl_debug"_str8);
 #if !defined(NDEBUG)
 	debug_mode = true;
 #endif

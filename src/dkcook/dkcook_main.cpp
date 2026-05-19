@@ -6,7 +6,7 @@
 #include "base/base.cpp"
 #include "platform/platform.cpp"
 
-auto entry_point(dk::String8List args) noexcept -> int {
-	(void)args;
+auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
+	(void)cmd_line;
 	return 0;
 }

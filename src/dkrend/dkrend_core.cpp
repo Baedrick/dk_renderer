@@ -2,20 +2,14 @@
 
 dk::DKR_Context *dk::dkr_context;
 
-auto dk::dkr_init(String8List args) noexcept -> void {
+auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	Arena *arena = arena_alloc();
 	dkr_context = arena_push<DKR_Context>(arena);
 	dkr_context->arena = arena;
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
 	rhi_window_equip(dkr_context->window);
-	b8 is_parent = true;
-	for (String8Node const *node = args.first; node != nullptr; node = node->next) {
-		if (str8_equals("--child"_str8, node->string, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
-			is_parent = false;
-		}
-	}
-	if (is_parent) {
+	if (!cmd_line_has_flag(cmd_line, "child"_str8)) {
 		TempArena const scratch = scratch_begin(nullptr, 0);
 		PLT_ProcessLaunchParams params = {};
 		params.working_dir = plt_get_process_info()->binary_dir;

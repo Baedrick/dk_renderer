@@ -10,7 +10,7 @@ namespace dk {
 
 	auto rhi_handle_invalid() noexcept -> RHI_Handle;
 
-	auto rhi_init(String8List args) noexcept -> void;
+	auto rhi_init(CmdLine *cmd_line) noexcept -> void;
 	auto rhi_shutdown() noexcept -> void;
 
 	auto rhi_window_equip(RGFW_window *window) noexcept -> void;

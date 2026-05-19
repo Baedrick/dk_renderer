@@ -12,15 +12,16 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 			str8_cstring(reinterpret_cast<u8 *>(argv[arg_index]))
 		);
 	}
+	CmdLine cmd_line = cmd_line_from_string_list(scratch.arena, cmd_line_strings);
 
 #if defined(DK_PLATFORM_GFX_INCLUDED)
 	plt_gfx_init();
 #endif
 #if defined(DK_RHI_INCLUDED)
-	rhi_init(cmd_line_strings);
+	rhi_init(&cmd_line);
 #endif
 
-	int const result = entry_point(cmd_line_strings);
+	int const result = entry_point(&cmd_line);
 
 #if defined(DK_RHI_INCLUDED)
 	rhi_shutdown();
