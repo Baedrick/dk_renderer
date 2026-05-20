@@ -1,17 +1,95 @@
 ### 2026-05-20: Command Line Parsing
-
+I implemented a simple command-line parser inspired by raddebugger's parser. It
+handles flags, options with explicit value signifiers, and positional passthrough
+strings. To keep the parsing logic predictable and straightforward, option values
+must follow an explicit assignment syntax; standalone arguments that lack a
+leading dash are categorized as passthrough inputs. To support fast lookups, I
+implemented my first hash map from scratch. It uses a straightforward chaining
+mechanism to resolve slot collisions, providing an excellent opportunity to
+validate classroom datastructure theory in a practical context. Choosing to write
+a specialized implementation rather than a generic container, allows for
+composition of different datastructures. I can easily adapt this into a linked
+hash map in the future if preserving the original argument parsing order becomes
+necessary.
 
 ### 2026-05-19: RHI Backend Choosing and OpenGL Bootstrap (cont.)
+I introduced a set of macros to automatically select the appropriate rendering
+backend based on the target operating system when one is not explicitly specified.
+I am considering a transition to Direct3D 11 and deprecating OpenGL in the long
+term. I am currently unfamiliar with the API and prefer to prioritize exploring
+rendering algorithms over learning a new interface. Mastering the core algorithms
+provides greater long-term value than simply learning the function calls of an
+arbitrary API.
 
+I also resolved the bug for my OpenGL boostrapping process. I discovered that
+every created window must have its pixel format explicitly configured via
+`SetPixelFormat` to properly prepare the window's device context (HDC) for OpenGL
+rendering. Afterwards, I can now share the OpenGL context  (HLGRC) created for
+the hidden bootstrap window across other application windows. This enables
+support for multi-window rendering and brings the interface of my render hardware
+interface closer to the interface of modern graphics APIs.
 
 ### 2026-05-18: Rename Build Targets
-
+I decided to rename my build targets to better reflect the long-term intent of
+the project. The original "viewer" name felt unfitting for a project intended to
+evolve into a full rendering engine; my vision aligns closer to Embark Studio's
+Kajiya engine. Similarly, naming the project after OpenGL felt short-sighted
+given my plans to eventually migrate to a modern API. For now, I have settled on
+`dk_renderer` as the project name, with `dkrend` serving as the executable name
+for the rendering application.
 
 ### 2026-05-17: OpenGL Bootstrap
+I spent time boostrapping the OpenGL function loading mechanism on the Win32
+platform. OpenGL differs significantly from modern graphics APIs; it requires
+an active, modern rendering context simply to query the driver for modern function
+pointers. Consequently, a temporary window with an active context must exist
+before initialization can complete. This stands in contrast to Vulkan's hybrid
+pointer querying model, Direct3D's dynamic linking, or WebGPU's static linking
+approaches.
 
+My strategy involves creating a hidden boostrap window during early initialization
+to load these function pointers and capture a shared rendering context (HLGRC).
+This context cna then be made current on any subsequent application windows.
+While leaving the bootstrap window open introduces a minor resource leak, it
+circumvents the complexities of multi-context resource sharing and synchronization.
+However, I am currently encountering an issue where newly created windows fail
+to render dispite being assigned the bootstrap context. This behavior is under-
+documented; because the Win32 device context (HDC) and rendering context must
+share a matching pixel format, and my configuration is uniform, the failure is
+unexpected. Modern driver behavior typically tolerates this in practice, suggesting
+I might have missed a platform layer step that I need to figure out.
 
 ### 2026-05-17: Process Launching
-Accidentally created a fork bomb.
+I implemeted the process launching logic within the Win32 platform layer. This
+required a fair amount of experimentation due to the inherent quirks of the
+Windows API; `CreateProcessW` offers multiple convoluted ways to specify execution
+parameters, such as splitting or combing the binary path and command-line arguments
+across different parameters. The official documentation is ambiguous, requiring
+trial and error to establish a predictable path. I initially considered parsing
+and modifying environment blocks to allow the parent process to append custom
+variables to the child; however, I opted to scrap this feature to avoid unnecessary
+architectural complexity. Allow the child process to inherit the parent's
+environment by default is sufficient for my current needs, though I did preserve
+the ability to specify an explicit working directory to simplify asset path
+resolution.
+
+During testing, I inadvertently triggered a fork bomb by forgetting that the
+first argument in a command line string represents the name of the binary itself,
+causing the application to continuously spawn recursive instances of itself. The
+erroneous code block demonstrates the oversight:
+```cpp
+// pseudocode
+for (String8Node *n = cmd_line->first; n; n = n->next) {
+    if (!str8_equals(n->string, "--child")) {
+        plt_process_launch("dkrend --child");
+        break;
+    }
+}
+```
+Resolving this bug was a tedious process; the recursive loop exhausted system
+resources and forced several system restarts before I found the bug. With that,
+process launching is implemented and I am one step closer to coordinating the
+renderer and an asset cooker.
 
 ### 2026-05-15: Documentation and Project Planning
 The academic semester has begun and this engine is now officially my capstone
