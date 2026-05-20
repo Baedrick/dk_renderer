@@ -40,7 +40,7 @@ namespace dk {
 		PLT_PROCESS_LAUNCH_FLAG_NONE = 0,
 		PLT_PROCESS_LAUNCH_FLAG_NO_WINDOW = 1u << 0,
 	};
-	
+
 	struct PLT_ProcessLaunchParams {
 		String8List cmd_line;
 		String8 working_dir;
@@ -110,4 +110,11 @@ namespace dk {
 	auto plt_cond_var_wait_rw_r(PLT_Handle cond_var, PLT_Handle rw_mutex, u64 end_time_us) noexcept -> b8;
 	auto plt_cond_var_signal(PLT_Handle cond_var) noexcept -> void;
 	auto plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void;
+
+	auto plt_semaphore_alloc(u32 initial_count, u32 max_count, String8 name) noexcept -> PLT_Handle;
+	auto plt_semaphore_release(PLT_Handle semaphore) noexcept -> void;
+	auto plt_semaphore_open(String8 name) noexcept -> PLT_Handle;
+	auto plt_semaphore_close(PLT_Handle semaphore) noexcept -> void;
+	auto plt_semaphore_wait(PLT_Handle semaphore, u64 end_time_us) noexcept -> b8;
+	auto plt_semaphore_signal(PLT_Handle semaphore) noexcept -> void;
 }

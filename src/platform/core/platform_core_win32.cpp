@@ -313,7 +313,7 @@ auto dk::plt_sleep(u64 milliseconds) noexcept -> void {
 auto dk::plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> PLT_Handle {
 	PLT_Handle result = plt_handle_invalid();
 	TempArena const scratch = scratch_begin(nullptr, 0);
-	
+
 	String8 cmd = {};
 	{
 		String8JoinParams join_params = {};
@@ -325,12 +325,12 @@ auto dk::plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> P
 
 	String16 const cmd16 = str16_from_8(scratch.arena, cmd);
 	String16 const dir16 = str16_from_8(scratch.arena, params->working_dir);
-	
+
 	DWORD creation_flags = CREATE_UNICODE_ENVIRONMENT;
 	if ((params->flags & PLT_PROCESS_LAUNCH_FLAG_NO_WINDOW) != 0) {
 		creation_flags |= CREATE_NO_WINDOW;
 	}
-	
+
 	STARTUPINFOW startup_info = {};
 	startup_info.cb = sizeof(STARTUPINFOW);
 	PROCESS_INFORMATION process_info = {};
@@ -350,7 +350,7 @@ auto dk::plt_process_launch(PLT_ProcessLaunchParams const *params) noexcept -> P
 		result.v = reinterpret_cast<uintptr_t>(process_info.hProcess);
 		CloseHandle(process_info.hThread);
 	}
-	
+
 	scratch_end(scratch);
 	return result;
 }
@@ -373,9 +373,9 @@ auto dk::plt_process_join(PLT_Handle process, u64 end_time_us, u64 *out_exit_cod
 }
 
 auto dk::plt_process_kill(PLT_Handle process) noexcept -> b8 {
-    HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
-    b8 const terminated = TerminateProcess(handle, 999);
-    return terminated;
+	HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
+	b8 const terminated = TerminateProcess(handle, 999);
+	return terminated;
 }
 
 auto dk::plt_set_thread_name(String8 name) noexcept -> void {
@@ -575,6 +575,46 @@ auto dk::plt_cond_var_signal_all(PLT_Handle cond_var) noexcept -> void {
 	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(cond_var.v);
 	DK_ASSERT(entity->kind == PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
 	WakeAllConditionVariable(&entity->cond_var.handle);
+}
+
+auto dk::plt_semaphore_alloc(u32 initial_count, u32 max_count, String8 name) noexcept -> PLT_Handle {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HANDLE const handle = CreateSemaphoreW(nullptr, initial_count, max_count, reinterpret_cast<WCHAR const *>(name16.data));
+	PLT_Handle result = { reinterpret_cast<uintptr_t>(handle) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::plt_semaphore_release(PLT_Handle semaphore) noexcept -> void {
+	HANDLE const handle = reinterpret_cast<HANDLE>(semaphore.v);
+	CloseHandle(handle);
+}
+
+auto dk::plt_semaphore_open(String8 name) noexcept -> PLT_Handle {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HANDLE const handle = OpenSemaphoreW(SEMAPHORE_ALL_ACCESS, FALSE, reinterpret_cast<WCHAR const *>(name16.data));
+	PLT_Handle result = { reinterpret_cast<uintptr_t>(handle) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::plt_semaphore_close(PLT_Handle semaphore) noexcept -> void {
+	HANDLE const handle = reinterpret_cast<HANDLE>(semaphore.v);
+	CloseHandle(handle);
+}
+
+auto dk::plt_semaphore_wait(PLT_Handle semaphore, u64 end_time_us) noexcept -> b8 {
+	DWORD const sleep_ms = plt_w32_sleep_ms_from_end_time_us(end_time_us);
+	HANDLE const handle = reinterpret_cast<HANDLE>(semaphore.v);
+	DWORD const wait_result = WaitForSingleObject(handle, sleep_ms);
+	return wait_result == WAIT_OBJECT_0;
+}
+
+auto dk::plt_semaphore_signal(PLT_Handle semaphore) noexcept -> void {
+	HANDLE const handle = reinterpret_cast<HANDLE>(semaphore.v);
+	ReleaseSemaphore(handle, 1, nullptr);
 }
 
 

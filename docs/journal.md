@@ -1,3 +1,6 @@
+### 2026-05-20: Semaphores
+
+
 ### 2026-05-20: Command Line Parsing
 I implemented a simple command-line parser inspired by raddebugger's parser. It
 handles flags, options with explicit value signifiers, and positional passthrough
