@@ -139,11 +139,6 @@ auto dk::rhi_window_unequip(RGFW_window *window) noexcept -> void {
 	(void)window;
 }
 
-auto dk::rhi_surface_current_texture(RGFW_window *window) noexcept -> RHI_Handle {
-	RGFW_window_makeCurrentContext_OpenGL(window);
-	return rhi_handle_invalid();
-}
-
 auto dk::rhi_surface_present(RGFW_window *window) noexcept -> void {
 	RGFW_window_swapBuffers_OpenGL(window);
 }

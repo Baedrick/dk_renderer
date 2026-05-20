@@ -17,6 +17,5 @@ namespace dk {
 	auto rhi_window_unequip(RGFW_window *window) noexcept -> void;
 
 	// TODO(Dedrick): Needs surface and texture structures.
-	auto rhi_surface_current_texture(RGFW_window *window) noexcept -> RHI_Handle;
 	auto rhi_surface_present(RGFW_window *window) noexcept -> void;
 }

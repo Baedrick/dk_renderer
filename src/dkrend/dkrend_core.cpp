@@ -31,9 +31,12 @@ auto dk::dkr_frame() noexcept -> b8 {
 			dkr_context->quit = true;
 		}
 	}
-	rhi_surface_current_texture(dkr_context->window);
-	glViewport(0, 0, 800, 600);
-	glClearColor(0.3f, 0.2f, 0.2f, 1.0f);
+	{
+		s32 width = 0, height = 0;
+		RGFW_window_getSizeInPixels(dkr_context->window, &width, &height);
+		glViewport(0, 0, width, height);
+	}
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
 	glUseProgram(rhi_ogl_context->shader);
