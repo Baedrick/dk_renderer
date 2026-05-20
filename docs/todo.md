@@ -65,13 +65,13 @@
 ### dkrend
 - [ ][Must Have] Reading of cooker logs to display
 - [ ][Must Have] Console in UI to show logs
-- [ ][Must Have] Hello Triangle shader code
 - [ ][Must Have] Hello Model to validate graphics code
-- [ ][Must Have] Hello Triangle to validate graphics code
 - [ ][Must Have] Application command/event list
 - [ ][Must Have] Inter-Process Communication with Toy Cooker
 - [ ][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][Nice To Have] Hot-reloading of cooked model binaries
+- [x][Must Have] Hello Triangle to validate graphics code
+- [x][Must Have] Hello Triangle shader code
 - [x][Must Have] Top level functions for init, update, and shutdown
 - [x][Must Have] Update build script to have viewer as a build target
 
