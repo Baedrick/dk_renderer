@@ -7,7 +7,7 @@ cd /D "%~dp0"
 :: Derived from RADDBG build.bat
 ::
 :: This is a build script for use in Windows development environments. It takes
-:: a list of alphanumeric only arguments that specifies the build options. By 
+:: a list of alphanumeric only arguments that specifies the build options. By
 :: default if no options are passed, all build targets are built in debug.
 ::
 :: Below is a non-exhaustive list of possible ways to use the script:
@@ -35,7 +35,7 @@ if "%msvc%"=="1"    set clang=0 && echo [msvc compile]
 if "%~1"==""                     echo [default mode, assuming `all` build] && set all=1
 if "%~1"=="release" if "%~2"=="" echo [default mode, assuming `all` build] && set all=1
 
-:: --- Unpack Command Line Build Arguments ------------------------------------- 
+:: --- Unpack Command Line Build Arguments -------------------------------------
 set compile_flags=
 if "%asan%"=="1"    set compile_flags=%compile_flags% -fsanitize=address && echo [asan enabled]
 if "%profile%"=="1" set compile_flags=%compile_flags% -DDK_PROFILE_ENABLE && echo [profiling enabled]
@@ -47,7 +47,7 @@ set cl_debug=   call cl /Od /MTd /D_DEBUG /RTC1 %cl_common%
 set cl_release= call cl /O2 /MT /DNDEBUG %cl_common%
 set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /pdbaltpath:%%%%_PDB%%%% /noexp /nocoffgrpinfo
 set cl_out=     /out:
-set cl_linker=  
+set cl_linker=
 
 :: --- Choose Compile Lines ----------------------------------------------------
 if "%msvc%"=="1"         set compile_debug=%cl_debug%
@@ -59,6 +59,7 @@ if "%release%"=="1"      set compile=%compile_release%
 
 :: --- Per-Build Settings ------------------------------------------------------
 set glslang= ..\tools\glslangValidator.exe
+set glslang_include= --preamble-text "#extension GL_GOOGLE_include_directive : require" -I..\src\shaders\
 
 :: --- Prep Directories --------------------------------------------------------
 if not exist bin mkdir bin
@@ -76,7 +77,7 @@ if "%shaders%"=="1" (
     echo [building shaders]
     set didbuild=1
     for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
-        %glslang% -G -o "%%~nxf.spv" "%%f" || exit /b 1
+        %glslang% %glslang_include% -G -o "%%~nxf.spv" "%%f" || exit /b 1
     )
 )
 if "%dkcook%"=="1" set didbuild=1 && %compile% ..\src\dkcook\dkcook_main.cpp %compile_link% %out%dkcook.exe || exit /b 1

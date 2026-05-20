@@ -40,5 +40,8 @@
 # debug information files
 *.dwo
 
+# Compiled Spir-V files
+*.spv
+
 # Whitelist
 !tools/glslangValidator.exe
