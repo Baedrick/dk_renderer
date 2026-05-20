@@ -9,6 +9,8 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	dkr_context->arena = arena;
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
 	rhi_window_equip(dkr_context->window);
+	(void)cmd_line;
+	#if 0
 	if (!cmd_line_has_flag(cmd_line, "child"_str8)) {
 		TempArena const scratch = scratch_begin(nullptr, 0);
 		PLT_ProcessLaunchParams params = {};
@@ -18,6 +20,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		plt_process_launch(&params);
 		scratch_end(scratch);
 	}
+	#endif
 }
 
 auto dk::dkr_frame() noexcept -> b8 {
@@ -31,7 +34,9 @@ auto dk::dkr_frame() noexcept -> b8 {
 	rhi_surface_current_texture(dkr_context->window);
 	glClearColor(0.3f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	// glDrawArrays(GL_TRIANGLES, 0, 3);
+	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
+	glUseProgram(rhi_ogl_context->shader);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 	rhi_surface_present(dkr_context->window);
 	return dkr_context->quit;
 }

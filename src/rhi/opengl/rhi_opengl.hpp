@@ -12,6 +12,8 @@ namespace dk {
 	struct RHI_OGL_Context {
 		Arena *arena;
 		RGFW_glContext *gl_context;
+		GLuint shader;
+		GLuint all_purpose_vao;
 	};
 
 	extern RHI_OGL_Context *rhi_ogl_context;
