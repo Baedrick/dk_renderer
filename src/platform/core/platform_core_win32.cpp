@@ -272,7 +272,7 @@ auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttribute
 	if (info_good) {
 		u64 const size_lo = info.nFileSizeLow;
 		u64 const size_hi = info.nFileSizeHigh;
-		attr.size = size_hi | (size_lo << 32);
+		attr.size = size_lo | (size_hi << 32);
 		attr.flags = plt_w32_file_flags_from_dw_file_attributes(info.dwFileAttributes);
 	}
 	return attr;
