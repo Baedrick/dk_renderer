@@ -60,11 +60,11 @@ namespace dk {
 
 	template <typename T>
 	auto arena_push(Arena *arena) noexcept -> T * {
-		return static_cast<T *>(arena_push_bytes(arena, sizeof(T), alignof(T)));
+		return static_cast<T *>(arena_push_bytes(arena, sizeof(T), max<u64>(8, alignof(T))));
 	}
 
 	template <typename T>
 	auto arena_push_array(Arena *arena, u64 count) noexcept -> T * {
-		return static_cast<T *>(arena_push_bytes(arena, sizeof(T) * count, alignof(T)));
+		return static_cast<T *>(arena_push_bytes(arena, sizeof(T) * count, max<u64>(8, alignof(T))));
 	}
 }
