@@ -2,6 +2,10 @@
 
 dk::DKR_Context *dk::dkr_context;
 
+auto dk::dkr_frame_arena() noexcept -> Arena * {
+	return dkr_context->frame_arenas[dkr_context->frame_index % array_count(dkr_context->frame_arenas)];
+}
+
 auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	(void)cmd_line;
@@ -9,6 +13,9 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	Arena *arena = arena_alloc();
 	dkr_context = arena_push<DKR_Context>(arena);
 	dkr_context->arena = arena;
+	for (u32 i = 0; i < array_count(dkr_context->frame_arenas); ++i) {
+		dkr_context->frame_arenas[i] = arena_alloc();
+	}
 	dkr_context->log = log_alloc();
 	log_select(dkr_context->log);
 	{
@@ -29,8 +36,14 @@ auto dk::dkr_frame() noexcept -> b8 {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	log_frame_begin();
 
+	// NOTE(Dedrick): Do per-frame resets.
+	arena_clear(dkr_frame_arena());
+
+	// NOTE(Dedrick): Begin measuring actual per-frame work.
+	u64 const begin_time_us = plt_now_microseconds();
+
 	// TODO(Dedrick): Process platform (window) events, then process application events.
-	for (RGFW_event event; RGFW_window_checkEvent(dkr_context->window, &event); ) {
+	for (RGFW_event event = {}; RGFW_window_checkEvent(dkr_context->window, &event); ) {
 		if (event.type == RGFW_windowClose) {
 			dkr_context->quit = true;
 		}
@@ -46,6 +59,16 @@ auto dk::dkr_frame() noexcept -> b8 {
 	glUseProgram(rhi_ogl_context->shader);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	rhi_surface_present(dkr_context->window);
+
+	// NOTE(Dedrick): Determine frame time.
+	u64 const end_time_us = plt_now_microseconds();
+	u64 const frame_time_us = end_time_us - begin_time_us;
+	f32 const frame_dt = min(static_cast<f32>(frame_time_us) / 1000000.0f, 0.1f);
+	dkr_context->frame_dt = frame_dt;
+	dkr_context->time_in_seconds += frame_dt;
+
+	// NOTE(Dedrick): Bump frame counters.
+	dkr_context->frame_index += 1;
 
 	{
 		ZoneScopedN("collect logs");

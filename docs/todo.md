@@ -77,7 +77,7 @@
 
 ### dkcook
 - [ ][Must Have] Inter-Process Communication with Toy Viewer
-- [ ][Must Have] Top level functions for init, update, and shutdown
+- [x][Must Have] Top level functions for entry to cooking
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
@@ -93,6 +93,7 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] Frame arena and measuring frame time
 - [x][Must Have] Obtain user program data path from os for config storing and logs
 - [x][Must Have] Platform high-level file reading/writing helpers
 - [x][Must Have] Refactor logging to allow for separation of log level and in-order append

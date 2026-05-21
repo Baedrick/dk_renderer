@@ -8,7 +8,10 @@
 #include <Windows.h>
 #include <processthreadsapi.h>
 #include <bcrypt.h>
+#include <ShlObj_core.h>
 
+#pragma comment(lib, "user32")
+#pragma comment(lib, "ole32")
 #pragma comment(lib, "shell32")
 #pragma comment(lib, "kernel32")
 #pragma comment(lib, "bcrypt")
