@@ -1,4 +1,7 @@
-### 2026-05-20: Semaphores
+### 2026-05-21: Logging Datastructure & Semaphores
+
+
+### 2026-05-20: Hello Triangle
 
 
 ### 2026-05-20: Command Line Parsing
