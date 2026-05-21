@@ -63,6 +63,7 @@ set glslang_include= --preamble-text "#extension GL_GOOGLE_include_directive : r
 
 :: --- Prep Directories --------------------------------------------------------
 if not exist bin mkdir bin
+if not exist bin\shaders mkdir bin\shaders
 if not exist .tmp mkdir .tmp
 
 :: --- Build (@build_targets)---------------------------------------------------
@@ -77,7 +78,7 @@ if "%shaders%"=="1" (
     echo [building shaders]
     set didbuild=1
     for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
-        %glslang% %glslang_include% -G -o "%%~nxf.spv" "%%f" || exit /b 1
+        %glslang% %glslang_include% -G -o "shaders\%%~nxf.spv" "%%f" || exit /b 1
     )
 )
 if "%dkcook%"=="1" set didbuild=1 && %compile% ..\src\dkcook\dkcook_main.cpp %compile_link% %out%dkcook.exe || exit /b 1
