@@ -29,12 +29,27 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	}
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
 	rhi_window_equip(dkr_context->window);
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.DeltaTime = 1.0f / 60.0f;
+
+	RGFW_monitor *monitor = RGFW_window_getMonitor(dkr_context->window);
+	io.DisplayFramebufferScale = ImVec2(monitor->scaleX, monitor->scaleY);
+
+	ImGui_ImplRgfw_InitForOpenGL(dkr_context->window, true);
+	ImGui_ImplOpenGL3_Init();
 }
 
 auto dk::dkr_frame() noexcept -> b8 {
 	ZoneScoped;
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	log_frame_begin();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplRgfw_NewFrame();
+	ImGui::NewFrame();
+	ImGui::ShowDemoWindow();
 
 	// NOTE(Dedrick): Do per-frame resets.
 	arena_clear(dkr_frame_arena());
@@ -52,12 +67,18 @@ auto dk::dkr_frame() noexcept -> b8 {
 		s32 width = 0, height = 0;
 		RGFW_window_getSizeInPixels(dkr_context->window, &width, &height);
 		glViewport(0, 0, width, height);
+		ImGuiIO &io = ImGui::GetIO();
+		io.DisplaySize = ImVec2(static_cast<f32>(width), static_cast<f32>(height));
 	}
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
 	glUseProgram(rhi_ogl_context->shader);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 	rhi_surface_present(dkr_context->window);
 
 	// NOTE(Dedrick): Determine frame time.
@@ -82,6 +103,9 @@ auto dk::dkr_frame() noexcept -> b8 {
 
 auto dk::dkr_shutdown() noexcept -> void {
 	ZoneScoped;
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplRgfw_Shutdown();
+	ImGui::DestroyContext();
 	log_release(dkr_context->log);
 	rhi_window_unequip(dkr_context->window);
 	plt_window_close(dkr_context->window);
