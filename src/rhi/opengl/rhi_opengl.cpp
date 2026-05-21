@@ -102,19 +102,15 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 	{
 		ZoneScopedN("create program");
 		TempArena const scratch = scratch_begin(nullptr, 0);
-		struct { GLenum type; String8 src; GLuint out; String8 errors; } stages[] = {
+		struct { GLenum type; String8 path; GLuint out; String8 errors; } stages[] = {
 			{ GL_VERTEX_SHADER, "hello_triangle.vert.spv"_str8, 0 },
 			{ GL_FRAGMENT_SHADER, "hello_triangle.frag.spv"_str8, 0 },
 		};
 		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
-			PLT_Handle const file = plt_file_open(stages[stage_idx].src, PLT_ACCESS_FLAG_READ);
-			PLT_FileAttributes const attrib = plt_attributes_from_file(file);
-			u8 *const bytes = static_cast<u8 *>(arena_push_bytes(scratch.arena, attrib.size, 8));
-			plt_file_read(file, 0, attrib.size, bytes);
+			Array<u8> const bytes = plt_read_data_from_file_path(scratch.arena, stages[stage_idx].path);
 			stages[stage_idx].out = glCreateShader(stages[stage_idx].type);
-			glShaderBinary(1, &stages[stage_idx].out, GL_SHADER_BINARY_FORMAT_SPIR_V, bytes, static_cast<GLsizei>(attrib.size));
+			glShaderBinary(1, &stages[stage_idx].out, GL_SHADER_BINARY_FORMAT_SPIR_V, bytes.v, static_cast<GLsizei>(bytes.count));
 			glSpecializeShader(stages[stage_idx].out, "main", 0, nullptr, nullptr);
-			plt_file_close(file);
 		}
 		GLuint program = glCreateProgram();
 		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
