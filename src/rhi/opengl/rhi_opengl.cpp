@@ -103,8 +103,8 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 		ZoneScopedN("create program");
 		TempArena const scratch = scratch_begin(nullptr, 0);
 		struct { GLenum type; String8 path; GLuint out; String8 errors; } stages[] = {
-			{ GL_VERTEX_SHADER, "hello_triangle.vert.spv"_str8, 0 },
-			{ GL_FRAGMENT_SHADER, "hello_triangle.frag.spv"_str8, 0 },
+			{ GL_VERTEX_SHADER, "shaders/hello_triangle.vert.spv"_str8, 0 },
+			{ GL_FRAGMENT_SHADER, "shaders/hello_triangle.frag.spv"_str8, 0 },
 		};
 		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
 			Array<u8> const bytes = plt_read_data_from_file_path(scratch.arena, stages[stage_idx].path);
