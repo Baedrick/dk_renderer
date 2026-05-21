@@ -33,7 +33,7 @@ auto dk::cmd_line_insert_option(Arena *arena, CmdLine *cmd_line, String8 name, S
 		option = existing_option;
 	} else {
 		option = arena_push<CmdLineOption>(arena);
-		option->hash_next = slot->first;
+		forward_list_stack_push<CmdLineOption, &CmdLineOption::hash_next>(&slot->first, option);
 		option->name = str8_copy(arena, name);
 		option->value_strings = values;
 		String8JoinParams join_params = {};
@@ -41,7 +41,6 @@ auto dk::cmd_line_insert_option(Arena *arena, CmdLine *cmd_line, String8 name, S
 		join_params.postfix = ""_str8;
 		join_params.separator = ","_str8;
 		option->value_string = str8_list_join(arena, option->value_strings, &join_params);
-		slot->first = option;
 	}
 	return option;
 }

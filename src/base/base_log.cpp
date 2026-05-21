@@ -37,7 +37,7 @@ auto dk::log_frame_begin() noexcept -> void {
 	if (local_log_context != nullptr) {
 		u64 const pos = arena_pos(local_log_context->arena);
 		LogFrame *frame = arena_push<LogFrame>(local_log_context->arena);
-		frame->pos = pos;
+		frame->arena_start_pos = pos;
 		forward_list_stack_push(&local_log_context->stack, frame);
 	}
 }
@@ -49,14 +49,18 @@ auto dk::log_frame_end(Arena *arena) noexcept -> LogFrameResult {
 		if (frame != nullptr) {
 			forward_list_stack_pop(&local_log_context->stack);
 			if (arena != nullptr) {
-				for (u32 kind = LOG_KIND_INFO; kind < LOG_KIND_COUNT; ++kind) {
-					TempArena const scratch = scratch_begin(&arena, 1);
-					String8 const unindented_str = str8_list_join(scratch.arena, frame->strings[kind], nullptr);
-					result.strings[kind] = str8_indent(arena, unindented_str);
-					scratch_end(scratch);
+				for (LogEntry const *node = frame->list.first; node != nullptr; node = node->next) {
+					LogEntry *const entry = arena_push<LogEntry>(arena);
+					entry->string = str8_copy(arena, node->string);
+					entry->kind = node->kind;
+					forward_list_queue_push(&result.list.first, &result.list.last, entry);
+					result.list.count += 1;
+					LogEntryList *const kind_list = &result.kind_lists[entry->kind];
+					forward_list_queue_push<LogEntry, &LogEntry::kind_next>(&kind_list->first, &kind_list->last, entry);
+					kind_list->count += 1;
 				}
 			}
-			arena_pop_to(local_log_context->arena, frame->pos);
+			arena_pop_to(local_log_context->arena, frame->arena_start_pos);
 		}
 	}
 	return result;
@@ -64,8 +68,17 @@ auto dk::log_frame_end(Arena *arena) noexcept -> LogFrameResult {
 
 auto dk::log_msg(LogKind kind, String8 str) noexcept -> void {
 	if (local_log_context != nullptr && local_log_context->stack != nullptr) {
-		String8 const copy = str8_copy(local_log_context->arena, str);
-		str8_list_push(local_log_context->arena, &local_log_context->stack->strings[kind], copy);
+		LogFrame *const frame = local_log_context->stack;
+		LogEntry *const entry = arena_push<LogEntry>(local_log_context->arena);
+		entry->string = str8_copy(local_log_context->arena, str);
+		entry->kind = kind;
+
+		forward_list_queue_push(&frame->list.first, &frame->list.last, entry);
+		frame->list.count += 1;
+
+		LogEntryList *const kind_list = &frame->kind_lists[kind];
+		forward_list_queue_push<LogEntry, &LogEntry::kind_next>(&kind_list->first, &kind_list->last, entry);
+		kind_list->count += 1;
 	}
 }
 

@@ -5,18 +5,33 @@
 namespace dk {
 	enum LogKind {
 		LOG_KIND_INFO = 0,
-		LOG_KIND_USER_ERROR,
+		LOG_KIND_ERROR,
 		LOG_KIND_COUNT
+	};
+
+	struct LogEntry {
+		LogEntry *next;
+		LogEntry *kind_next;
+		String8 string;
+		LogKind kind;
+	};
+
+	struct LogEntryList {
+		LogEntry *first;
+		LogEntry *last;
+		u64 count;
 	};
 
 	struct LogFrame {
 		LogFrame *next;
-		u64 pos;
-		String8List strings[LOG_KIND_COUNT];
+		u64 arena_start_pos;
+		LogEntryList list;
+		LogEntryList kind_lists[LOG_KIND_COUNT];
 	};
 
 	struct LogFrameResult {
-		String8 strings[LOG_KIND_COUNT];
+		LogEntryList list;
+		LogEntryList kind_lists[LOG_KIND_COUNT];
 	};
 
 	struct LogContext {
@@ -44,9 +59,9 @@ namespace dk {
 	auto log_msgf(LogKind kind, char const *fmt, ...) noexcept -> void;
 }
 
-#define DK_LOG_INFO(s)          dk::log_msg(dk::LOG_KIND_INFO, (s))
-#define DK_LOG_INFOF(...)       dk::log_msgf(dk::LOG_KIND_INFO, __VA_ARGS__)
-#define DK_LOG_USER_ERROR(s)    dk::log_msg(dk::LOG_KIND_USER_ERROR, (s))
-#define DK_LOG_USER_ERRORF(...) dk::dk_log_msgf(dk::LOG_KIND_USER_ERROR, __VA_ARGS__)
+#define DK_LOG_INFO(s)       dk::log_msg(dk::LOG_KIND_INFO, (s))
+#define DK_LOG_INFOF(...)    dk::log_msgf(dk::LOG_KIND_INFO, __VA_ARGS__)
+#define DK_LOG_ERROR(s)      dk::log_msg(dk::LOG_KIND_ERROR, (s))
+#define DK_LOG_ERRORF(...)   dk::log_msgf(dk::LOG_KIND_ERROR, __VA_ARGS__)
 
-#define DK_LOG_INFO_SCOPE(s)    dk::LogScope DK_GLUE(_log_scope_, __LINE__)(dk::LOG_KIND_INFO, (s))
+#define DK_LOG_INFO_SCOPE(s) dk::LogScope DK_GLUE(_log_scope_, __LINE__)(dk::LOG_KIND_INFO, (s))

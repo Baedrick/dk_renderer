@@ -74,6 +74,12 @@ namespace dk {
 	static_assert(sizeof(f32) == 4);
 	static_assert(sizeof(f64) == 8);
 
+	template <typename T>
+	struct Array {
+		T *v;
+		u64 count;
+	};
+
 	u32 constexpr U32_MAX = 0xFFFFFFFF;
 	u64 constexpr U32_MIN = 0;
 

@@ -7,6 +7,9 @@ namespace dk {
 		Arena *arena;
 		b8 quit;
 
+		LogContext *log;
+		String8 log_path;
+
 		RGFW_window *window;
 	};
 

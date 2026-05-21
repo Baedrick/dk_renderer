@@ -52,8 +52,12 @@ auto dk::rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, G
 		DK_STR8_VARG(source_str),
 		static_cast<int>(length), message
 	);
-	DK_LOG_INFO(log_msg);
-	std::fwrite(log_msg.data, 1, log_msg.size, stdout);
+	if (severity == GL_DEBUG_SEVERITY_HIGH) {
+		DK_LOG_ERROR(log_msg);
+		std::fwrite(log_msg.data, 1, log_msg.size, stderr);
+	} else {
+		DK_LOG_INFO(log_msg);
+	}
 	scratch_end(scratch);
 }
 
