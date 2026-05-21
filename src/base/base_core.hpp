@@ -132,7 +132,7 @@ namespace dk {
 		DK_ASSERT(is_pow2(align));
 		return (value + align - 1) & ~(align - 1);
 	}
-	
+
 	constexpr auto align_down_pow2(u64 value, u64 align) noexcept -> u64 {
 		DK_ASSERT(is_pow2(align));
 		return value & ~(align - 1);
@@ -153,95 +153,95 @@ namespace dk {
 		return min(max_x, max(min_x, x));
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next>
 	auto forward_list_stack_push(T **top, T *node) noexcept -> void {
-		node->next = *top;
+		node->*Next = *top;
 		*top = node;
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next>
 	auto forward_list_stack_pop(T **top) noexcept -> void {
 		if (*top != nullptr) {
-			*top = (*top)->next;
+			*top = (*top)->*Next;
 		}
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next>
 	auto forward_list_queue_push(T **first, T **last, T *node) noexcept -> void {
-		node->next = nullptr;
+		node->*Next = nullptr;
 		if (*first == nullptr) {
 			*first = *last = node;
 		}
 		else {
-			(*last)->next = node;
+			(*last)->*Next = node;
 			*last = node;
 		}
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next>
 	auto forward_list_queue_pop(T **first, T **last) noexcept -> void {
 		if (*first == *last) {
 			*first = *last = nullptr;
 		}
 		else {
-			*first = (*first)->next;
+			*first = (*first)->*Next;
 		}
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next, T *T::*Prev = &T::prev>
 	auto list_insert_after(T **first, T **last, T*pos, T *node) noexcept -> void {
 		if (*first == nullptr) {
 			*first = *last = node;
-			node->next = nullptr;
-			node->prev = nullptr;
+			node->*Next = nullptr;
+			node->*Prev = nullptr;
 		}
 		else if (pos == nullptr) {
-			node->next = *first;
-			(*first)->prev = node;
+			node->*Next = *first;
+			(*first)->*Prev = node;
 			*first = node;
-			node->prev = nullptr;
+			node->*Prev = nullptr;
 		}
 		else if (pos == *last) {
-			(*last)->next = node;
-			node->prev = *last;
+			(*last)->*Next = node;
+			node->*Prev = *last;
 			*last = node;
-			node->next = nullptr;
+			node->*Next = nullptr;
 		}
 		else {
-			if (pos->next != nullptr) {
-				pos->next->prev = node;
+			if (pos->*Next != nullptr) {
+				(pos->*Next)->*Prev = node;
 			}
-			node->next = pos->next;
-			pos->next = node;
-			node->prev = pos;
+			node->*Next = pos->*Next;
+			pos->*Next = node;
+			node->*Prev = pos;
 		}
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next, T *T::*Prev = &T::prev>
 	auto list_push_front(T **first, T **last, T *node) noexcept -> void {
-		list_insert_after(first, last, nullptr, node);
+		list_insert_after<T, Next, Prev>(first, last, nullptr, node);
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next, T *T::*Prev = &T::prev>
 	auto list_push_back(T **first, T **last, T *node) noexcept -> void {
-		list_insert_after(first, last, *last, node);
+		list_insert_after<T, Next, Prev>(first, last, *last, node);
 	}
 
-	template <typename T>
+	template <typename T, T *T::*Next = &T::next, T *T::*Prev = &T::prev>
 	auto list_remove(T **first, T **last, T *node) noexcept -> void {
 		if (node == *first) {
-			*first = node->next;
+			*first = node->*Next;
 		}
 		if (node == *last) {
-			*last = node->prev;
+			*last = node->*Prev;
 		}
 		if (node->prev != nullptr) {
-			node->prev->next = node->next;
+			(node->*Prev)->*Next = node->*Next;
 		}
 		if (node->next != nullptr) {
-			node->next->prev = node->prev;
+			(node->*Next)->*Prev = node->*Prev;
 		}
-		node->next = nullptr;
-		node->prev = nullptr;
+		node->*Next = nullptr;
+		node->*Prev = nullptr;
 	}
 }
