@@ -677,6 +677,15 @@ auto dk::plt_w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> i
 			info->binary_dir = str8_copy(arena, path_chop_last_slash(path8));
 			scratch_end(scratch);
 		}
+		{
+			TempArena const scratch = scratch_begin(nullptr, 0);
+			DWORD constexpr size = static_cast<DWORD>(kilo_bytes(32));
+			u16 *const buffer = arena_push_array<u16>(scratch.arena, size);
+			if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, reinterpret_cast<WCHAR *>(buffer)))) {
+				info->user_program_data_path = str8_from_16(arena, str16_cstring(buffer));
+			}
+			scratch_end(scratch);
+		}
 	}
 
 	InitializeCriticalSection(&plt_w32_context.entity_mutex);

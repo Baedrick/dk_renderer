@@ -81,7 +81,6 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [ ][Must Have] Obtain user program data path from os for config storing and logs
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Import Dear ImGui
@@ -94,7 +93,8 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
-- [-][Must Have] Platform high-level file reading/writing helpers
+- [x][Must Have] Obtain user program data path from os for config storing and logs
+- [x][Must Have] Platform high-level file reading/writing helpers
 - [x][Must Have] Refactor logging to allow for separation of log level and in-order append
 - [x][Must Have] Refactor list helpers to support named next and prev pointers
 - [x][Must Have] Win32 semaphores for IPC synchronization

@@ -15,6 +15,7 @@ namespace dk {
 	struct PLT_ProcessInfo {
 		u32 pid;
 		String8 binary_dir;
+		String8 user_program_data_path;
 	};
 
 	using PLT_AccessFlags = u32;
