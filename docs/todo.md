@@ -70,6 +70,7 @@
 - [ ][Must Have] Inter-Process Communication with Toy Cooker
 - [ ][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][Nice To Have] Hot-reloading of cooked model binaries
+- [x][Must Have] ImGui show demo window
 - [x][Must Have] Hello Triangle to validate graphics code
 - [x][Must Have] Hello Triangle shader code
 - [x][Must Have] Top level functions for init, update, and shutdown
@@ -83,7 +84,9 @@
 ### Codebase
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
-- [ ][Must Have] Import Dear ImGui
+- [ ][Must Have] Set up UI layer
+- [ ][Must Have] Tidy up RGFW imgui backend to correctly support io fields updating
+- [ ][Must Have] Remove chrono from RGFW imgui backend because of compile times
 - [ ][Must Have] Ring buffer for Inter-Process Communication
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
@@ -93,6 +96,8 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] Import Dear ImGui
+- [x][Must Have] Update build script to build shaders to shader folder in bin
 - [x][Must Have] Frame arena and measuring frame time
 - [x][Must Have] Obtain user program data path from os for config storing and logs
 - [x][Must Have] Platform high-level file reading/writing helpers

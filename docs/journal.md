@@ -1,3 +1,20 @@
+### 2026-05-22: ImGui, Backend, and Opensource Contributing
+RGFW doesnt have matured imgui backend implementation.
+It didnt support the rgfw version that has been out for a while.
+I took some time to write an updated backend and fix it to support unity
+builds correctly. Then I opened a PR to merge my changed to the repository.
+
+I worked on bringing imgui into the main application. Because rgfw imgui backend
+is not very mature, a lot of the functionality was still lacking, requiring me
+to dig through the source code or in the main function directly call stuff that
+should've just worked, like using glfw you dont need to think about a lot of the
+imgui updating. my main goal was just to bring imgui into the project first, ill
+figure out how to improve the rgfw backend as i continue this project.
+
+another problem with the backend that i might need to solve is that it included
+the chrono header which brings a lot of other stl headers in. this slows down
+compile times by a lot.
+
 ### 2026-05-21: Logging Datastructure & Semaphores
 
 
