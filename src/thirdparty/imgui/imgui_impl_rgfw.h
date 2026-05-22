@@ -2,6 +2,8 @@
 // unmodified copy of the original imgui_impl_rgfw.h. Changes are:
 // 1. Removed #pragma once because the preprocessor was excluding the file
 //    for the implementation in the cpp file
+// 2. Update the implementation to support RGFW 2.0.0-dev.
+// 3. Remove <chrono> include in favor of platform code timing to improve compile time.
 
 /*
     dear imgui RGFW backend
@@ -83,8 +85,6 @@ IMGUI_IMPL_API void     ImGui_ImplRgfw_CharCallback(const RGFW_event* e);
 #endif /* ifndef RGFW_IMGUI_H */
 
 #ifdef RGFW_IMGUI_IMPLEMENTATION
-
-#include <chrono>
 
 #ifndef RGFWDEF
     #define RGFWDEF
@@ -589,12 +589,11 @@ void ImGui_ImplRgfw_NewFrame()
     io.DisplaySize = ImVec2(static_cast<float>(bd->Window->w), static_cast<float>(bd->Window->h));
 
     // Setup time step
-    using namespace std::chrono;
-    double current_time = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0f;
-    if(current_time <= bd->Time) {
-        current_time = bd->Time + 0.000001;
-    }
-    io.DeltaTime = bd->Time == 0.0 ? static_cast<float>(1.0f / 60.0f) : static_cast<float>(current_time - bd->Time);
+    u64 const time_us = dk::plt_now_microseconds();
+    double current_time = static_cast<double>(time_us) / 1e6;
+    if (current_time <= bd->Time)
+    	current_time = bd->Time + 0.000001;
+    io.DeltaTime = bd->Time > 0.0 ? static_cast<float>(current_time - bd->Time) : static_cast<float>(1.0f / 60.0f);
     bd->Time = current_time;
 
     ImGui_ImplRgfw_UpdateMouseData();
