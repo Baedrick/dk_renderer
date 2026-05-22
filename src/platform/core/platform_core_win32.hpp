@@ -36,12 +36,19 @@ namespace dk {
 		CONDITION_VARIABLE handle;
 	};
 
+	struct PLT_W32_DirIter {
+		HANDLE handle;
+		WIN32_FIND_DATAW find_data;
+		PLT_DirIterFlags flags;
+	};
+
 	enum PLT_W32_EntityKind {
 		PLT_W32_ENTITY_NULL = 0,
 		PLT_W32_ENTITY_THREAD,
 		PLT_W32_ENTITY_MUTEX,
 		PLT_W32_ENTITY_RW_MUTEX,
-		PLT_W32_ENTITY_CONDITIONAL_VARIABLE
+		PLT_W32_ENTITY_CONDITIONAL_VARIABLE,
+		PLT_W32_ENTITY_DIR_ITER
 	};
 
 	struct PLT_W32_Entity {
@@ -52,6 +59,7 @@ namespace dk {
 			PLT_W32_Mutex mutex;
 			PLT_W32_RWMutex rw_mutex;
 			PLT_W32_ConditionalVariable cond_var;
+			PLT_W32_DirIter dir_iter;
 		};
 	};
 

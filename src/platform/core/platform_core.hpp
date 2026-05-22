@@ -15,7 +15,7 @@ namespace dk {
 	struct PLT_ProcessInfo {
 		u32 pid;
 		String8 binary_dir;
-		String8 user_program_data_path;
+		String8 user_program_data_dir;
 	};
 
 	using PLT_AccessFlags = u32;
@@ -34,6 +34,20 @@ namespace dk {
 	struct PLT_FileAttributes {
 		u64 size;
 		PLT_FileFlags flags;
+	};
+
+	using PLT_DirIterFlags = u32;
+	enum : u32 {
+		PLT_DIR_ITER_FLAG_NONE = 0,
+		PLT_DIR_ITER_FLAG_SKIP_FOLDERS = 1u << 0,
+		PLT_DIR_ITER_FLAG_SKIP_FILES = 1u << 1,
+		PLT_DIR_ITER_FLAG_SKIP_HIDDEN_FILES = 1u << 2,
+		PLT_DIR_ITER_FLAG_DONE = 1u << 31,
+	};
+
+	struct PLT_DirIterResult {
+		String8 name;
+		PLT_FileAttributes attributes;
 	};
 
 	using PLT_ProcessLaunchFlags = u32;
@@ -81,6 +95,10 @@ namespace dk {
 	auto plt_read_data_from_file_path(Arena *arena, String8 path) noexcept -> Array<u8>;
 	auto plt_write_data_to_file_path(String8 path, Array<u8> data) noexcept -> b8;
 	auto plt_append_data_to_file_path(String8 path, Array<u8> data) noexcept -> b8;
+
+	auto plt_dir_iter_begin(String8 dir, PLT_DirIterFlags flags) noexcept -> PLT_Handle;
+	auto plt_dir_iter_next(Arena *arena, PLT_Handle dir_iter, PLT_DirIterResult *out_result) noexcept -> b8;
+	auto plt_dir_iter_end(PLT_Handle dir_iter) noexcept -> void;
 
 	auto plt_make_directory(String8 path) noexcept -> b8;
 

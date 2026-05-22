@@ -52,6 +52,18 @@ auto dk::char_to_forward_slash(u8 c) noexcept -> u8 {
 	return c == '\\' ? '/' : c;
 }
 
+auto dk::char16_is_lower(u16 c) noexcept -> b8 {
+	return c >= u'A' && c <= u'Z';
+}
+
+auto dk::char16_to_lower(u16 c) noexcept -> u16 {
+	return char16_is_lower(c) ? u'a' + (c - u'A') : c;
+}
+
+auto dk::char16_to_forward_slash(u16 c) noexcept -> u16 {
+	return c == '\\' ? u'/' : c;
+}
+
 auto dk::cstring8_length(u8 const *cstr) noexcept -> u64 {
 	u64 length = 0;
 	if (cstr != nullptr) {
@@ -70,6 +82,10 @@ auto dk::cstring16_length(u16 const *cstr) noexcept -> u64 {
 
 auto dk::operator""_str8(char const *cstr, u64 size) noexcept -> String8 {
 	return { .data = reinterpret_cast<u8 const *>(cstr), .size = size };
+}
+
+auto dk::operator""_str16(char16_t const *cstr, u64 size) noexcept -> String16 {
+	return { .data = reinterpret_cast<u16 const *>(cstr), .size = size };
 }
 
 auto dk::str8(u8 const *str, u64 size) noexcept -> String8 {
@@ -209,6 +225,28 @@ auto dk::str8_find_needle_reverse(String8 str, u64 start_pos, String8 needle, St
 		}
 	}
 	return str.size;
+}
+
+auto dk::str16_equals(String16 s1, String16 s2, StringMatchFlags flags) noexcept -> b8 {
+	if (s1.size != s2.size) {
+		return false;
+	}
+	for (u64 i = 0; i < s1.size; ++i) {
+		u16 c1 = s1[i];
+		u16 c2 = s2[i];
+		if ((flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0) {
+			c1 = char16_to_lower(c1);
+			c2 = char16_to_lower(c2);
+		}
+		if ((flags & STRING_MATCH_FLAG_SLASH_INSENSITIVE) != 0) {
+			c1 = char16_to_forward_slash(c1);
+			c2 = char16_to_forward_slash(c2);
+		}
+		if (c1 != c2) {
+			return false;
+		}
+	}
+	return true;
 }
 
 auto dk::str8_to_upper(Arena *arena, String8 str) noexcept -> String8 {
@@ -540,7 +578,7 @@ auto dk::utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode {
 	};
 	u8 constexpr first_byte_mask[] = { 0, 0x7F, 0x1F, 0x0F, 0x07 };
 	u8 constexpr final_shift[] = { 0, 18, 12, 6, 0 };
-	
+
 	// NOTE(Dedrick): Replacement character '?'.
 	StringDecode result = { 0xFFFD, 1 };
 	if (max > 0) {
@@ -648,10 +686,10 @@ auto dk::str8_from_16(Arena *arena, String16 str) noexcept -> String8 {
 		u64 const max_size = str.size * 3 + 1;
 		u8 *const out_begin = arena_push_array<u8>(arena, max_size);
 		u8 *out = out_begin;
-		
+
 		u16 const *in = str.data;
 		u16 const *const in_end = in + str.size;
-		
+
 		while (in < in_end) {
 			StringDecode const decode = utf16_decode(in, in_end - in);
 			in += decode.advance;
@@ -673,10 +711,10 @@ auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
 		u64 const max_size = str.size * 2 + 1;
 		u16 *const out_begin = arena_push_array<u16>(arena, max_size);
 		u16 *out = out_begin;
-		
+
 		u8 const *in = str.data;
 		u8 const *const in_end = in + str.size;
-		
+
 		while (in < in_end) {
 			StringDecode const decode = utf8_decode(in, in_end - in);
 			in += decode.advance;

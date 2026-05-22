@@ -278,6 +278,74 @@ auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttribute
 	return attr;
 }
 
+auto dk::plt_dir_iter_begin(String8 dir, PLT_DirIterFlags flags) noexcept -> PLT_Handle {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String8 const dir_with_wildcard = str8_cat(scratch.arena, dir, "\\*"_str8);
+	String16 const dir16 = str16_from_8(scratch.arena, dir_with_wildcard);
+	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_DIR_ITER);
+	entity->dir_iter.flags = flags;
+	entity->dir_iter.handle = FindFirstFileExW(
+		reinterpret_cast<WCHAR const *>(dir16.data),
+		FindExInfoBasic,
+		&entity->dir_iter.find_data,
+		FindExSearchNameMatch,
+		nullptr,
+		FIND_FIRST_EX_LARGE_FETCH
+	);
+	PLT_Handle const result = { reinterpret_cast<uintptr_t>(entity) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::plt_dir_iter_next(Arena *arena, PLT_Handle dir_iter, PLT_DirIterResult *out_result) noexcept -> b8 {
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(dir_iter.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_DIR_ITER);
+	PLT_W32_DirIter *const w32_iter = &entity->dir_iter;
+	PLT_DirIterFlags const flags = w32_iter->flags;
+	if ((flags & PLT_DIR_ITER_FLAG_DONE) != 0 || w32_iter->handle == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+	b8 found = false;
+	do {
+		b8 usable = true;
+		String16 const name16 = str16_cstring(reinterpret_cast<u16 const *>(w32_iter->find_data.cFileName));
+		DWORD const attributes = w32_iter->find_data.dwFileAttributes;
+		if (str16_equals(name16, u"."_str16, STRING_MATCH_FLAG_NONE) ||
+			str16_equals(name16, u".."_str16, STRING_MATCH_FLAG_NONE)) {
+			usable = false;
+		}
+		if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+			usable = usable && (flags & PLT_DIR_ITER_FLAG_SKIP_FOLDERS) == 0;
+		}
+		else {
+			usable = usable && (flags & PLT_DIR_ITER_FLAG_SKIP_FILES) == 0;
+		}
+		if (usable) {
+			out_result->name = str8_from_16(arena, name16);
+			u64 const size_lo = w32_iter->find_data.nFileSizeLow;
+			u64 const size_hi = w32_iter->find_data.nFileSizeHigh;
+			out_result->attributes.size = size_lo | (size_hi << 32);
+			out_result->attributes.flags = plt_w32_file_flags_from_dw_file_attributes(attributes);
+			found = true;
+			if (!FindNextFileW(w32_iter->handle, &w32_iter->find_data)) {
+				w32_iter->flags |= PLT_DIR_ITER_FLAG_DONE;
+			}
+			break;
+		}
+	} while (FindNextFileW(w32_iter->handle, &w32_iter->find_data));
+	if (!found) {
+		w32_iter->flags |= PLT_DIR_ITER_FLAG_DONE;
+	}
+	return found;
+}
+
+auto dk::plt_dir_iter_end(PLT_Handle dir_iter) noexcept -> void {
+	PLT_W32_Entity *const entity = reinterpret_cast<PLT_W32_Entity *>(dir_iter.v);
+	DK_ASSERT(entity->kind == PLT_W32_ENTITY_DIR_ITER);
+	FindClose(entity->dir_iter.handle);
+	plt_w32_entity_release(entity);
+}
+
 auto dk::plt_make_directory(String8 path) noexcept -> b8 {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const path16 = str16_from_8(scratch.arena, path);
@@ -392,13 +460,10 @@ auto dk::plt_set_thread_name(String8 name) noexcept -> void {
 auto dk::plt_thread_launch(PLT_ThreadFunction *func, void *params) noexcept -> PLT_Handle {
 	PLT_Handle result = plt_handle_invalid();
 	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_THREAD);
-	if (entity != nullptr) {
-		// TODO(Dedrick): Error handling.
-		entity->thread.func = func;
-		entity->thread.params = params;
-		entity->thread.handle = CreateThread(nullptr, 0, plt_w32_thread_entry_caller, entity, 0, &entity->thread.tid);
-		result.v = reinterpret_cast<uintptr_t>(entity);
-	}
+	entity->thread.func = func;
+	entity->thread.params = params;
+	entity->thread.handle = CreateThread(nullptr, 0, plt_w32_thread_entry_caller, entity, 0, &entity->thread.tid);
+	result.v = reinterpret_cast<uintptr_t>(entity);
 	return result;
 }
 
@@ -430,10 +495,8 @@ auto dk::plt_thread_detach(PLT_Handle thread) noexcept -> void {
 auto dk::plt_mutex_alloc() noexcept -> PLT_Handle {
 	PLT_Handle result = plt_handle_invalid();
 	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_MUTEX);
-	if (entity != nullptr) {
-		InitializeCriticalSection(&entity->mutex.handle);
-		result.v = reinterpret_cast<uintptr_t>(entity);
-	}
+	InitializeCriticalSection(&entity->mutex.handle);
+	result.v = reinterpret_cast<uintptr_t>(entity);
 	return result;
 }
 
@@ -459,10 +522,8 @@ auto dk::plt_mutex_scope_leave(PLT_Handle mutex) noexcept -> void {
 auto dk::plt_rw_mutex_alloc() noexcept -> PLT_Handle {
 	PLT_Handle result = plt_handle_invalid();
 	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_RW_MUTEX);
-	if (entity != nullptr) {
-		InitializeSRWLock(&entity->rw_mutex.handle);
-		result.v = reinterpret_cast<uintptr_t>(entity);
-	}
+	InitializeSRWLock(&entity->rw_mutex.handle);
+	result.v = reinterpret_cast<uintptr_t>(entity);
 	return result;
 }
 
@@ -499,10 +560,8 @@ auto dk::plt_rw_mutex_scope_leave_r(PLT_Handle rw_mutex) noexcept -> void {
 auto dk::plt_cond_var_alloc() noexcept -> PLT_Handle {
 	PLT_Handle result = plt_handle_invalid();
 	PLT_W32_Entity *const entity = plt_w32_entity_alloc(PLT_W32_ENTITY_CONDITIONAL_VARIABLE);
-	if (entity != nullptr) {
-		InitializeConditionVariable(&entity->cond_var.handle);
-		result.v = reinterpret_cast<uintptr_t>(entity);
-	}
+	InitializeConditionVariable(&entity->cond_var.handle);
+	result.v = reinterpret_cast<uintptr_t>(entity);
 	return result;
 }
 
@@ -682,7 +741,7 @@ auto dk::plt_w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> i
 			DWORD constexpr size = static_cast<DWORD>(kilo_bytes(32));
 			u16 *const buffer = arena_push_array<u16>(scratch.arena, size);
 			if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, reinterpret_cast<WCHAR *>(buffer)))) {
-				info->user_program_data_path = str8_from_16(arena, str16_cstring(buffer));
+				info->user_program_data_dir = str8_from_16(arena, str16_cstring(buffer));
 			}
 			scratch_end(scratch);
 		}

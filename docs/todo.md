@@ -82,7 +82,6 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [ ][Must Have] File directory iteratoration
 - [ ][Must Have] Resource packing tool to export spirv binaries as one blob
 - [ ][Must Have] Packed resource format, only needs to support spriv
 - [ ][Must Have] Update readme with project description and goals
@@ -99,6 +98,8 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [x][Must Have] File directory iteration
+- [x][Must Have] String16 helpers and user literal for win32 code
 - [x][Must Have] Import Dear ImGui
 - [x][Must Have] Update build script to build shaders to shader folder in bin
 - [x][Must Have] Frame arena and measuring frame time

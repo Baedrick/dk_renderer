@@ -11,11 +11,11 @@ namespace dk {
 
 		auto operator[](u64 index) const noexcept -> u8 const &;
 	};
-	
+
 	struct String16 {
 		u16 const *data;
 		u64 size;
-		
+
 		auto operator[](u64 index) const noexcept -> u16 const &;
 	};
 
@@ -72,10 +72,15 @@ namespace dk {
 	auto char_to_lower(u8 c) noexcept -> u8;
 	auto char_to_forward_slash(u8 c) noexcept -> u8;
 
+	auto char16_is_lower(u16 c) noexcept -> b8;
+	auto char16_to_lower(u16 c) noexcept -> u16;
+	auto char16_to_forward_slash(u16 c) noexcept -> u16;
+
 	auto cstring8_length(u8 const *cstr) noexcept -> u64;
 	auto cstring16_length(u16 const *cstr) noexcept -> u64;
 
 	auto operator ""_str8(char const *cstr, u64 size) noexcept -> String8;
+	auto operator ""_str16(char16_t const *cstr, u64 size) noexcept -> String16;
 
 	// NOTE(Dedrick): Usage printf("My String: %.*s\n", DK_STR8_VARG(my_string));
 	#define DK_STR8_VARG(s) static_cast<int>((s).size), reinterpret_cast<char const *>((s).data)
@@ -97,6 +102,8 @@ namespace dk {
 	auto str8_compare(String8 s1, String8 s2, StringMatchFlags flags) noexcept -> s32;
 	auto str8_find_needle(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64;
 	auto str8_find_needle_reverse(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64;
+
+	auto str16_equals(String16 s1, String16 s2, StringMatchFlags flags) noexcept -> b8;
 
 	auto str8_to_upper(Arena *arena, String8 str) noexcept -> String8;
 	auto str8_to_lower(Arena *arena, String8 str) noexcept -> String8;
@@ -126,7 +133,7 @@ namespace dk {
 	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8;
 
 	auto str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array;
-	
+
 	auto path_chop_last_slash(String8 path) noexcept -> String8;
 	auto path_skip_last_slash(String8 path) noexcept -> String8;
 
