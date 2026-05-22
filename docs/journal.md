@@ -1,85 +1,89 @@
-### 2025-05-22: Shipping Resource Binary (Draft)
-From the hello triangle code I realized that I need something better than reading
-each individual shader binary from file then compiling it at runtime. A lot of
-things can fail, like the file cant be found, reading fails, etc. I need the
-build process and launching the appliction to be easy as possible for my university
-appointed grader to be able to build and just run. I considered embedding the
-shaders directly into the source code of the project but the issue with that is
-it is a lot more complex than expected, because there is no standard way to do
-so. There is #embed in C23 but that bumps build the requirements up and I'm not
-ready for that. It makes things harder to incorporate since this is a cpp code-
-base and c++23 doesnt have #embed. A solution is to write a small program to
-parse binary programs and generate header files to embed. The problem is that
-since compiling shaders requires compilation to spirv via glslangvalidator, I
-need to then find those binaries and write a cpp header file out. The embedding
-approach would increase compile times in the future because of the amount of
-assets that are needed for rendering. Like a few shader files etc, unlike simpler
-programs which can have one uber shader this renderer would need a lot more than
-that which will increase compile times by a lot. I decided on an approach which
-is a middle ground between both approaches of reading multiple files from disk
-and embedding. The approach would be to pack all assets to ship with the renderer
-into one .dkpak file. Then at startup I just read the file into memory and
-initialize from there. If the file doesnt exist I can straight away shutdown
-rather than halfway through initialization scream that something doesnt exist.
+### 2025-05-22: Shipping Resource Binary
+From working on the hello triangle milestone, I realized that reading individual
+shader binaries from disk and compiling them at runtime is too fragile. Multiple
+points of failure exist, such as missing files or read errors, which unnecessarily
+complicates distribution. I want the build and execution process to be as seamless
+as possible for the professor grading me to build and run the project.
 
-To start work on that I have to introduce a file directory iterator to be able
-to iterate the file directories so I can grab the assets I need to pack into
-the .dkpak file for export.
+While I considered embedding shaders directly into the source code, C++ lacks a
+clean, standard way to achieve this. C23 introduces #embed, but adapting it to a
+C++ codebase bumps build requirements past what I am ready to accept. Writing a
+custom utility to parse binaries and generate header files is an option, but
+compiling shaders to SPIR-V via glslangValidator and then converting them into
+headers would drastically inflate future compile times as asset counts grow,
+since a lot of string manipulation is required to dump a binary into a C array.
+Unlike simpler applications that rely on a single uber-shader, this renderer will
+require numerous distinct shaders.
 
-### 2026-05-22: ImGui, ImGui Backend, and Opensource Contributing (Draft)
-RGFW doesnt have matured imgui backend implementation.
-It didnt support the rgfw version that has been out for a while.
-I took some time to write an updated backend and fix it to support unity
-builds correctly. Then I opened a PR to merge my changed to the repository.
+To strike a balance between loose disk files and embedded source code, I decided
+to pack all runtime assets into a single .dkpak file. At startup, the engine will
+read this archive into a single memory block for initialization. If the archive
+is missing, the application can safely terminate immediately rather than failing
+halfway through initialization. To implement this, I need to introduce a platform
+file directory iterator to gather the necessary assets during the packing phase.
 
-I worked on bringing imgui into the main application. Because rgfw imgui backend
-is not very mature, a lot of the functionality was still lacking, requiring me
-to dig through the source code or in the main function directly call stuff that
-should've just worked, like using glfw you dont need to think about a lot of the
-imgui updating. my main goal was just to bring imgui into the project first, ill
-figure out how to improve the rgfw backend as i continue this project.
+### 2026-05-22: ImGui, ImGui Backend, and Opensource Contributing
+The existing Dear ImGui backend for RGFW is immature and failed to support the
+latest version of the library. I spent time writing an updated backend
+implementation, fixing bugs to ensure it compiles correctly within my unity build
+setup. After verifying the changes, I opened a pull request to contribute these
+fixes back to the upstream repository.
 
-another problem with the backend that i might need to solve is that it included
-the chrono header which brings a lot of other stl headers in. this slows down
-compile times by a lot.
+Integrating ImGui into the main application revealed further limitations in the
+RGFW backend. Unlike mature backends like GLFW that handle context updates
+transparently, RGFW requires explicit intervention. My immediate priority was
+simply to establish a working ImGui baseline in the project; I will refine and
+clean up the backend integration as development progresses.
 
-i managed to get imgui to show the demo window to make sure that i did set up
-imgui correctly.
+Another issue with the current backend is its dependency on the <chrono> header,
+which transitively pulls in a massive amount of STL boilerplate. This noticeably
+slows down compilation speeds, conflicting with my unity build goals. For now,
+I successfully rendered the ImGui demo window to validate the initial setup,
+confirming that the rendering state and pipeline bindings are correctly
+configured.
 
-### 2026-05-21: Logging Datastructure & Semaphores (Draft)
-I want logs to print to the renderer instead of needing to launch the renderer
-from the console to logs. This requires changes to the way logs are stored in
-memory because for a console window, basic user experience is being able to filter
-logs by levels. The previous iteration of the logging concatenates the logs and
-automatically indents them based on scope, but thats not useful when you need to
-parse the logs and filter and colorize the text. This is where being able to
-control the allocation strategy and not reaching for a generic data structure
-shines because the cost of link lists (cache trashing) is negliable because the
-nodes are allocated beside each other in memory. I wrote a hybrid data structure
-called a multi-intrusive list which allows me to chain the same node in different
-lists. So I created a list of pushes in order of log emission. I created homogenous
-lists of log of the same level only. Because in 90% of cases, you want to see
-logs of a specific level, or you want to see all logs. If you really needed to
-filter by more than 2 types of logs (the 5% of cases), then we can traverse the
-list in-order list and skip logs that are not desired.
+### 2026-05-21: Logging Datastructure & Semaphores
+I want to display log output directly within the renderer UI rather than forcing
+the application to launch from a system console to view logs. This requires
+refactoring how log data is structured in memory. To provide a proper user
+experience, the UI needs to filter and color-code logs by severity level. The
+previous iteration simply concatenated strings and applied visual indentations
+based on logging scopes, which makes parsing, filtering, and colorizing text
+impractical.
 
-I also implemented semaphores in the platform layer. The reason why I need it is
-for inter-process communication. Last time I talked about not needing it because
-I can use mutexes and conditional variables, but I need semaphores now because
-those primitives are user level not system level, so sharing them across processes
-is hard.
+This scenario highlights the advantages of custom allocation strategies over
+generic containers. While linked lists typically suffer from cache thrashing,
+my arena allocations ensure that nodes sit contiguously in memory, rendering the
+cache overhead negligible. I designed a specialized data structure called a
+multi-intrusive list, which allows a single log node to be chained simultaneously
+into multiple distinct lists. Every log is appended to a master list tracking
+chronological emission order, while also being linked into a homogenous list
+specific to its severity level. Since the vast majority of use cases involve
+viewing either all logs or a single filtered level, this layout provides instant
+lookups. For complex filters, traversing the master chronological list and
+skipping undesired elements remains highly efficient.
 
-### 2026-05-20: Hello Triangle (Draft)
-I reached a milestone today by successfully rendering a triangle in the codebase.
-It took much longer than I expect since starting the project late february, but
-Im happy that I have something to show for now with the work I put into the
-project. Getting the triangle up did expose a lot of inefficiencies with the
-codebase, like there are some functions that were too granular so doing a simple
-action with them, like reading a file from disk, took a considerable amount of
-code to make happen. So I know I need higher-level functions that I can just
-say read from this file and give me the bytes back. Another thing is that it
-showed me I need to consider a workflow for shipping shaders with the renderer
-so that it will be simple and faster to initialize the renderer.
+Additionally, I implemented semaphore primitives within the platform layer to
+facilitate inter-process communication. Although I previously noted that mutexes
+and condition variables would suffice for synchronization, those user-level
+primitives do not easily bridge the process boundary. System-level semaphores
+are necessary to coordinate data sharing between the renderer and the upcoming
+asset cooker application.
+
+### 2026-05-20: Hello Triangle
+I achieved a major milestone today by successfully rendering a triangle. While
+reaching this point took longer than anticipated since starting the project in
+late February, it serves as validation for the foundational architecture built
+so far.
+
+Bringing up the first geometry exposed several design inefficiencies within the
+codebase. Many platform utilities proved to be too granular, requiring an
+excessive amount of boilerplate code to perform routine tasks like reading a
+file from disk. Moving forward, I need to implement higher-level convenience
+functions to streamline asset loading, allowing me to request raw bytes from a
+file path in a single call. Furthermore, the process to rendering the triangle
+emphasized the immediate need for a robust shader distribution workflow to
+simplify and accelerate engine initialization.
 
 ### 2026-05-20: Command Line Parsing
 I implemented a simple command-line parser inspired by raddebugger's parser. It
