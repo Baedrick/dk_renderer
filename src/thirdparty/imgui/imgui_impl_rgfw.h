@@ -404,6 +404,7 @@ void ImGui_ImplRgfw_InstallCallbacks(RGFW_window* window)
     ImGui_ImplRgfw_Data* bd = ImGui_ImplRgfw_GetBackendData();
     IM_ASSERT(bd->InstalledCallbacks == false && "Callbacks already installed!");
     IM_ASSERT(bd->Window == window);
+    (void)window;
 
     /*
         TODO: RGFW doesn't have anyway to do this yet
@@ -419,6 +420,7 @@ void ImGui_ImplRgfw_RestoreCallbacks(RGFW_window* window)
     ImGui_ImplRgfw_Data* bd = ImGui_ImplRgfw_GetBackendData();
     IM_ASSERT(bd->InstalledCallbacks == true && "Callbacks not installed!");
     IM_ASSERT(bd->Window == window);
+    (void)window;
 
     for (u32 i = RGFW_eventNone + 1; i < RGFW_eventCount; i++)
         RGFW_setEventCallback((RGFW_eventType)i, bd->PrevCallbacks.arr[i]);
