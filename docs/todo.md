@@ -98,6 +98,7 @@
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
+- [ ][Nice To Have] Support large page allocations for arena performance
 - [x][Must Have] File directory iteration
 - [x][Must Have] String16 helpers and user literal for win32 code
 - [x][Must Have] Import Dear ImGui
