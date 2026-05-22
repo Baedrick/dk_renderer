@@ -71,13 +71,11 @@ pushd bin
 if "%all%"=="1" (
     echo [building all targets]
     set shaders=1
-    set dkpak=1
     set dkcook=1
     set dkrend=1
 )
 if "%shaders%"=="1" (
     echo [building shaders]
-    set dkpak=1
     set didbuild=1
     for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
         %glslang% %glslang_include% -G -o "shaders\%%~nxf.spv" "%%f" || exit /b 1
@@ -94,12 +92,12 @@ if "%didbuild%"=="" (
 
 :: --- Build & Run Resource Packing --------------------------------------------
 pushd bin
-if "%dkpak%"=="1" if not "%no_dkpak%"=="1" (
-    echo [building dkpakgen]
+if "%shaders%"=="1" set dkpak=1
+if "%dkpak%"=="1" (
     %compile% ..\src\dkpakgen\dkpakgen_main.cpp %compile_link% %out%dkpakgen.exe || exit /b 1
-)
-if "%no_dkpak%"=="" if exist dkpakgen.exe (
-    echo [running dkpakgen]
-    dkpakgen.exe || exit /b 1
+    if exist dkpakgen.exe (
+        echo [running dkpakgen]
+        dkpakgen.exe || exit /b 1
+    )
 )
 popd
