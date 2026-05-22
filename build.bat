@@ -85,15 +85,11 @@ if "%dkcook%"=="1" set didbuild=1 && %compile% ..\src\dkcook\dkcook_main.cpp %co
 if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% %out%dkrend.exe || exit /b 1
 popd
 
-if "%didbuild%"=="" (
-  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build dkrend` or `build all`.
-  exit /b 1
-)
-
 :: --- Build & Run Resource Packing --------------------------------------------
 pushd bin
 if "%shaders%"=="1" set dkpak=1
 if "%dkpak%"=="1" (
+    set didbuild=1
     %compile% ..\src\dkpakgen\dkpakgen_main.cpp %compile_link% %out%dkpakgen.exe || exit /b 1
     if exist dkpakgen.exe (
         echo [running dkpakgen]
@@ -101,3 +97,9 @@ if "%dkpak%"=="1" (
     )
 )
 popd
+
+:: --- Warn On No Builds -------------------------------------------------------
+if "%didbuild%"=="" (
+  echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build dkrend` or `build all`.
+  exit /b 1
+)
