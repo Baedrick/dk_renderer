@@ -18,7 +18,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 	String8 const binary_dir = plt_get_process_info()->binary_dir;
 	String8 const project_dir = path_chop_last_slash(binary_dir);
-	String8 const code_dir = str8f(arena, "%.*s/src", DK_STR8_VARG(project_dir));
+	String8 const code_dir = str8f(arena, "%.*s/src/shaders", DK_STR8_VARG(project_dir));
 
 	// NOTE(Dedrick): Recursively search directories for all files to consider.
 	// TODO(Dedrick); Spir-V binaries will only be built to a specific folder, only need to iterate that.

@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 cd /D "%~dp0"
 
-:: -- Usage (2026/05/17) -------------------------------------------------------
+:: -- Usage (2026/05/22) -------------------------------------------------------
 ::
 :: Derived from RADDBG build.bat
 ::
@@ -71,11 +71,13 @@ pushd bin
 if "%all%"=="1" (
     echo [building all targets]
     set shaders=1
+    set dkpak=1
     set dkcook=1
     set dkrend=1
 )
 if "%shaders%"=="1" (
     echo [building shaders]
+    set dkpak=1
     set didbuild=1
     for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
         %glslang% %glslang_include% -G -o "shaders\%%~nxf.spv" "%%f" || exit /b 1
@@ -89,3 +91,15 @@ if "%didbuild%"=="" (
   echo [WARNING] no valid build target specified; must use build target names as arguments to this script, like `build dkrend` or `build all`.
   exit /b 1
 )
+
+:: --- Build & Run Resource Packing --------------------------------------------
+pushd bin
+if "%dkpak%"=="1" if not "%no_dkpak%"=="1" (
+    echo [building dkpakgen]
+    %compile% ..\src\dkpakgen\dkpakgen_main.cpp %compile_link% %out%dkpakgen.exe || exit /b 1
+)
+if "%no_dkpak%"=="" if exist dkpakgen.exe (
+    echo [running dkpakgen]
+    dkpakgen.exe || exit /b 1
+)
+popd
