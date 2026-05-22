@@ -82,6 +82,9 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
+- [ ][Must Have] File directory iteratoration
+- [ ][Must Have] Resource packing tool to export spirv binaries as one blob
+- [ ][Must Have] Packed resource format, only needs to support spriv
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Set up UI layer
