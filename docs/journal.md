@@ -1,4 +1,32 @@
-### 2026-05-22: ImGui, Backend, and Opensource Contributing
+### 2025-05-22: Shipping Resource Binary (Draft)
+From the hello triangle code I realized that I need something better than reading
+each individual shader binary from file then compiling it at runtime. A lot of
+things can fail, like the file cant be found, reading fails, etc. I need the
+build process and launching the appliction to be easy as possible for my university
+appointed grader to be able to build and just run. I considered embedding the
+shaders directly into the source code of the project but the issue with that is
+it is a lot more complex than expected, because there is no standard way to do
+so. There is #embed in C23 but that bumps build the requirements up and I'm not
+ready for that. It makes things harder to incorporate since this is a cpp code-
+base and c++23 doesnt have #embed. A solution is to write a small program to
+parse binary programs and generate header files to embed. The problem is that
+since compiling shaders requires compilation to spirv via glslangvalidator, I
+need to then find those binaries and write a cpp header file out. The embedding
+approach would increase compile times in the future because of the amount of
+assets that are needed for rendering. Like a few shader files etc, unlike simpler
+programs which can have one uber shader this renderer would need a lot more than
+that which will increase compile times by a lot. I decided on an approach which
+is a middle ground between both approaches of reading multiple files from disk
+and embedding. The approach would be to pack all assets to ship with the renderer
+into one .dkpak file. Then at startup I just read the file into memory and
+initialize from there. If the file doesnt exist I can straight away shutdown
+rather than halfway through initialization scream that something doesnt exist.
+
+To start work on that I have to introduce a file directory iterator to be able
+to iterate the file directories so I can grab the assets I need to pack into
+the .dkpak file for export.
+
+### 2026-05-22: ImGui, ImGui Backend, and Opensource Contributing (Draft)
 RGFW doesnt have matured imgui backend implementation.
 It didnt support the rgfw version that has been out for a while.
 I took some time to write an updated backend and fix it to support unity
@@ -15,11 +43,43 @@ another problem with the backend that i might need to solve is that it included
 the chrono header which brings a lot of other stl headers in. this slows down
 compile times by a lot.
 
-### 2026-05-21: Logging Datastructure & Semaphores
+i managed to get imgui to show the demo window to make sure that i did set up
+imgui correctly.
 
+### 2026-05-21: Logging Datastructure & Semaphores (Draft)
+I want logs to print to the renderer instead of needing to launch the renderer
+from the console to logs. This requires changes to the way logs are stored in
+memory because for a console window, basic user experience is being able to filter
+logs by levels. The previous iteration of the logging concatenates the logs and
+automatically indents them based on scope, but thats not useful when you need to
+parse the logs and filter and colorize the text. This is where being able to
+control the allocation strategy and not reaching for a generic data structure
+shines because the cost of link lists (cache trashing) is negliable because the
+nodes are allocated beside each other in memory. I wrote a hybrid data structure
+called a multi-intrusive list which allows me to chain the same node in different
+lists. So I created a list of pushes in order of log emission. I created homogenous
+lists of log of the same level only. Because in 90% of cases, you want to see
+logs of a specific level, or you want to see all logs. If you really needed to
+filter by more than 2 types of logs (the 5% of cases), then we can traverse the
+list in-order list and skip logs that are not desired.
 
-### 2026-05-20: Hello Triangle
+I also implemented semaphores in the platform layer. The reason why I need it is
+for inter-process communication. Last time I talked about not needing it because
+I can use mutexes and conditional variables, but I need semaphores now because
+those primitives are user level not system level, so sharing them across processes
+is hard.
 
+### 2026-05-20: Hello Triangle (Draft)
+I reached a milestone today by successfully rendering a triangle in the codebase.
+It took much longer than I expect since starting the project late february, but
+Im happy that I have something to show for now with the work I put into the
+project. Getting the triangle up did expose a lot of inefficiencies with the
+codebase, like there are some functions that were too granular so doing a simple
+action with them, like reading a file from disk, took a considerable amount of
+code to make happen. So I know I need higher-level functions that I can just
+say read from this file and give me the bytes back. Another thing is that it
+showed me I need to consider a workflow for shipping shaders with the renderer
+so that it will be simple and faster to initialize the renderer.
 
 ### 2026-05-20: Command Line Parsing
 I implemented a simple command-line parser inspired by raddebugger's parser. It
