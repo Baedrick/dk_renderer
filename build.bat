@@ -49,6 +49,10 @@ set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /pdbaltpath:%%%%_PDB%%%% /
 set cl_out=     /out:
 set cl_linker=
 
+:: --- Shader Compile Definitions ------------------------------------------------------
+set glslang= ..\tools\glslangValidator.exe
+set glslang_include= --preamble-text "#extension GL_GOOGLE_include_directive : require" -I..\src\shaders\
+
 :: --- Choose Compile Lines ----------------------------------------------------
 if "%msvc%"=="1"         set compile_debug=%cl_debug%
 if "%msvc%"=="1"         set compile_release=%cl_release%
@@ -56,10 +60,6 @@ if "%msvc%"=="1"         set compile_link=%cl_link%
 if "%msvc%"=="1"         set out=%cl_out%
 if "%debug%"=="1"        set compile=%compile_debug%
 if "%release%"=="1"      set compile=%compile_release%
-
-:: --- Per-Build Settings ------------------------------------------------------
-set glslang= ..\tools\glslangValidator.exe
-set glslang_include= --preamble-text "#extension GL_GOOGLE_include_directive : require" -I..\src\shaders\
 
 :: --- Prep Directories --------------------------------------------------------
 if not exist bin mkdir bin
@@ -86,14 +86,17 @@ if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %co
 popd
 
 :: --- Build & Run Resource Packing --------------------------------------------
+:: TODO(Dedrick): Other assets (like tonemapping lut) will need to be packed too,
+:: would be good to use `build pak` as the target instead of `build shaders`.
 pushd bin
-if "%shaders%"=="1" set dkpak=1
-if "%dkpak%"=="1" (
+set pak=0
+if "%shaders%"=="1" set pak=1
+if "%pak%"=="1" (
     set didbuild=1
-    %compile% ..\src\dkpakgen\dkpakgen_main.cpp %compile_link% %out%dkpakgen.exe || exit /b 1
-    if exist dkpakgen.exe (
-        echo [running dkpakgen]
-        dkpakgen.exe || exit /b 1
+    %compile% ..\src\pakgen\pakgen_main.cpp %compile_link% %out%pakgen.exe || exit /b 1
+    if exist pakgen.exe (
+        echo [running pakgen]
+        pakgen.exe || exit /b 1
     )
 )
 popd

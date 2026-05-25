@@ -83,12 +83,10 @@
 
 ### Codebase
 - [ ][Must Have] Resource packing tool to export spirv binaries as one blob
-- [ ][Must Have] Packed resource format, only needs to support spriv
+- [ ][Must Have] Packed resource format, only needs to support spriv for now
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Set up UI layer
-- [ ][Must Have] Tidy up RGFW imgui backend to correctly support io fields updating
-- [ ][Must Have] Remove chrono from RGFW imgui backend because of compile times
 - [ ][Must Have] Ring buffer for Inter-Process Communication
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
@@ -99,6 +97,8 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Write RGFW v2.0.0 imgui backend
+- [x][Must Have] Remove chrono from RGFW imgui backend because of compile times
 - [x][Must Have] File directory iteration
 - [x][Must Have] String16 helpers and user literal for win32 code
 - [x][Must Have] Import Dear ImGui
