@@ -27,9 +27,7 @@ namespace dk {
 		PAK_SECTION_KIND_STRING_DATA,
 		PAK_SECTION_KIND_STRING_TABLE,
 		PAK_SECTION_KIND_SHADER,
-		PAK_SECTION_KIND_TEXTURE,
 		PAK_SECTION_KIND_GPU_SHADER_DATA,
-		PAK_SECTION_KIND_GPU_TEXTURE_DATA,
 		PAK_SECTION_KIND_COUNT
 	};
 
@@ -67,37 +65,9 @@ namespace dk {
 		u64 gpu_data_size;
 	};
 
-	using u32 = PAK_TextureKind;
-	enum : u32 {
-		PAK_TEXTURE_KIND_2D,
-		PAK_TEXTURE_KIND_3D,
-		PAK_TEXTURE_KIND_COUNT
-	};
-
-	using u32 = PAK_TextureFormat;
-	enum : u32 {
-		PAK_TEXTURE_FORMAT_BC1_UNORM,
-		PAK_TEXTURE_FORMAT_BC1_UNORM_SRGB,
-		PAK_TEXTURE_FORMAT_BC5_UNORM,
-		PAK_TEXTURE_FORMAT_RGB9E5_UFLOAT,
-		PAK_TEXTURE_FORMAT_COUNT
-	};
-
-	struct PAK_Texture {
-		u32 name_string_idx;
-		PAK_TextureKind kind;
-		PAK_TextureFormat format;
-		u32 width;
-		u32 height;
-		u32 mip_count;
-		u64 gpu_data_offset;
-		u64 gpu_data_size;
-	};
-
 	using PAK_SectionElementType_StringData = u8;
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
 	using PAK_SectionElementType_Shader = PAK_Shader;
 	using PAK_SectionElementType_Table = PAK_Texture;
 	using PAK_SectionElementType_GpuShaderData = u8;
-	using PAK_SectionElementType_GpuTextureData = u8;
 }
