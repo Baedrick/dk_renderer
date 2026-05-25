@@ -1,3 +1,8 @@
+### 2025-05-24: RGFW ImGui Backend
+I wrote my own backend for RGFW ImGui to update it to support the latest version.
+I created a pull request to merge the new backend to the official repository on
+github but thats up to the author if they want to.
+
 ### 2025-05-22: Shipping Resource Binary
 From working on the hello triangle milestone, I realized that reading individual
 shader binaries from disk and compiling them at runtime is too fragile. Multiple

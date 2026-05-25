@@ -34,6 +34,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.DeltaTime = 1.0f / 60.0f;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
 	RGFW_monitor *monitor = RGFW_window_getMonitor(dkr_context->window);
 	io.DisplayFramebufferScale = ImVec2(monitor->scaleX, monitor->scaleY);
