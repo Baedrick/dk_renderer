@@ -27,7 +27,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		plt_write_data_to_file_path(dkr_context->log_path, Array<u8>{});
 		scratch_end(scratch);
 	}
-	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter);
+	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	rhi_window_equip(dkr_context->window);
 
 	IMGUI_CHECKVERSION();
@@ -52,10 +52,10 @@ auto dk::dkr_frame() noexcept -> b8 {
 	ImGui::NewFrame();
 	ImGui::ShowDemoWindow();
 
-	// NOTE(Dedrick): Do per-frame resets.
+	// Dedrick: Do per-frame resets.
 	arena_clear(dkr_frame_arena());
 
-	// NOTE(Dedrick): Begin measuring actual per-frame work.
+	// Dedrick: Begin measuring actual per-frame work.
 	u64 const begin_time_us = plt_now_microseconds();
 
 	// TODO(Dedrick): Process platform (window) events, then process application events.
@@ -64,11 +64,19 @@ auto dk::dkr_frame() noexcept -> b8 {
 			dkr_context->quit = true;
 		}
 	}
+
+	ImGuiIO &io = ImGui::GetIO();
+	// Dedrick: Adjust ImGui for HiDPI screens.
+	{
+        float const old_scale = io.FontGlobalScale;
+        float const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
+        io.FontGlobalScale = content_scale;
+        ImGui::GetStyle().ScaleAllSizes(content_scale / old_scale);
+    }
 	{
 		s32 width = 0, height = 0;
 		RGFW_window_getSizeInPixels(dkr_context->window, &width, &height);
 		glViewport(0, 0, width, height);
-		ImGuiIO &io = ImGui::GetIO();
 		io.DisplaySize = ImVec2(static_cast<f32>(width), static_cast<f32>(height));
 	}
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -82,14 +90,14 @@ auto dk::dkr_frame() noexcept -> b8 {
 
 	rhi_surface_present(dkr_context->window);
 
-	// NOTE(Dedrick): Determine frame time.
+	// Dedrick: Determine frame time.
 	u64 const end_time_us = plt_now_microseconds();
 	u64 const frame_time_us = end_time_us - begin_time_us;
 	f32 const frame_dt = min(static_cast<f32>(frame_time_us) / 1000000.0f, 0.1f);
 	dkr_context->frame_dt = frame_dt;
 	dkr_context->time_in_seconds += frame_dt;
 
-	// NOTE(Dedrick): Bump frame counters.
+	// Dedrick: Bump frame counters.
 	dkr_context->frame_index += 1;
 
 	{
