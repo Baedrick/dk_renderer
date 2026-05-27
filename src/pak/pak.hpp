@@ -21,7 +21,7 @@ namespace dk {
 	u64 constexpr PAK_MAGIC_CONSTANT = 0x006B61705F726B64;
 	u64 constexpr PAK_VERSION = 1;
 
-	using u32 = PAK_SectionKind;
+	using PAK_SectionKind = u32;
 	enum : u32 {
 		PAK_SECTION_KIND_NULL = 0,
 		PAK_SECTION_KIND_STRING_DATA,
@@ -50,7 +50,7 @@ namespace dk {
 		u64 size;
 	};
 
-	using u32 = PAK_ShaderKind;
+	using PAK_ShaderKind = u32;
 	enum : u32 {
 		PAK_SHADER_KIND_VERTEX = 0,
 		PAK_SHADER_KIND_FRAGMENT,
@@ -68,6 +68,5 @@ namespace dk {
 	using PAK_SectionElementType_StringData = u8;
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
 	using PAK_SectionElementType_Shader = PAK_Shader;
-	using PAK_SectionElementType_Table = PAK_Texture;
 	using PAK_SectionElementType_GpuShaderData = u8;
 }
