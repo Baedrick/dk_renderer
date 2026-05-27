@@ -63,36 +63,25 @@ if "%release%"=="1"      set compile=%compile_release%
 
 :: --- Prep Directories --------------------------------------------------------
 if not exist bin mkdir bin
-if not exist bin\shaders mkdir bin\shaders
 if not exist .tmp mkdir .tmp
+if not exist src\shaders\.spirv mkdir src\shaders\.spirv
 
 :: --- Build (@build_targets)---------------------------------------------------
 pushd bin
 if "%all%"=="1" (
     echo [building all targets]
-    set shaders=1
     set dkcook=1
     set dkrend=1
-)
-if "%shaders%"=="1" (
-    echo [building shaders]
-    set didbuild=1
-    for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
-        %glslang% %glslang_include% -G -o "shaders\%%~nxf.spv" "%%f" || exit /b 1
-    )
+    set assets=1
 )
 if "%dkcook%"=="1" set didbuild=1 && %compile% ..\src\dkcook\dkcook_main.cpp %compile_link% %out%dkcook.exe || exit /b 1
 if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% %out%dkrend.exe || exit /b 1
-popd
-
-:: --- Build & Run Resource Packing --------------------------------------------
-:: TODO(Dedrick): Other assets (like tonemapping lut) will need to be packed too,
-:: would be good to use `build pak` as the target instead of `build shaders`.
-pushd bin
-set pak=0
-if "%shaders%"=="1" set pak=1
-if "%pak%"=="1" (
+if "%assets%"=="1" (
     set didbuild=1
+    echo [building shaders]
+    for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
+        %glslang% %glslang_include% -G -o "..\src\shaders\.spirv\%%~nxf.spv" "%%f" || exit /b 1
+    )
     %compile% ..\src\pakgen\pakgen_main.cpp %compile_link% %out%pakgen.exe || exit /b 1
     if exist pakgen.exe (
         echo [running pakgen]
