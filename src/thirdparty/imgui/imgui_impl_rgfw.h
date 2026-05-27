@@ -1,3 +1,7 @@
+// NOTE(Dedrick): This has been modified to support the codebase. This is NOT an
+// unmodified copy of the original imgui_impl_rgfw.h code. Changes are:
+// 1. Update the entire backend to support RGFW 2.0.0-dev
+
 /*
     dear imgui: Platform backend for RGFW
     This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan, WebGPU..)
