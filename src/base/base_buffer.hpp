@@ -21,6 +21,8 @@ namespace dk {
 		u64 total_size;
 	};
 
+	auto buf8_copy(Arena *arena, Buffer8 buf) noexcept -> Buffer8;
+
 	auto buf8_list_push_node(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node *;
 	auto buf8_list_push_node_front(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node *;
 	auto buf8_list_push(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -> Buffer8Node *;

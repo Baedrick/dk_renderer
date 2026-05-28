@@ -82,7 +82,7 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [x][Must Have] Clean up string implementation to have consistent calling convention
+- [ ][Must Have] Remove Array<u8> from file reading and use buffer8 instead
 - [ ][Must Have] Resource packing tool to export spirv binaries as one blob
 - [ ][Must Have] Packed resource format, only needs to support spriv for now
 - [ ][Must Have] Update readme with project description and goals
@@ -98,6 +98,8 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Write buffer8 implementation for storing bytes
+- [x][Must Have] Clean up string implementation to have consistent calling convention
 - [x][Must Have] Write RGFW v2.0.0 imgui backend
 - [x][Must Have] Remove chrono from RGFW imgui backend because of compile times
 - [x][Must Have] File directory iteration

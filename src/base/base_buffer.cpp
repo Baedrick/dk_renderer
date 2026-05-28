@@ -10,6 +10,12 @@ auto dk::Buffer8::operator[](u64 index) const noexcept -> u8 const & {
 	return data[index];
 }
 
+auto dk::buf8_copy(Arena *arena, Buffer8 buf) noexcept -> Buffer8 {
+	u8 *arr = arena_push_array<u8>(arena, buf.size);
+	std::memcpy(arr, buf.data, buf.size);
+	return { .data = arr, .size = buf.size };
+}
+
 auto dk::buf8_list_push_node(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node * {
 	forward_list_queue_push(&list->first, &list->last, node);
 	list->node_count += 1;
@@ -34,24 +40,24 @@ auto dk::buf8_list_push(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -
 auto dk::buf8_list_push_front(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -> Buffer8Node * {
 	Buffer8Node *node = arena_push<Buffer8Node>(arena);
 	node->buffer = buf;
-	buf8_list_push_node(list, node);
+	buf8_list_push_node_front(list, node);
 	return node;
 }
 
 auto dk::buf8_list_push_align(Arena *arena, Buffer8List *list, u64 min, u64 align) noexcept -> Buffer8Node * {
-	u8 constexpr zeroes[64] = {};
 	DK_ASSERT(is_pow2_or_zero(align));
 	u64 const padding = max(min, align_pad_pow2(list->total_size, align));
-	if (padding < sizeof(zeroes)) {
-		return buf8_list_push(arena, list, Buffer{ zeroes, padding });
-	}
-	else {
-		return buf8_list_push(arena, list, Buffer{ arena_push_array<u8>(arena, padding), padding });
-	}
+	Buffer8 const buf = { arena_push_array<u8>(arena, padding), padding };
+	Buffer8Node *const result = buf8_list_push(arena, list, buf);
+	return result;
 }
 
 auto dk::buf8_list_copy(Arena *arena, Buffer8List const *list) noexcept -> Buffer8List {
-
+	Buffer8List result = {};
+	for (Buffer8Node *node = list->first; node != nullptr; node = node->next) {
+		buf8_list_push(arena, &result, buf8_copy(arena, node->buffer));
+	}
+	return result;
 }
 
 auto dk::buf8_list_join(Arena *arena, Buffer8List const *list) noexcept -> Buffer8 {
