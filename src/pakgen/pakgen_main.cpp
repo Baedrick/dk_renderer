@@ -24,7 +24,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	// Dedrick: Search spriv directory for all files to pack.
 	String8 const spriv_dir = str8f(pg_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
 	String8List file_paths = {};
-	std::printf("gathering shaders (.spirv) %.*s...", DK_STR8_VARG(spriv_dir));
+	std::printf("gathering shaders (.spv) %.*s...", DK_STR8_VARG(spriv_dir));
 	{
 		PLT_Handle const iter = plt_dir_iter_begin(spriv_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
 		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pg_arena, iter, &file); ) {
