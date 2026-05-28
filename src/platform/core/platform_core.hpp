@@ -92,9 +92,9 @@ namespace dk {
 	auto plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) noexcept -> u64;
 	auto plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes;
 
-	auto plt_read_data_from_file_path(Arena *arena, String8 path) noexcept -> Array<u8>;
-	auto plt_write_data_to_file_path(String8 path, Array<u8> data) noexcept -> b8;
-	auto plt_append_data_to_file_path(String8 path, Array<u8> data) noexcept -> b8;
+	auto plt_read_bytes_from_file_path(Arena *arena, String8 path) noexcept -> Buffer8;
+	auto plt_write_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;
+	auto plt_append_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;
 
 	auto plt_dir_iter_begin(String8 dir, PLT_DirIterFlags flags) noexcept -> PLT_Handle;
 	auto plt_dir_iter_next(Arena *arena, PLT_Handle dir_iter, PLT_DirIterResult *out_result) noexcept -> b8;

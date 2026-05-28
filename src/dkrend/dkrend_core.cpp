@@ -24,7 +24,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		String8 const user_data_folder = str8f(scratch.arena, "%.*s/dkrend", DK_STR8_VARG(user_program_data_dir));
 		dkr_context->log_path = str8f(dkr_context->arena, "%.*s/dkrend.log", DK_STR8_VARG(user_data_folder));
 		plt_make_directory(user_data_folder);
-		plt_write_data_to_file_path(dkr_context->log_path, Array<u8>{});
+		plt_write_bytes_to_file_path(dkr_context->log_path, Buffer8{});
 		scratch_end(scratch);
 	}
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);

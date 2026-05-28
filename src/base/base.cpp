@@ -3,6 +3,7 @@
 #include "base_core.cpp"
 #include "base_arena.cpp"
 #include "base_hash.cpp"
+#include "base_buffer.cpp"
 #include "base_string.cpp"
 #include "base_profile.cpp"
 #include "base_thread_context.cpp"

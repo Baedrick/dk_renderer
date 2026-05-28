@@ -107,9 +107,9 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 			{ GL_FRAGMENT_SHADER, "shaders/hello_triangle.frag.spv"_str8, 0 },
 		};
 		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
-			Array<u8> const bytes = plt_read_data_from_file_path(scratch.arena, stages[stage_idx].path);
+			Buffer8 const bytes = plt_read_bytes_from_file_path(scratch.arena, stages[stage_idx].path);
 			stages[stage_idx].out = glCreateShader(stages[stage_idx].type);
-			glShaderBinary(1, &stages[stage_idx].out, GL_SHADER_BINARY_FORMAT_SPIR_V, bytes.v, static_cast<GLsizei>(bytes.count));
+			glShaderBinary(1, &stages[stage_idx].out, GL_SHADER_BINARY_FORMAT_SPIR_V, bytes.data, static_cast<GLsizei>(bytes.size));
 			glSpecializeShader(stages[stage_idx].out, "main", 0, nullptr, nullptr);
 		}
 		GLuint program = glCreateProgram();
