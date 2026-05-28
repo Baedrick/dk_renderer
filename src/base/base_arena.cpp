@@ -2,8 +2,8 @@
 
 auto dk::arena_alloc(ArenaParams const *params) noexcept -> Arena * {
 	u64 const page_size = plt_get_system_info()->page_size;
-	u64 const reserve_size = align_forward_pow2(params->reserve_size, page_size);
-	u64 const commit_size = align_forward_pow2(params->commit_size, page_size);
+	u64 const reserve_size = align_pow2(params->reserve_size, page_size);
+	u64 const commit_size = align_pow2(params->commit_size, page_size);
 
 	void *memory = plt_reserve(reserve_size);
 	if (!plt_commit(memory, commit_size)) {
@@ -46,7 +46,7 @@ auto dk::arena_push_bytes(Arena *arena, u64 size, u64 align) noexcept -> void * 
 
 auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept -> void * {
 	Arena *current = arena->current;
-	u64 pre_pos = align_forward_pow2(current->pos, align);
+	u64 pre_pos = align_pow2(current->pos, align);
 	u64 post_pos = pre_pos + size;
 
 	// NOTE(Dedrick): Chain new blocks if needed.
@@ -57,8 +57,8 @@ auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept ->
 		u64 const required_size = size + ARENA_HEADER_SIZE + align;
 		if (required_size > reserve_size) {
 			u64 const page_size = plt_get_system_info()->page_size;
-			reserve_size = align_forward_pow2(required_size, page_size);
-			commit_size = align_forward_pow2(required_size, page_size);
+			reserve_size = align_pow2(required_size, page_size);
+			commit_size = align_pow2(required_size, page_size);
 		}
 
 		ArenaParams const params = {
@@ -72,13 +72,13 @@ auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept ->
 		forward_list_stack_push(&arena->current, new_block);
 
 		current = new_block;
-		pre_pos = align_forward_pow2(current->pos, align);
+		pre_pos = align_pow2(current->pos, align);
 		post_pos = pre_pos + size;
 	}
 
 	// NOTE(Dedrick): Commit new pages if needed.
 	if (current->committed < post_pos) {
-		u64 const commit_pos_aligned = align_forward_pow2(post_pos, current->commit_size);
+		u64 const commit_pos_aligned = align_pow2(post_pos, current->commit_size);
 		u64 const commit_pos_clamped = min(commit_pos_aligned, current->reserved);
 		u64 const commit_size = commit_pos_clamped - current->committed;
 		u8 *commit_ptr = reinterpret_cast<u8 *>(current) + current->committed;

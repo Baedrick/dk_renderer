@@ -82,7 +82,7 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [ ][Must Have] Clean up string implementation to have consistent calling convention
+- [x][Must Have] Clean up string implementation to have consistent calling convention
 - [ ][Must Have] Resource packing tool to export spirv binaries as one blob
 - [ ][Must Have] Packed resource format, only needs to support spriv for now
 - [ ][Must Have] Update readme with project description and goals

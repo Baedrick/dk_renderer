@@ -134,7 +134,12 @@ namespace dk {
 		return x > 0 && (x & (x - 1)) == 0;
 	}
 
-	constexpr auto align_forward_pow2(u64 value, u64 align) noexcept -> u64 {
+	template <typename T>
+	constexpr auto is_pow2_or_zero(T x) noexcept -> b8 {
+		return (x & (x - 1)) == 0;
+	}
+
+	constexpr auto align_pow2(u64 value, u64 align) noexcept -> u64 {
 		DK_ASSERT(is_pow2(align));
 		return (value + align - 1) & ~(align - 1);
 	}
@@ -142,6 +147,11 @@ namespace dk {
 	constexpr auto align_down_pow2(u64 value, u64 align) noexcept -> u64 {
 		DK_ASSERT(is_pow2(align));
 		return value & ~(align - 1);
+	}
+
+	constexpr auto align_pad_pow2(u64 value, u64 align) noexcept -> u64 {
+		DK_ASSERT(is_pow2(align));
+		return (0 - value) & (align - 1);
 	}
 
 	template <typename T>
@@ -180,6 +190,15 @@ namespace dk {
 		}
 		else {
 			(*last)->*Next = node;
+			*last = node;
+		}
+	}
+
+	template <typename T, T *T::*Next = &T::next>
+	auto forward_list_queue_push_front(T **first, T **last, T *node) noexcept -> void {
+		node->*Next = *first;
+		*first = node;
+		if (*last == nullptr) {
 			*last = node;
 		}
 	}

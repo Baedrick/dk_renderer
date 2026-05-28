@@ -40,7 +40,7 @@ auto dk::cmd_line_insert_option(Arena *arena, CmdLine *cmd_line, String8 name, S
 		join_params.prefix = ""_str8;
 		join_params.postfix = ""_str8;
 		join_params.separator = ","_str8;
-		option->value_string = str8_list_join(arena, option->value_strings, &join_params);
+		option->value_string = str8_list_join(arena, &option->value_strings, &join_params);
 	}
 	return option;
 }

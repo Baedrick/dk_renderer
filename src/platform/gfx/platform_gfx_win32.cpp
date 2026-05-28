@@ -121,7 +121,7 @@ auto dk::plt_w32_create_filter_specs(
 		for (String8Node const *node = exts.first; node != nullptr; node = node->next) {
 			str8_list_pushf(scratch.arena, &fmt_exts, "*.%.*s", static_cast<s32>(node->string.size), node->string.data);
 		}
-		String8 const ext_filter = str8_list_join(scratch.arena, fmt_exts, &join_params);
+		String8 const ext_filter = str8_list_join(scratch.arena, &fmt_exts, &join_params);
 		String8 const display_name = str8f(
 			scratch.arena,
 			"%.*s (%.*s)",

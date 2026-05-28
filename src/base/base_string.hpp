@@ -122,17 +122,18 @@ namespace dk {
 	auto s32_from_str8(String8 str, u32 radix) noexcept -> s32;
 	// TODO(Dedrick): f64 from string.
 
-	auto str8_list_push_node(String8List *list, String8Node *node) noexcept -> void;
-	auto str8_list_push_node_front(String8List *list, String8Node *node) noexcept -> void;
-	auto str8_list_push(Arena *arena, String8List *list, String8 str) noexcept -> void;
-	auto str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> void;
-	auto str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> void;
+	auto str8_list_push_node(String8List *list, String8Node *node) noexcept -> String8Node *;
+	auto str8_list_push_node_front(String8List *list, String8Node *node) noexcept -> String8Node *;
+	auto str8_list_push(Arena *arena, String8List *list, String8 str) noexcept -> String8Node *;
+	auto str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> String8Node *;
+	auto str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> String8Node *;
+	auto str8_list_push_frontf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> String8Node *;
 
 	auto str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List;
 	auto str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count, StringSplitFlags flags) noexcept -> String8List;
-	auto str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8;
+	auto str8_list_join(Arena *arena, String8List const *list, String8JoinParams const *optional_params) noexcept -> String8;
 
-	auto str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array;
+	auto str8_array_from_list(Arena *arena, String8List const *list) noexcept -> String8Array;
 
 	auto path_chop_last_slash(String8 path) noexcept -> String8;
 	auto path_skip_last_slash(String8 path) noexcept -> String8;

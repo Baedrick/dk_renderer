@@ -307,7 +307,7 @@ auto dk::str8_indent(Arena *arena, String8 str) noexcept -> String8 {
 			default: break;
 		}
 	}
-	String8 const result = str8_list_join(arena, indented_strings, nullptr);
+	String8 const result = str8_list_join(arena, &indented_strings, nullptr);
 	scratch_end(scratch);
 	return result;
 }
@@ -393,47 +393,50 @@ auto dk::s32_from_str8(String8 str, u32 radix) noexcept -> s32 {
 	return static_cast<s32>(s64_from_str8(str, radix));
 }
 
-auto dk::str8_list_push_node(String8List *list, String8Node *node) noexcept -> void {
-	node->next = nullptr;
-	if (list->last != nullptr) {
-		list->last->next = node;
-		list->last = node;
-	}
-	else {
-		list->first = list->last = node;
-	}
+auto dk::str8_list_push_node(String8List *list, String8Node *node) noexcept -> String8Node * {
+	forward_list_queue_push(&list->first, &list->last, node);
 	list->node_count += 1;
 	list->total_size += node->string.size;
+	return node;
 }
 
-auto dk::str8_list_push_node_front(String8List *list, String8Node *node) noexcept -> void {
-	node->next = list->first;
-	list->first = node;
-	if (list->last == nullptr) {
-		list->last = node;
-	}
+auto dk::str8_list_push_node_front(String8List *list, String8Node *node) noexcept -> String8Node * {
+	forward_list_queue_push_front(&list->first, &list->last, node);
 	list->node_count += 1;
 	list->total_size += node->string.size;
+	return node;
 }
 
-auto dk::str8_list_push(Arena *arena, String8List *list, String8 str) noexcept -> void {
+auto dk::str8_list_push(Arena *arena, String8List *list, String8 str) noexcept -> String8Node * {
 	String8Node *node = arena_push<String8Node>(arena);
 	node->string = str;
 	str8_list_push_node(list, node);
+	return node;
 }
 
-auto dk::str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> void {
+auto dk::str8_list_pushf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> String8Node * {
 	va_list args;
 	va_start(args, fmt);
 	String8 const str = str8fv(arena, fmt, args);
+	String8Node *result = str8_list_push(arena, list, str);
 	va_end(args);
-	str8_list_push(arena, list, str);
+	return result;
 }
 
-auto dk::str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> void {
+auto dk::str8_list_push_front(Arena *arena, String8List *list, String8 str) noexcept -> String8Node * {
 	String8Node *node = arena_push<String8Node>(arena);
 	node->string = str;
 	str8_list_push_node_front(list, node);
+	return node;
+}
+
+auto dk::str8_list_push_frontf(Arena *arena, String8List *list, char const *fmt, ...) noexcept -> String8Node * {
+	va_list args;
+	va_start(args, fmt);
+	String8 const str = str8fv(arena, fmt, args);
+	String8Node *result = str8_list_push_front(arena, list, str);
+	va_end(args);
+	return result;
 }
 
 auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List {
@@ -495,15 +498,15 @@ auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *del
 	return list;
 }
 
-auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const *optional_params) noexcept -> String8 {
+auto dk::str8_list_join(Arena *arena, String8List const *list, String8JoinParams const *optional_params) noexcept -> String8 {
 	String8JoinParams params = {};
 	if (optional_params != nullptr) {
 		params = *optional_params;
 	}
 
-	u64 total_size = params.prefix.size + params.postfix.size + list.total_size;
-	if (list.node_count > 1) {
-		total_size += params.separator.size * (list.node_count - 1);
+	u64 total_size = params.prefix.size + params.postfix.size + list->total_size;
+	if (list->node_count > 1) {
+		total_size += params.separator.size * (list->node_count - 1);
 	}
 
 	u8 *s = arena_push_array<u8>(arena, total_size + 1);
@@ -512,10 +515,10 @@ auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const 
 	std::memcpy(p, params.prefix.data, params.prefix.size);
 	p += params.prefix.size;
 
-	for (String8Node *node = list.first; node != nullptr; node = node->next) {
+	for (String8Node *node = list->first; node != nullptr; node = node->next) {
 		std::memcpy(p, node->string.data, node->string.size);
 		p += node->string.size;
-		if (node != list.last) {
+		if (node != list->last) {
 			std::memcpy(p, params.separator.data, params.separator.size);
 			p += params.separator.size;
 		}
@@ -528,12 +531,12 @@ auto dk::str8_list_join(Arena *arena, String8List list, String8JoinParams const 
 	return { .data = s, .size = total_size };
 }
 
-auto dk::str8_array_from_list(Arena *arena, String8List list) noexcept -> String8Array {
+auto dk::str8_array_from_list(Arena *arena, String8List const *list) noexcept -> String8Array {
 	String8Array array = {};
-	array.count = list.node_count;
+	array.count = list->node_count;
 	array.data = arena_push_array<String8>(arena, array.count);
 	u64 idx = 0;
-	for (String8Node *node = list.first; node != nullptr; node = node->next) {
+	for (String8Node *node = list->first; node != nullptr; node = node->next) {
 		array[idx++] = node->string;
 	}
 	return array;
