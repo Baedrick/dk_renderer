@@ -69,4 +69,13 @@ namespace dk {
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
 	using PAK_SectionElementType_Shader = PAK_Shader;
 	using PAK_SectionElementType_GpuShaderData = u8;
+
+	struct PAK_BakeSection {
+		void *data;
+		u64 size;
+	};
+
+	struct PAK_BakeBundle {
+		PAK_BakeSection sections[PAK_SECTION_KIND_COUNT];
+	};
 }

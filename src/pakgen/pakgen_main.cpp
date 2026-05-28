@@ -20,8 +20,22 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 	String8 const binary_dir = plt_get_process_info()->binary_dir;
 	String8 const project_dir = path_chop_last_slash(binary_dir);
-	String8 const code_dir = str8f(pg_arena, "%.*s/src/shaders", DK_STR8_VARG(project_dir));
 
+	// Dedrick: Search spriv directory for all files to pack.
+	String8 const spriv_dir = str8f(pg_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
+	String8List file_paths = {};
+	std::printf("gathering shaders (.spirv) %.*s...", DK_STR8_VARG(spriv_dir));
+	{
+		PLT_Handle const iter = plt_dir_iter_begin(spriv_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
+		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pg_arena, iter, &file); ) {
+			String8 const file_path = str8f(pg_arena, "%.*s/%.*s", DK_STR8_VARG(spriv_dir), DK_STR8_VARG(file.name));
+			str8_list_push(pg_arena, &file_paths, file_path);
+		}
+		plt_dir_iter_end(iter);
+	}
+	std::printf(" %llu shaders processed\n", file_paths.node_count);
+
+#if 0
 	// NOTE(Dedrick): Recursively search directories for all files to consider.
 	// TODO(Dedrick); Spir-V binaries will only be built to a specific folder, only need to iterate that.
 	String8List file_paths = {};
@@ -48,5 +62,6 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		plt_dir_iter_end(iter);
 	}
 	std::printf("%llu files found\n", file_paths.node_count);
+#endif
 	return 0;
 }
