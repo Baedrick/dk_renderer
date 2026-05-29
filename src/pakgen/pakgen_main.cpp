@@ -3,10 +3,12 @@
 #include "base/base.hpp"
 #include "platform/platform.hpp"
 #include "pak/pak.hpp"
+#include "pakgen/pakgen.hpp"
 
 #include "base/base.cpp"
 #include "platform/platform.cpp"
 #include "pak/pak.cpp"
+#include "pakgen/pakgen.cpp"
 
 auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	using namespace dk;
