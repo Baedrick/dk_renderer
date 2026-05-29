@@ -41,6 +41,9 @@
 # debug information files
 *.dwo
 
+# Packaged resources
+*.pak
+
 # Compiled Spir-V files
 *.spv
 

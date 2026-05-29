@@ -21,13 +21,14 @@ namespace dk {
 		u64 total_size;
 	};
 
+	auto buf8_compare(Buffer8 b1, Buffer8 b2) noexcept -> s32;
 	auto buf8_copy(Arena *arena, Buffer8 buf) noexcept -> Buffer8;
 
 	auto buf8_list_push_node(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node *;
 	auto buf8_list_push_node_front(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node *;
 	auto buf8_list_push(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -> Buffer8Node *;
 	auto buf8_list_push_front(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -> Buffer8Node *;
-	auto buf8_list_push_align(Arena *arena, Buffer8List *list, u64 min, u64 align) noexcept -> Buffer8Node *;
+	auto buf8_list_push_align(Arena *arena, Buffer8List *list, u64 align) noexcept -> void;
 	auto buf8_list_copy(Arena *arena, Buffer8List const *list) noexcept -> Buffer8List;
 
 	auto buf8_list_join(Arena *arena, Buffer8List const *list) noexcept -> Buffer8;

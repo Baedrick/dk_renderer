@@ -138,6 +138,9 @@ namespace dk {
 	auto path_chop_last_slash(String8 path) noexcept -> String8;
 	auto path_skip_last_slash(String8 path) noexcept -> String8;
 
+	auto path_chop_last_period(String8 path) noexcept -> String8;
+	auto path_skip_last_period(String8 path) noexcept -> String8;
+
 	auto utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode;
 	auto utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode;
 	auto utf8_encode(u8 *out, u32 codepoint) noexcept -> u32;

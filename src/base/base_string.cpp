@@ -571,6 +571,44 @@ auto dk::path_skip_last_slash(String8 path) noexcept -> String8 {
 	return path;
 }
 
+auto dk::path_chop_last_period(String8 path) noexcept -> String8 {
+	u64 period_idx = path.size;
+	b8 period_found = false;
+	while (period_idx --> 0) {
+		if (path[period_idx] == '.') {
+			period_found = true;
+			break;
+		}
+		if (path[period_idx] == '/' || path[period_idx] == '\\') {
+			break;
+		}
+	}
+	path.size = period_found ? period_idx : path.size;
+	return path;
+}
+
+auto dk::path_skip_last_period(String8 path) noexcept -> String8 {
+	u64 period_idx = path.size;
+	b8 period_found = false;
+	while (period_idx --> 0) {
+		if (path[period_idx] == '.') {
+			period_found = true;
+			break;
+		}
+		if (path[period_idx] == '/' || path[period_idx] == '\\') {
+			break;
+		}
+	}
+	if (period_found) {
+		path.data += period_idx + 1;
+		path.size -= period_idx + 1;
+	} else {
+		path.data += path.size;
+		path.size = 0;
+	}
+	return path;
+}
+
 // NOTE(Dedrick): Based on the following decoder.
 // https://nullprogram.com/blog/2017/10/06/
 // https://git.mr4th.com/mr4th-public/mr4th/src/branch/main/src/base/base_big_functions.c#L696
