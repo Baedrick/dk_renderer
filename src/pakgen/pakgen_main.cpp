@@ -25,23 +25,20 @@ struct PAKG_StringChunkList {
 	u64 total_size;
 };
 
-struct PAKG_ShaderChunkNode {
-	PAKG_ShaderChunkNode *next;
-	PAK_Shader *v;
-	u64 count;
-	u64 cap;
+struct PAKG_ShaderNode {
+	PAKG_ShaderNode *next;
+	PAK_Shader shader;
 };
 
-struct PAKG_ShaderChunkList {
-	PAKG_ShaderChunkNode *first;
-	PAKG_ShaderChunkNode *last;
-	u64 chunk_count;
-	u64 total_count;
+struct PAKG_ShaderList {
+	PAKG_ShaderNode *first;
+	PAKG_ShaderNode *last;
+	u64 count;
 };
 
 struct PAKG_BakeParams {
 	PAKG_StringChunkList strings;
-	PAKG_ShaderChunkList shaders;
+	PAKG_ShaderList shaders;
 	Buffer8List shader_binaries;
 };
 
@@ -64,20 +61,6 @@ auto pakg_string_chunk_list_push(Arena *arena, PAKG_StringChunkList *list, u64 c
 		list->chunk_count += 1;
 	}
 	String8 *result = &n->v[n->count++];
-	list->total_count += 1;
-	return result;
-}
-
-auto pakg_shader_chunk_list_push(Arena *arena, PAKG_ShaderChunkList *list, u64 cap) noexcept -> PAK_Shader * {
-	PAKG_ShaderChunkNode *n = list->last;
-	if (n == nullptr || n->count >= n->cap) {
-		n = arena_push<PAKG_ShaderChunkNode>(arena);
-		n->cap = cap;
-		n->v = arena_push_array<PAK_Shader>(arena, cap);
-		forward_list_queue_push(&list->first, &list->last, n);
-		list->chunk_count += 1;
-	}
-	PAK_Shader *result = &n->v[n->count++];
 	list->total_count += 1;
 	return result;
 }
@@ -152,14 +135,18 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			u64 shader_binary_offset = bake_params.shader_binaries.total_size;
 			buf8_list_push(pg_arena, &bake_params.shader_binaries, binary);
 
-			PAK_Shader *shader = pakg_shader_chunk_list_push(pg_arena, &bake_params.shaders, 64);
+			PAKG_ShaderNode *node = arena_push<PAKG_ShaderNode>(pg_arena);
+			forward_list_queue_push(&bake_params.shaders.first, &bake_params.shaders.last, node);
+			bake_params.shaders.count += 1;
+
+			PAK_Shader *shader = &node->shader;
 			shader->name_hash = u64_hash_from_str8(task->shader_name);
 			shader->name_string_idx = str_idx;
 			shader->shader_binary_offset = shader_binary_offset;
 			shader->shader_binary_size = binary.size;
 			shader->kind = task->shader_kind;
 		}
-		DK_LOG_INFOF(" %llu shaders processed\n", bake_params.shaders.total_count);
+		DK_LOG_INFOF(" %llu shaders processed\n", bake_params.shaders.count);
 	}
 
 	// Dedrick: Bake Strings.
@@ -227,11 +214,11 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	{
 		ZoneScopedN("bake shaders");
 		baked_shaders = arena_push<BakedShaders>(pg_arena);
-		baked_shaders->shaders = arena_push_array<PAK_SectionElementType_Shader>(pg_arena, bake_params.shaders.total_count);
+		baked_shaders->shaders = arena_push_array<PAK_SectionElementType_Shader>(pg_arena, bake_params.shaders.count);
 		u64 shader_idx = 0;
-		for (PAKG_ShaderChunkNode *n = bake_params.shaders.first; n != nullptr; n = n->next) {
-			std::memcpy(baked_shaders->shaders + shader_idx, n->v, n->count * sizeof(PAK_SectionElementType_Shader));
-			shader_idx += n->count;
+		for (PAKG_ShaderNode *n = bake_params.shaders.first; n != nullptr; n = n->next) {
+			baked_shaders->shaders[shader_idx] = n->shader;
+			shader_idx += 1;
 		}
 	}
 
@@ -244,7 +231,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	bundle.sections[PAK_SECTION_KIND_SHADER_BINARY].data = baked_shader_binaries->binaries;
 	bundle.sections[PAK_SECTION_KIND_SHADER_BINARY].size = bake_params.shader_binaries.total_size;
 	bundle.sections[PAK_SECTION_KIND_SHADER].data = baked_shaders->shaders;
-	bundle.sections[PAK_SECTION_KIND_SHADER].size = bake_params.shaders.total_count * sizeof(PAK_SectionElementType_Shader);
+	bundle.sections[PAK_SECTION_KIND_SHADER].size = bake_params.shaders.count * sizeof(PAK_SectionElementType_Shader);
 
 	// Dedrick: Serialize bundles.
 	Buffer8List output_blobs = {};
