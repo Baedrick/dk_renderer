@@ -93,64 +93,74 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	log_select(log);
 	log_frame_begin();
 
+	// Dedrick: Extract paths.
 	String8 const binary_dir = plt_get_process_info()->binary_dir;
 	String8 const project_dir = path_chop_last_slash(binary_dir);
-
-	// Dedrick: Parse output path.
 	String8 out_path = "resource.pak"_str8;
 	if (cmd_line_has_argument(cmd_line, "output"_str8)) {
 		out_path = cmd_line_value(cmd_line, "output"_str8);
 	}
 
-	// Dedrick: Search spriv directory for all files to pack.
-	String8 const spriv_dir = str8f(pg_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
 	PAKG_BakeParams bake_params = {};
 
-	DK_LOG_INFOF("gathering shaders (.spv) %.*s...", DK_STR8_VARG(spriv_dir));
+	// Dedrick: Search spir-v directory for shaders.
 	{
-		PLT_Handle const iter = plt_dir_iter_begin(spriv_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
+		ZoneScopedN("gather shaders");
+		struct ShaderTask {
+			ShaderTask *next;
+			String8 binary_path;
+			String8 shader_name;
+			PAK_ShaderKind shader_kind;
+		};
+		ShaderTask *first_task = nullptr;
+		ShaderTask *last_task = nullptr;
+		String8 const spirv_dir = str8f(pg_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
+		DK_LOG_INFOF("gathering shaders %.*s...", DK_STR8_VARG(spirv_dir));
+		PLT_Handle const iter = plt_dir_iter_begin(spirv_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
 		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pg_arena, iter, &file); ) {
-			// TODO(Dedrick): Protect against stray files.
-
-			String8 const file_path = str8f(pg_arena, "%.*s/%.*s", DK_STR8_VARG(spriv_dir), DK_STR8_VARG(file.name));
-			Buffer8 binary = plt_read_bytes_from_file_path(pg_arena, file_path);
-
-			String8 shader_name = file.name;
-			String8 ext = path_skip_last_period(shader_name);
-			if (str8_equals(ext, "spv"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
-				shader_name = path_chop_last_period(shader_name);
+			if (!str8_equals(path_skip_last_period(file.name), "spv"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+				continue;
 			}
+			String8 const shader_name = path_chop_last_period(file.name);
+			String8 const shader_ext = path_skip_last_period(shader_name);
+			struct { String8 ext; PAK_ShaderKind kind; } const filters[] = {
+				{ "vert"_str8, PAK_SHADER_KIND_VERTEX },
+				{ "frag"_str8, PAK_SHADER_KIND_FRAGMENT },
+				{ "comp"_str8, PAK_SHADER_KIND_COMPUTE }
+			};
+			for (u64 i = 0; i < array_count(filters); ++i) {
+				if (str8_equals(shader_ext, filters[i].ext, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+					ShaderTask *task = arena_push<ShaderTask>(pg_arena);
+					task->binary_path = str8f(pg_arena, "%.*s/%.*s", DK_STR8_VARG(spirv_dir), DK_STR8_VARG(file.name));
+					task->shader_name = shader_name;
+					task->shader_kind = filters[i].kind;
+					forward_list_queue_push(&first_task, &last_task, task);
+					break;
+				}
+			}
+		}
+		plt_dir_iter_end(iter);
+		for (ShaderTask const *task = first_task; task != nullptr; task = task->next) {
+			Buffer8 const binary = plt_read_bytes_from_file_path(pg_arena, task->binary_path);
+			u32 const str_idx = static_cast<u32>(bake_params.strings.total_count);
 
-			u32 str_idx = static_cast<u32>(bake_params.strings.total_count);
-			String8 *str_ptr = pakg_string_chunk_list_push(pg_arena, &bake_params.strings, 64);
-			*str_ptr = shader_name;
-			bake_params.strings.total_size += shader_name.size;
+			String8 *str = pakg_string_chunk_list_push(pg_arena, &bake_params.strings, 64);
+			*str = task->shader_name;
+			bake_params.strings.total_size += task->shader_name.size;
 
 			buf8_list_push_align(pg_arena, &bake_params.shader_binaries, 16);
 			u64 shader_binary_offset = bake_params.shader_binaries.total_size;
 			buf8_list_push(pg_arena, &bake_params.shader_binaries, binary);
 
-			PAK_Shader *sh = pakg_shader_chunk_list_push(pg_arena, &bake_params.shaders, 64);
-			sh->name_hash = u64_hash_from_str8(shader_name);
-			sh->name_string_idx = str_idx;
-			sh->shader_binary_offset = shader_binary_offset;
-			sh->shader_binary_size = binary.size;
-
-			sh->kind = PAK_SHADER_KIND_COUNT;
-			String8 shader_ext = path_skip_last_period(shader_name);
-			if (str8_equals(shader_ext, "vert"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
-				sh->kind = PAK_SHADER_KIND_VERTEX;
-			}
-			else if (str8_equals(shader_ext, "frag"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
-				sh->kind = PAK_SHADER_KIND_FRAGMENT;
-			}
-			else if (str8_equals(shader_ext, "comp"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
-				sh->kind = PAK_SHADER_KIND_COMPUTE;
-			}
+			PAK_Shader *shader = pakg_shader_chunk_list_push(pg_arena, &bake_params.shaders, 64);
+			shader->name_hash = u64_hash_from_str8(task->shader_name);
+			shader->name_string_idx = str_idx;
+			shader->shader_binary_offset = shader_binary_offset;
+			shader->shader_binary_size = binary.size;
+			shader->kind = task->shader_kind;
 		}
-		plt_dir_iter_end(iter);
+		DK_LOG_INFOF(" %llu shaders processed\n", bake_params.shaders.total_count);
 	}
-	DK_LOG_INFOF(" %llu shaders processed\n", bake_params.shaders.total_count);
 
 	// Dedrick: Bake Strings.
 	struct BakedStrings {
@@ -269,7 +279,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			DK_LOG_INFOF("written to %.*s\n", DK_STR8_VARG(out_path));
 		}
 		else {
-			DK_LOG_ERRORF("failed to write file %.*s\n", DK_STR8_VARG(out_path));
+			DK_LOG_ERRORF("ERROR: failed to write file %.*s\n", DK_STR8_VARG(out_path));
 		}
 	}
 
