@@ -94,6 +94,7 @@ namespace dk {
 
 	auto plt_read_bytes_from_file_path(Arena *arena, String8 path) noexcept -> Buffer8;
 	auto plt_write_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;
+	auto plt_write_bytes_list_to_file_path(String8 path, Buffer8List const *list) noexcept -> b8;
 	auto plt_append_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;
 
 	auto plt_dir_iter_begin(String8 dir, PLT_DirIterFlags flags) noexcept -> PLT_Handle;

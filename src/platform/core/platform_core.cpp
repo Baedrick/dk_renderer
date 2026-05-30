@@ -33,6 +33,29 @@ auto dk::plt_write_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b
 	return good;
 }
 
+auto dk::plt_write_bytes_list_to_file_path(String8 path, Buffer8List const *list) noexcept -> b8 {
+	// TODO(Dedrick): This isn't performant because writing each node directly
+	// to disk creates a massive bottleneck when handling lists of small bytes.
+	// Every node forces a new system call, causing constant, expensive CPU
+	// context switches between user and kernel modes. Buffer the writing to
+	// disk with 64KB temporary memory space. Use a ring buffer to align writes.
+	b8 good = false;
+	PLT_Handle const file = plt_file_open(path, PLT_ACCESS_FLAG_WRITE);
+	if (file != plt_handle_invalid()) {
+		u64 file_pos = 0;
+		for (Buffer8Node *node = list->first; node != nullptr; node = node->next) {
+			u64 const bytes_written = plt_file_write(file, file_pos, file_pos + node->buffer.size, node->buffer.data);
+			if (bytes_written != node->buffer.size) {
+				break;
+			}
+			file_pos += bytes_written;
+		}
+		good = file_pos == list->total_size;
+		plt_file_close(file);
+	}
+	return good;
+}
+
 auto dk::plt_append_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8 {
 	b8 good = false;
 	if (bytes.size != 0) {

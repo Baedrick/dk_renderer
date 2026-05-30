@@ -85,7 +85,7 @@ if "%assets%"=="1" (
     %compile% ..\src\pakgen\pakgen_main.cpp %compile_link% %out%pakgen.exe || exit /b 1
     if exist pakgen.exe (
         echo [running pakgen]
-        pakgen.exe --output=dkrend.pak || exit /b 1
+        pakgen.exe --output=dkrend.pak --verbose || exit /b 1
     )
 )
 popd
