@@ -32,7 +32,7 @@
 #if !defined(NDEBUG)
 #	define DK_ASSERT(x) DK_ASSERT_ALWAYS(x)
 #else
-#	define DK_ASSERT(x) ((void)sizeof(x))
+#	define DK_ASSERT(x) (void)(x)
 #endif
 
 #if defined(DK_COMPILER_MSVC)
