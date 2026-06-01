@@ -263,4 +263,17 @@ namespace dk {
 		node->*Next = nullptr;
 		node->*Prev = nullptr;
 	}
+
+	template <typename T, typename Compare>
+	auto insertion_sort(T *arr, u64 count, Compare comp) {
+		for (u64 i = 0; i < count; ++i) {
+			T const key = arr[i];
+			u64 j = i;
+			while (j > 0 && comp(key, arr[j - 1])) {
+				arr[j] = arr[j - 1];
+				j -= 1;
+			}
+			arr[j] = key;
+		}
+	}
 }
