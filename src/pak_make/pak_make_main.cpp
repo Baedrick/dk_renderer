@@ -91,6 +91,11 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 	}
 
+	// TODO(Dedrick): Gather and process textures.
+	{
+		ZoneScopedN("textures");
+	}
+
 	// ~ Dedrick: Bake Strings.
 	PAK_SectionElementType_StringTable *string_table = nullptr;
 	PAK_SectionElementType_StringData *string_data = nullptr;
@@ -99,6 +104,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	String8Array sorted_names = {};
 	{
 		ZoneScopedN("bake strings");
+		DK_LOG_INFOF("baking strings...");
 		String8List names = {};
 		for (PAKM_ShaderNode *n = shaders.first; n != nullptr; n = n->next) {
 			str8_list_push(pg_arena, &names, n->name);
@@ -125,16 +131,18 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			std::memcpy(string_data + offset, name.data, name.size);
 			offset += name.size;
 		}
+		DK_LOG_INFOF(" done\n");
 	}
 
 	// ~ Dedrick: Bake GPU Data.
-	Buffer8 gpu_data_blob = {0};
+	Buffer8 gpu_data_blob = {};
 	u64 *shader_gpu_offsets = nullptr;
 	{
 		ZoneScopedN("bake gpu data");
-		Buffer8List gpu_data_list = {0};
+		DK_LOG_INFOF("baking gpu data...");
+		Buffer8List gpu_data_list = {};
 
-		// 1. Shaders
+		// ~ Dedrick: Shader Data.
 		shader_gpu_offsets = arena_push_array<u64>(pg_arena, shaders.count);
 		u64 idx = 0;
 		for (PAKM_ShaderNode *n = shaders.first; n != nullptr; n = n->next, ++idx) {
@@ -142,8 +150,10 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			shader_gpu_offsets[idx] = gpu_data_list.total_size;
 			buf8_list_push(pg_arena, &gpu_data_list, n->binary);
 		}
+		// TODO(Dedrick): Texture Data.
 
 		gpu_data_blob = buf8_list_join(pg_arena, &gpu_data_list);
+		DK_LOG_INFOF(" done\n");
 	}
 
 	// ~ Dedrick: Bake Metadata.
@@ -151,8 +161,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	u64 baked_shaders_size = 0;
 	{
 		ZoneScopedN("bake metadata");
-
-		// 1. Shaders
+		DK_LOG_INFOF("baking metadata...");
 		baked_shaders_size = shaders.count * sizeof(PAK_SectionElementType_Shader);
 		baked_shaders = arena_push_array<PAK_SectionElementType_Shader>(pg_arena, shaders.count);
 
@@ -165,10 +174,11 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			s->gpu_offset = shader_gpu_offsets[idx];
 			s->gpu_size = n->binary.size;
 		}
+		DK_LOG_INFOF(" done\n");
 	}
 
 	// ~ Dedrick: Package results.
-	PAKM_BakeBundle bundle = {0};
+	PAKM_BakeBundle bundle = {};
 	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].data = string_table;
 	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].size = string_table_size;
 	bundle.sections[PAK_SECTION_KIND_STRING_DATA].data = string_data;
@@ -182,6 +192,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	Buffer8List output_blobs = {};
 	{
 		ZoneScopedN("serialize bundles");
+		DK_LOG_INFOF("serializing bundles...");
 		PAK_Header *header = arena_push<PAK_Header>(pg_arena);
 		header->magic = PAK_MAGIC_CONSTANT;
 		header->version = PAK_VERSION;
@@ -200,6 +211,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 
 		header->gpu_offset = pak_sections[PAK_SECTION_KIND_GPU_SHADER].offset;
+		DK_LOG_INFOF(" done\n");
 	}
 
 	// Dedrick: Write blobs.
