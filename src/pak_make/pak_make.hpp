@@ -3,8 +3,9 @@
 namespace dk {
 	struct PAKM_ShaderNode {
 		PAKM_ShaderNode *next;
-		PAK_Shader shader;
+		PAK_ShaderKind kind;
 		String8 name;
+		Buffer8 binary;
 	};
 
 	struct PAKM_ShaderList {

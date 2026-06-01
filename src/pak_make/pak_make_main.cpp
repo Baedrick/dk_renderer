@@ -31,11 +31,8 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		out_path = cmd_line_value(cmd_line, "output"_str8);
 	}
 
-	String8List *bake_strings = nullptr;
-
 	// ~ Dedrick: Gather and process spir-v shaders.
-	PAKG_ShaderList *bake_shaders = nullptr;
-	Buffer8List *bake_gpu_shaders = nullptr;
+	PAKM_ShaderList shaders = {};
 	{
 		ZoneScopedN("shaders");
 		struct ShaderTask {
@@ -77,135 +74,109 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			}
 			plt_dir_iter_end(iter);
 			DK_LOG_INFOF(" found %llu\n", task_count);
-
 		}
 		{
 			ZoneScopedN("process");
 			DK_LOG_INFOF("processing shaders...");
 			for (ShaderTask const *task = first_task; task != nullptr; task = task->next) {
-
-
 				Buffer8 const binary = plt_read_bytes_from_file_path(pg_arena, task->binary_path);
-				u32 const str_idx = static_cast<u32>(bake_params.strings.total_count);
-
-				String8 *str = pakg_string_chunk_list_push(pg_arena, &bake_params.strings, 64);
-				*str = task->shader_name;
-				bake_params.strings.total_size += task->shader_name.size;
-
-				buf8_list_push_align(pg_arena, &bake_params.shader_binaries, 16);
-				u64 shader_binary_offset = bake_params.shader_binaries.total_size;
-				buf8_list_push(pg_arena, &bake_params.shader_binaries, binary);
-
 				PAKM_ShaderNode *node = arena_push<PAKM_ShaderNode>(pg_arena);
-				forward_list_queue_push(&bake_params.shaders.first, &bake_params.shaders.last, node);
-				bake_params.shaders.count += 1;
-
-				PAK_Shader *shader = &node->shader;
-				shader->name_hash = u64_hash_from_str8(task->shader_name);
-				shader->name_string_idx = 0;
-				shader->shader_binary_offset = shader_binary_offset;
-				shader->shader_binary_size = binary.size;
-				shader->kind = task->shader_kind;
+				node->name = task->shader_name;
+				node->binary = binary;
+				node->kind = task->shader_kind;
+				forward_list_queue_push(&shaders.first, &shaders.last, node);
+				shaders.count += 1;
 			}
 			DK_LOG_INFOF(" done\n");
 		}
 	}
 
-	// TODO(Dedrick): Gather and process textures.
-	{
-		ZoneScopedN("textures");
-	}
-
-	// Dedrick: Bake Strings.
-	struct BakedStrings {
-		PAK_SectionElementType_StringTable *string_table;
-		PAK_SectionElementType_StringData *string_data;
-	};
-	BakedStrings *baked_strings = nullptr;
+	// ~ Dedrick: Bake Strings.
+	PAK_SectionElementType_StringTable *string_table = nullptr;
+	PAK_SectionElementType_StringData *string_data = nullptr;
+	u64 string_table_size = 0;
+	u64 string_data_size = 0;
+	String8Array sorted_names = {};
 	{
 		ZoneScopedN("bake strings");
-		baked_strings = arena_push<BakedStrings>(pg_arena);
-		baked_strings->string_table = arena_push_array<PAK_SectionElementType_StringTable>(pg_arena, bake_params.strings.total_count + 1);
-		baked_strings->string_data = arena_push_array<PAK_SectionElementType_StringData>(pg_arena, bake_params.strings.total_size);
-		{
-			ZoneScopedN("layout strings");
-			u64 str_idx = 1;
-			u64 str_offset = 0;
-			// TODO(Dedrick): Convert chunk nodes to linked list of 1 element per node.
-			for (PAKG_StringChunkNode *node = bake_params.strings.first; node != nullptr; node = node->next) {
-				for (u64 i = 0; i < node->count; ++i) {
-					String8 const str = node->v[i];
-					baked_strings->string_table[str_idx].offset = str_offset;
-					baked_strings->string_table[str_idx].size = str.size;
-					str_idx += 1;
-					str_offset += str.size;
-				}
-			}
+		String8List names = {};
+		for (PAKM_ShaderNode *n = shaders.first; n != nullptr; n = n->next) {
+			str8_list_push(pg_arena, &names, n->name);
 		}
-		{
-			ZoneScopedN("fill string data");
-			u64 str_idx = 1;
-			// TODO(Dedrick): Convert to linked list of 1 element per node.
-			for (PAKG_StringChunkNode *node = bake_params.strings.first; node != nullptr; node = node->next) {
-				for (u64 i = 0; i < node->count; ++i) {
-					String8 const str = node->v[i];
-					u64 const dst_offset = baked_strings->string_table[str_idx].offset;
-					std::memcpy(baked_strings->string_data + dst_offset, str.data, str.size);
-					str_idx += 1;
-				}
-			}
-		}
-	}
 
-	// Dedrick: Bake Shader binaries.
-	struct BakedShaderBinary {
-		PAK_SectionElementType_ShaderBinary *binaries;
-	};
-	BakedShaderBinary *baked_shader_binaries = nullptr;
-	{
-		ZoneScopedN("bake shader binaries");
-		baked_shader_binaries = arena_push<BakedShaderBinary>(pg_arena);
-		baked_shader_binaries->binaries = arena_push_array<PAK_SectionElementType_ShaderBinary>(pg_arena, bake_params.shader_binaries.total_size);
-		u64 binary_offset = 0;
-		for (Buffer8Node *n = bake_params.shader_binaries.first; n != nullptr; n = n->next) {
-			std::memcpy(baked_shader_binaries->binaries + binary_offset, n->buffer.data, n->buffer.size);
-			binary_offset += n->buffer.size;
-		}
-	}
-
-	// Dedrick: Bake Shaders.
-	struct BakedShaders {
-		PAK_SectionElementType_Shader *shaders;
-	};
-	BakedShaders *baked_shaders = nullptr;
-	{
-		ZoneScopedN("bake shaders");
-		baked_shaders = arena_push<BakedShaders>(pg_arena);
-		baked_shaders->shaders = arena_push_array<PAK_SectionElementType_Shader>(pg_arena, bake_params.shaders.count);
-		String8Array strings = str8_array_from_list(pg_arena, &bake_params.strings);
-		insertion_sort(strings.data, strings.count,
+		sorted_names = str8_array_from_list(pg_arena, &names);
+		insertion_sort(sorted_names.data, sorted_names.count,
 			[](String8 a, String8 b) {
-				return str8_compare(a, b, STRING_MATCH_FLAG_CASE_INSENSITIVE) < 0;
+				return str8_compare(a, b, STRING_MATCH_FLAG_NONE) < 0;
 			}
 		);
-		u64 shader_idx = 0;
-		for (PAKG_ShaderNode *n = bake_params.shaders.first; n != nullptr; n = n->next) {
-			n->shader.name_string_idx = pakm_bake_string_index(n->name, strings);
-			baked_shaders->shaders[shader_idx] = n->shader;
-			shader_idx += 1;
+
+		string_table_size = (sorted_names.count + 1) * sizeof(PAK_SectionElementType_StringTable);
+		string_table = arena_push_array<PAK_SectionElementType_StringTable>(pg_arena, sorted_names.count + 1);
+
+		string_data_size = names.total_size;
+		string_data = arena_push_array<PAK_SectionElementType_StringData>(pg_arena, string_data_size);
+
+		u64 offset = 0;
+		for (u64 i = 0; i < sorted_names.count; ++i) {
+			String8 const name = sorted_names[i];
+			string_table[i + 1].offset = offset;
+			string_table[i + 1].size = name.size;
+			std::memcpy(string_data + offset, name.data, name.size);
+			offset += name.size;
 		}
 	}
 
-	// Dedrick: Package results.
-	PAKG_BakeBundle bundle = {};
-	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].data = baked_strings->string_table;
-	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].size = bake_params.strings.total_count * sizeof(PAK_SectionElementType_StringTable);
-	bundle.sections[PAK_SECTION_KIND_STRING_DATA].data = baked_strings->string_data;
-	bundle.sections[PAK_SECTION_KIND_STRING_DATA].size = bake_params.strings.total_size;
-	bundle.sections[PAK_SECTION_KIND_SHADER_BINARY].data = baked_shader_binaries->binaries;
-	bundle.sections[PAK_SECTION_KIND_SHADER_BINARY].size = bake_params.shader_binaries.total_size;
-	bundle.sections[PAK_SECTION_KIND_SHADER].data = baked_shaders->shaders;
-	bundle.sections[PAK_SECTION_KIND_SHADER].size = bake_params.shaders.count * sizeof(PAK_SectionElementType_Shader);
+	// ~ Dedrick: Bake GPU Data.
+	Buffer8 gpu_data_blob = {0};
+	u64 *shader_gpu_offsets = nullptr;
+	{
+		ZoneScopedN("bake gpu data");
+		Buffer8List gpu_data_list = {0};
+
+		// 1. Shaders
+		shader_gpu_offsets = arena_push_array<u64>(pg_arena, shaders.count);
+		u64 idx = 0;
+		for (PAKM_ShaderNode *n = shaders.first; n != nullptr; n = n->next, ++idx) {
+			buf8_list_push_align(pg_arena, &gpu_data_list, 16);
+			shader_gpu_offsets[idx] = gpu_data_list.total_size;
+			buf8_list_push(pg_arena, &gpu_data_list, n->binary);
+		}
+
+		gpu_data_blob = buf8_list_join(pg_arena, &gpu_data_list);
+	}
+
+	// ~ Dedrick: Bake Metadata.
+	PAK_SectionElementType_Shader *baked_shaders = nullptr;
+	u64 baked_shaders_size = 0;
+	{
+		ZoneScopedN("bake metadata");
+
+		// 1. Shaders
+		baked_shaders_size = shaders.count * sizeof(PAK_SectionElementType_Shader);
+		baked_shaders = arena_push_array<PAK_SectionElementType_Shader>(pg_arena, shaders.count);
+
+		u64 idx = 0;
+		for (PAKM_ShaderNode *n = shaders.first; n != nullptr; n = n->next, ++idx) {
+			PAK_Shader *s = &baked_shaders[idx];
+			s->name_hash = u64_hash_from_str8(n->name);
+			s->name_string_idx = pakm_find_string_index(n->name, sorted_names);
+			s->kind = n->kind;
+			s->gpu_offset = shader_gpu_offsets[idx];
+			s->gpu_size = n->binary.size;
+		}
+	}
+
+	// ~ Dedrick: Package results.
+	PAKM_BakeBundle bundle = {0};
+	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].data = string_table;
+	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].size = string_table_size;
+	bundle.sections[PAK_SECTION_KIND_STRING_DATA].data = string_data;
+	bundle.sections[PAK_SECTION_KIND_STRING_DATA].size = string_data_size;
+	bundle.sections[PAK_SECTION_KIND_GPU_SHADER].data = gpu_data_blob.data;
+	bundle.sections[PAK_SECTION_KIND_GPU_SHADER].size = gpu_data_blob.size;
+	bundle.sections[PAK_SECTION_KIND_SHADER].data = baked_shaders;
+	bundle.sections[PAK_SECTION_KIND_SHADER].size = baked_shaders_size;
 
 	// Dedrick: Serialize bundles.
 	Buffer8List output_blobs = {};
@@ -217,19 +188,18 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		header->section_count = PAK_SECTION_KIND_COUNT;
 		header->section_offset = sizeof(PAK_Header);
 
-		PAK_Section *sections = arena_push_array<PAK_Section>(pg_arena, PAK_SECTION_KIND_COUNT);
+		PAK_Section *pak_sections = arena_push_array<PAK_Section>(pg_arena, PAK_SECTION_KIND_COUNT);
 		buf8_list_push(pg_arena, &output_blobs, Buffer8{ reinterpret_cast<u8 *>(header), sizeof(PAK_Header) });
-		buf8_list_push(pg_arena, &output_blobs, Buffer8{ reinterpret_cast<u8 *>(sections), PAK_SECTION_KIND_COUNT * sizeof(PAK_Section) });
+		buf8_list_push(pg_arena, &output_blobs, Buffer8{ reinterpret_cast<u8 *>(pak_sections), PAK_SECTION_KIND_COUNT * sizeof(PAK_Section) });
 
 		for (u32 i = 0; i < PAK_SECTION_KIND_COUNT; ++i) {
 			buf8_list_push_align(pg_arena, &output_blobs, 16);
-			u64 const file_offset = output_blobs.total_size;
-			sections[i].offset = file_offset;
-			sections[i].size = bundle.sections[i].size;
-			if (bundle.sections[i].size > 0) {
-				buf8_list_push(pg_arena, &output_blobs, Buffer8{ reinterpret_cast<u8 *>(bundle.sections[i].data), bundle.sections[i].size });
-			}
+			pak_sections[i].offset = output_blobs.total_size;
+			pak_sections[i].size = bundle.sections[i].size;
+			buf8_list_push(pg_arena, &output_blobs, Buffer8{ static_cast<u8 *>(bundle.sections[i].data), bundle.sections[i].size });
 		}
+
+		header->gpu_offset = pak_sections[PAK_SECTION_KIND_GPU_SHADER].offset;
 	}
 
 	// Dedrick: Write blobs.
