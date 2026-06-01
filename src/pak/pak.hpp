@@ -12,8 +12,8 @@ namespace dk {
 		PAK_SECTION_KIND_NULL = 0,
 		PAK_SECTION_KIND_STRING_DATA,
 		PAK_SECTION_KIND_STRING_TABLE,
-		PAK_SECTION_KIND_SHADER_BINARY,
 		PAK_SECTION_KIND_SHADER,
+		PAK_SECTION_KIND_GPU_SHADER,
 		PAK_SECTION_KIND_COUNT
 	};
 
@@ -22,6 +22,8 @@ namespace dk {
 		u32 version;
 		u32 section_offset;
 		u32 section_count;
+		u32 pad;
+		u64 gpu_offset;
 	};
 
 	struct PAK_Section {
@@ -46,12 +48,12 @@ namespace dk {
 		u64 name_hash;
 		u32 name_string_idx;
 		PAK_ShaderKind kind;
-		u64 shader_binary_offset;
-		u64 shader_binary_size;
+		u64 gpu_offset;
+		u64 gpu_size;
 	};
 
 	using PAK_SectionElementType_StringData = u8;
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
-	using PAK_SectionElementType_ShaderBinary = u8;
 	using PAK_SectionElementType_Shader = PAK_Shader;
+	using PAK_SectionElementType_GpuShader = u8;
 }

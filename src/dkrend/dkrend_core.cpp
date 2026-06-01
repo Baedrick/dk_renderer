@@ -52,10 +52,10 @@ auto dk::dkr_frame() noexcept -> b8 {
 	ImGui::NewFrame();
 	ImGui::ShowDemoWindow();
 
-	// Dedrick: Do per-frame resets.
+	// ~ Dedrick: Do per-frame resets.
 	arena_clear(dkr_frame_arena());
 
-	// Dedrick: Begin measuring actual per-frame work.
+	// ~ Dedrick: Begin measuring actual per-frame work.
 	u64 const begin_time_us = plt_now_microseconds();
 
 	// TODO(Dedrick): Process platform (window) events, then process application events.
@@ -66,7 +66,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 	}
 
 	ImGuiIO &io = ImGui::GetIO();
-	// Dedrick: Adjust ImGui for HiDPI screens.
+	// ~ Dedrick: Adjust ImGui for HiDPI screens.
 	{
         float const old_scale = io.FontGlobalScale;
         float const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
@@ -90,14 +90,14 @@ auto dk::dkr_frame() noexcept -> b8 {
 
 	rhi_surface_present(dkr_context->window);
 
-	// Dedrick: Determine frame time.
+	// ~ Dedrick: Determine frame time.
 	u64 const end_time_us = plt_now_microseconds();
 	u64 const frame_time_us = end_time_us - begin_time_us;
 	f32 const frame_dt = min(static_cast<f32>(frame_time_us) / 1000000.0f, 0.1f);
 	dkr_context->frame_dt = frame_dt;
 	dkr_context->time_in_seconds += frame_dt;
 
-	// Dedrick: Bump frame counters.
+	// ~ Dedrick: Bump frame counters.
 	dkr_context->frame_index += 1;
 
 	{

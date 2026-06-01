@@ -13,5 +13,14 @@ namespace dk {
 		u64 count;
 	};
 
-	auto pakm_find_string_index(String8 str, String8Array arr) -> u32;
+	struct PAKM_BakeSection {
+		void *data;
+		u64 size;
+	};
+
+	struct PAKM_BakeBundle {
+		PAKM_BakeSection sections[PAK_SECTION_KIND_COUNT];
+	};
+
+	auto pakm_find_string_index(String8 str, String8Array arr) noexcept -> u32;
 }
