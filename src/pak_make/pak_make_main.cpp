@@ -226,15 +226,10 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 	}
 
-	// Dedrick: Write info & errors.
+	// Dedrick: Write all logs.
 	LogFrameResult const log_frame = log_frame_end(pg_arena);
-	if (cmd_line_has_flag(cmd_line, "verbose"_str8) && log_frame.kind_lists[LOG_KIND_INFO].count > 0) {
-		for (LogEntry *node = log_frame.kind_lists[LOG_KIND_INFO].first; node != nullptr; node = node->next) {
-			std::fprintf(stdout, "%.*s", DK_STR8_VARG(node->string));
-		}
-	}
-	if (log_frame.kind_lists[LOG_KIND_ERROR].count > 0) {
-		for (LogEntry *node = log_frame.kind_lists[LOG_KIND_ERROR].first; node != nullptr; node = node->next) {
+	if (log_frame.list.count > 0) {
+		for (LogEntry *node = log_frame.list.first; node != nullptr; node = node->next) {
 			std::fprintf(stdout, "%.*s", DK_STR8_VARG(node->string));
 		}
 	}

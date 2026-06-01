@@ -85,7 +85,7 @@ if "%assets%"=="1" (
     %compile% ..\src\pak_make\pak_make_main.cpp %compile_link% %out%pak_make.exe || exit /b 1
     if exist pak_make.exe (
         echo [running pak_make]
-        pak_make.exe --output=dkrend.pak --verbose || exit /b 1
+        pak_make.exe --output=dkrend.pak || exit /b 1
     )
 )
 popd
