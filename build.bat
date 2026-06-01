@@ -82,10 +82,10 @@ if "%assets%"=="1" (
     for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
         %glslang% %glslang_include% -G -o "..\src\shaders\.spirv\%%~nxf.spv" "%%f" || exit /b 1
     )
-    %compile% ..\src\pakgen\pakgen_main.cpp %compile_link% %out%pakgen.exe || exit /b 1
+    %compile% ..\src\pak_make\pak_make_main.cpp %compile_link% %out%pak_make.exe || exit /b 1
     if exist pakgen.exe (
-        echo [running pakgen]
-        pakgen.exe --output=dkrend.pak --verbose || exit /b 1
+        echo [running pak_make]
+        pak_make.exe --output=dkrend.pak --verbose || exit /b 1
     )
 )
 popd

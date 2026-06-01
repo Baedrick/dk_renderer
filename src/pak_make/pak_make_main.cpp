@@ -3,41 +3,17 @@
 #include "base/base.hpp"
 #include "platform/platform.hpp"
 #include "pak/pak.hpp"
+#include "pak_make/pak_make.hpp"
 
 #include "base/base.cpp"
 #include "platform/platform.cpp"
 #include "pak/pak.cpp"
+#include "pak_make/pak_make.cpp"
 
 using namespace dk;
 
-struct PAKG_StringChunkNode {
-	PAKG_StringChunkNode *next;
-	String8 *v;
-	u64 count;
-	u64 cap;
-};
-
-struct PAKG_StringChunkList {
-	PAKG_StringChunkNode *first;
-	PAKG_StringChunkNode *last;
-	u64 chunk_count;
-	u64 total_count;
-	u64 total_size;
-};
-
-struct PAKG_ShaderNode {
-	PAKG_ShaderNode *next;
-	PAK_Shader shader;
-};
-
-struct PAKG_ShaderList {
-	PAKG_ShaderNode *first;
-	PAKG_ShaderNode *last;
-	u64 count;
-};
-
 struct PAKG_BakeParams {
-	PAKG_StringChunkList strings;
+	String8List strings;
 	PAKG_ShaderList shaders;
 	Buffer8List shader_binaries;
 };
@@ -50,20 +26,6 @@ struct PAKG_BakeSection {
 struct PAKG_BakeBundle {
 	PAKG_BakeSection sections[PAK_SECTION_KIND_COUNT];
 };
-
-auto pakg_string_chunk_list_push(Arena *arena, PAKG_StringChunkList *list, u64 cap) noexcept -> String8 * {
-	PAKG_StringChunkNode *n = list->last;
-	if (n == nullptr || n->count >= n->cap) {
-		n = arena_push<PAKG_StringChunkNode>(arena);
-		n->cap = cap;
-		n->v = arena_push_array<String8>(arena, cap);
-		forward_list_queue_push(&list->first, &list->last, n);
-		list->chunk_count += 1;
-	}
-	String8 *result = &n->v[n->count++];
-	list->total_count += 1;
-	return result;
-}
 
 auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	ArenaParams constexpr pg_arena_params = {
@@ -141,7 +103,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 			PAK_Shader *shader = &node->shader;
 			shader->name_hash = u64_hash_from_str8(task->shader_name);
-			shader->name_string_idx = str_idx;
+			shader->name_string_idx = 0;
 			shader->shader_binary_offset = shader_binary_offset;
 			shader->shader_binary_size = binary.size;
 			shader->kind = task->shader_kind;
@@ -215,8 +177,15 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		ZoneScopedN("bake shaders");
 		baked_shaders = arena_push<BakedShaders>(pg_arena);
 		baked_shaders->shaders = arena_push_array<PAK_SectionElementType_Shader>(pg_arena, bake_params.shaders.count);
+		String8Array strings = str8_array_from_list(pg_arena, &bake_params.strings);
+		insertion_sort(strings.data, strings.count,
+			[](String8 a, String8 b) {
+				return str8_compare(a, b, STRING_MATCH_FLAG_CASE_INSENSITIVE) < 0;
+			}
+		);
 		u64 shader_idx = 0;
 		for (PAKG_ShaderNode *n = bake_params.shaders.first; n != nullptr; n = n->next) {
+			n->shader.name_string_idx = pakm_bake_string_index(n->name, strings);
 			baked_shaders->shaders[shader_idx] = n->shader;
 			shader_idx += 1;
 		}

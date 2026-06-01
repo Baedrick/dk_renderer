@@ -1,0 +1,17 @@
+// Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
+
+namespace dk {
+	struct PAKM_ShaderNode {
+		PAKM_ShaderNode *next;
+		PAK_Shader shader;
+		String8 name;
+	};
+
+	struct PAKM_ShaderList {
+		PAKM_ShaderNode *first;
+		PAKM_ShaderNode *last;
+		u64 count;
+	};
+
+	auto pakm_find_string_index(String8 str, String8Array arr) -> u32;
+}
