@@ -5,7 +5,7 @@
 #include "base_hash.cpp"
 #include "base_buffer.cpp"
 #include "base_string.cpp"
-#include "base_ring.cpp"
+#include "base_ring_buffer.cpp"
 #include "base_profile.cpp"
 #include "base_thread_context.cpp"
 #include "base_command_line.cpp"
