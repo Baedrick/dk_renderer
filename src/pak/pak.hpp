@@ -56,4 +56,21 @@ namespace dk {
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
 	using PAK_SectionElementType_Shader = PAK_Shader;
 	using PAK_SectionElementType_GpuShader = u8;
+
+	using PAK_ParseStatus = u32;
+	enum : u32 {
+		PAK_PARSE_STATUS_GOOD = 0,
+		PAK_PARSE_STATUS_HEADER_DOES_NOT_MATCH,
+		PAK_PARSE_STATUS_UNSUPPORTED_VERSION,
+		PAK_PARSE_STATUS_INVALID_SECTIONS
+	};
+
+	struct PAK_Parsed {
+		u8 *raw_data;
+		u64 raw_data_size;
+		PAK_Section *sections;
+		u64 section_count;
+	};
+
+	auto pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseStatus;
 }
