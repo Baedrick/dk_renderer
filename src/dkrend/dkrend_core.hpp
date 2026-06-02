@@ -3,6 +3,12 @@
 #pragma once
 
 namespace dk {
+	enum DKR_CmdKind : u32 {
+		DKR_CMD_KIND_NULL = 0,
+		DKR_CMD_KIND_OPEN_WINDOW,
+		DKR_CMD_KIND_COUNT
+	};
+
 	struct DKR_Context {
 		Arena *arena;
 		b8 quit;

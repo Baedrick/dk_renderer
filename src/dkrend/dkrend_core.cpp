@@ -10,6 +10,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	(void)cmd_line;
 
+	// ~ Dedrick: Set up state
 	Arena *arena = arena_alloc();
 	dkr_context = arena_push<DKR_Context>(arena);
 	dkr_context->arena = arena;
@@ -27,6 +28,8 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		plt_write_bytes_to_file_path(dkr_context->log_path, Buffer8{});
 		scratch_end(scratch);
 	}
+
+	// ~ Dedrick: Set up
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	rhi_window_equip(dkr_context->window);
 
@@ -35,9 +38,6 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ImGuiIO& io = ImGui::GetIO();
 	io.DeltaTime = 1.0f / 60.0f;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-	RGFW_monitor *monitor = RGFW_window_getMonitor(dkr_context->window);
-	io.DisplayFramebufferScale = ImVec2(monitor->scaleX, monitor->scaleY);
 
 	ImGui_ImplRgfw_InitForOpenGL(dkr_context->window, true);
 	ImGui_ImplOpenGL3_Init();
@@ -68,16 +68,15 @@ auto dk::dkr_frame() noexcept -> b8 {
 	ImGuiIO &io = ImGui::GetIO();
 	// ~ Dedrick: Adjust ImGui for HiDPI screens.
 	{
-        float const old_scale = io.FontGlobalScale;
-        float const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
-        io.FontGlobalScale = content_scale;
-        ImGui::GetStyle().ScaleAllSizes(content_scale / old_scale);
-    }
+		float const old_scale = io.FontGlobalScale;
+		float const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
+		io.FontGlobalScale = content_scale;
+		ImGui::GetStyle().ScaleAllSizes(content_scale / old_scale);
+	}
 	{
 		s32 width = 0, height = 0;
 		RGFW_window_getSizeInPixels(dkr_context->window, &width, &height);
 		glViewport(0, 0, width, height);
-		io.DisplaySize = ImVec2(static_cast<f32>(width), static_cast<f32>(height));
 	}
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
