@@ -7,6 +7,7 @@
 #include "base_hash.hpp"
 #include "base_buffer.hpp"
 #include "base_string.hpp"
+#include "base_ring.hpp"
 #include "base_profile.hpp"
 #include "base_thread_context.hpp"
 #include "base_command_line.hpp"

@@ -42,3 +42,10 @@ auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseSta
 	}
 	return result;
 }
+
+auto dk::pak_find_shader_index(PAK_Parsed const *pak, String8 name) noexcept -> u32 {
+	(void)pak;
+	(void)name;
+	u32 result = 0;
+	return result;
+}

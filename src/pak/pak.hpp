@@ -73,4 +73,6 @@ namespace dk {
 	};
 
 	auto pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseStatus;
+
+	auto pak_find_shader_index(PAK_Parsed const *pak, String8 name) noexcept -> u32;
 }
