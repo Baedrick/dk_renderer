@@ -21,6 +21,8 @@ namespace dk {
 		u64 total_size;
 	};
 
+	auto buf8(void *data, u64 size) noexcept -> Buffer8;
+
 	auto buf8_compare(Buffer8 b1, Buffer8 b2) noexcept -> s32;
 	auto buf8_copy(Arena *arena, Buffer8 buf) noexcept -> Buffer8;
 

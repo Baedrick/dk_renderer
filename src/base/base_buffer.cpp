@@ -10,6 +10,10 @@ auto dk::Buffer8::operator[](u64 index) const noexcept -> u8 const & {
 	return data[index];
 }
 
+auto dk::buf8(void *data, u64 size) noexcept -> Buffer8 {
+	return { .data = static_cast<u8 *>(data), .size = size };
+}
+
 auto dk::buf8_compare(Buffer8 b1, Buffer8 b2) noexcept -> s32 {
 	return std::memcmp(b1.data, b2.data, min(b1.size, b2.size));
 }
