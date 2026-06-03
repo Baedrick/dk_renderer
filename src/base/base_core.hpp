@@ -149,6 +149,11 @@ namespace dk {
 	}
 
 	template <typename T>
+	constexpr auto abs(T x) noexcept -> T {
+		return x < 0 ? -x : x;
+	}
+
+	template <typename T>
 	constexpr auto min(T a, T b) noexcept -> T {
 		return a < b ? a : b;
 	}
