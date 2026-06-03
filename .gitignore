@@ -7,6 +7,11 @@
 *.o
 *.obj
 
+# Build results/cache
+[Bb]in/
+.tmp/
+.spirv/
+
 # Precompiled Headers
 *.gch
 *.pch
@@ -40,12 +45,6 @@
 
 # debug information files
 *.dwo
-
-# Packaged resources
-*.pak
-
-# Compiled Spir-V files
-*.spv
 
 # Whitelist
 !tools/glslangValidator.exe
