@@ -163,17 +163,20 @@ auto dk::plt_file_open(String8 path, PLT_AccessFlags flags) noexcept -> PLT_Hand
 	PLT_Handle result = plt_handle_invalid();
 
 	DWORD access_flags = 0;
+	DWORD share_mode = 0;
 	DWORD creation_disposition = OPEN_EXISTING;
 	SECURITY_ATTRIBUTES security_attributes = { sizeof(SECURITY_ATTRIBUTES), nullptr, FALSE };
 	if (flags & PLT_ACCESS_FLAG_READ) { access_flags |= GENERIC_READ; }
 	if (flags & PLT_ACCESS_FLAG_WRITE) { access_flags |= GENERIC_WRITE; }
+	if (flags & PLT_ACCESS_FLAG_SHARE_READ) { share_mode |= FILE_SHARE_READ; }
+	if (flags & PLT_ACCESS_FLAG_SHARE_WRITE) { share_mode |= FILE_SHARE_WRITE | FILE_SHARE_DELETE; }
 	if (flags & PLT_ACCESS_FLAG_WRITE) { creation_disposition = CREATE_ALWAYS; }
 	if (flags & PLT_ACCESS_FLAG_APPEND) { creation_disposition = OPEN_ALWAYS; access_flags |= FILE_APPEND_DATA; }
 
 	HANDLE const file = CreateFileW(
 		reinterpret_cast<WCHAR const *>(path16.data),
 		access_flags,
-		0,
+		share_mode,
 		&security_attributes,
 		creation_disposition,
 		FILE_ATTRIBUTE_NORMAL,
@@ -260,6 +263,41 @@ auto dk::plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) n
 	return total_write_size;
 }
 
+auto dk::plt_full_path_from_path(Arena *arena, String8 path) noexcept -> String8 {
+	TempArena const scratch = scratch_begin(&arena, 1);
+	DWORD buffer_size = static_cast<DWORD>(max(MAX_PATH, path.size * 2) + 1);
+	WCHAR *buffer = arena_push_array<WCHAR>(scratch.arena, buffer_size);
+	String16 const path16 = str16_from_8(scratch.arena, path);
+	DWORD path16_size = GetFullPathNameW(reinterpret_cast<WCHAR const *>(path16.data), buffer_size, buffer, nullptr);
+	if (path16_size > buffer_size) {
+		arena_pop(scratch.arena, buffer_size);
+		buffer_size = path16_size + 1;
+		buffer = arena_push_array<WCHAR>(scratch.arena, buffer_size);
+		path16_size = GetFullPathNameW(reinterpret_cast<WCHAR const *>(path16.data), buffer_size, buffer, nullptr);
+	}
+	String8 const full_path = str8_from_16(arena, str16(reinterpret_cast<u16 *>(buffer), path16_size));
+	scratch_end(scratch);
+	return full_path;
+}
+
+auto dk::plt_file_path_exists(String8 path) noexcept -> b8 {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const path16 = str16_from_8(scratch.arena, path);
+	DWORD const attributes = GetFileAttributesW(reinterpret_cast<WCHAR const *>(path16.data));
+	b8 const exists = (attributes != INVALID_FILE_ATTRIBUTES) && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+	scratch_end(scratch);
+	return exists;
+}
+
+auto dk::plt_folder_path_exists(String8 path) noexcept -> b8 {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const path16 = str16_from_8(scratch.arena, path);
+	DWORD const attributes = GetFileAttributesW(reinterpret_cast<WCHAR const *>(path16.data));
+	b8 const exists = (attributes != INVALID_FILE_ATTRIBUTES) && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	scratch_end(scratch);
+	return exists;
+}
+
 auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes {
 	if (file == plt_handle_invalid()) {
 		PLT_FileAttributes result = {};
@@ -276,6 +314,64 @@ auto dk::plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttribute
 		attr.flags = plt_w32_file_flags_from_dw_file_attributes(info.dwFileAttributes);
 	}
 	return attr;
+}
+
+auto dk::plt_file_map_open(PLT_Handle file, PLT_AccessFlags flags) noexcept -> PLT_Handle {
+	HANDLE const file_handle = reinterpret_cast<HANDLE>(file.v);
+	DWORD protect_flags = 0;
+	switch (flags) {
+		case PLT_ACCESS_FLAG_READ: {
+			protect_flags |= PAGE_READONLY;
+			break;
+		}
+		case PLT_ACCESS_FLAG_WRITE:
+		case PLT_ACCESS_FLAG_READ | PLT_ACCESS_FLAG_WRITE: {
+			protect_flags |= PAGE_READWRITE;
+			break;
+		}
+		default: break;
+	}
+	HANDLE const map_handle = CreateFileMappingW(file_handle, nullptr, protect_flags, 0, 0, nullptr);
+	PLT_Handle const map = { reinterpret_cast<uintptr_t>(map_handle) };
+	return map;
+}
+
+auto dk::plt_file_map_close(PLT_Handle map) noexcept -> void {
+	HANDLE const handle = reinterpret_cast<HANDLE>(map.v);
+	CloseHandle(handle);
+}
+
+auto dk::plt_file_map_view_open(PLT_Handle map, PLT_AccessFlags flags, u64 begin, u64 end) noexcept -> void * {
+	HANDLE const handle = reinterpret_cast<HANDLE>(map.v);
+	u32 const off_lo = static_cast<u32>(begin & 0x00000000FFFFFFFF);
+	u32 const off_hi = static_cast<u32>((begin & 0xFFFFFFFF00000000) >> 32);
+	u64 const size = end - begin;
+	DWORD access_flags = 0;
+	switch (flags) {
+		case PLT_ACCESS_FLAG_READ: {
+			access_flags = FILE_MAP_READ;
+			break;
+		}
+		case PLT_ACCESS_FLAG_WRITE: {
+			access_flags = FILE_MAP_WRITE;
+			break;
+		}
+		case PLT_ACCESS_FLAG_READ | PLT_ACCESS_FLAG_WRITE: {
+			access_flags = FILE_MAP_ALL_ACCESS;
+			break;
+		}
+		default: break;
+	}
+	void *const result = MapViewOfFile(handle, access_flags, off_hi, off_lo, size);
+	return result;
+}
+
+auto dk::plt_file_map_view_close(PLT_Handle map, void *ptr, u64 begin, u64 end) noexcept -> void {
+	// NOTE(Dedrick): Range not used, not necessary on Windows.
+	(void)map;
+	(void)begin;
+	(void)end;
+	UnmapViewOfFile(ptr);
 }
 
 auto dk::plt_dir_iter_begin(String8 dir, PLT_DirIterFlags flags) noexcept -> PLT_Handle {

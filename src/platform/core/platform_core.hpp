@@ -20,14 +20,16 @@ namespace dk {
 
 	using PLT_AccessFlags = u32;
 	enum : u32 {
-		PLT_ACCESS_FLAG_READ = 1u << 0,
-		PLT_ACCESS_FLAG_WRITE = 1u << 1,
-		PLT_ACCESS_FLAG_APPEND = 1u << 2
+		PLT_ACCESS_FLAG_READ        = 1u << 0,
+		PLT_ACCESS_FLAG_WRITE       = 1u << 1,
+		PLT_ACCESS_FLAG_APPEND      = 1u << 2,
+		PLT_ACCESS_FLAG_SHARE_READ  = 1u << 3,
+		PLT_ACCESS_FLAG_SHARE_WRITE = 1u << 4
 	};
 
 	using PLT_FileFlags = u32;
 	enum : u32 {
-		PLT_FILE_FLAG_NONE = 0,
+		PLT_FILE_FLAG_NONE      = 0,
 		PLT_FILE_FLAG_DIRECTORY = 1u << 0
 	};
 
@@ -38,11 +40,11 @@ namespace dk {
 
 	using PLT_DirIterFlags = u32;
 	enum : u32 {
-		PLT_DIR_ITER_FLAG_NONE = 0,
-		PLT_DIR_ITER_FLAG_SKIP_FOLDERS = 1u << 0,
-		PLT_DIR_ITER_FLAG_SKIP_FILES = 1u << 1,
+		PLT_DIR_ITER_FLAG_NONE              = 0,
+		PLT_DIR_ITER_FLAG_SKIP_FOLDERS      = 1u << 0,
+		PLT_DIR_ITER_FLAG_SKIP_FILES        = 1u << 1,
 		PLT_DIR_ITER_FLAG_SKIP_HIDDEN_FILES = 1u << 2,
-		PLT_DIR_ITER_FLAG_DONE = 1u << 31,
+		PLT_DIR_ITER_FLAG_DONE              = 1u << 31,
 	};
 
 	struct PLT_DirIterResult {
@@ -90,7 +92,15 @@ namespace dk {
 	auto plt_file_close(PLT_Handle file) noexcept -> void;
 	auto plt_file_read(PLT_Handle file, u64 begin, u64 end, void *out_data) noexcept -> u64;
 	auto plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) noexcept -> u64;
+	auto plt_full_path_from_path(Arena *arena, String8 path) noexcept -> String8;
+	auto plt_file_path_exists(String8 path) noexcept -> b8;
+	auto plt_folder_path_exists(String8 path) noexcept -> b8;
 	auto plt_attributes_from_file(PLT_Handle file) noexcept -> PLT_FileAttributes;
+
+	auto plt_file_map_open(PLT_Handle file, PLT_AccessFlags flags) noexcept -> PLT_Handle;
+	auto plt_file_map_close(PLT_Handle map) noexcept -> void;
+	auto plt_file_map_view_open(PLT_Handle map, PLT_AccessFlags flags, u64 begin, u64 end) noexcept -> void *;
+	auto plt_file_map_view_close(PLT_Handle map, void *ptr, u64 begin, u64 end) noexcept -> void;
 
 	auto plt_read_bytes_from_file_path(Arena *arena, String8 path) noexcept -> Buffer8;
 	auto plt_write_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;

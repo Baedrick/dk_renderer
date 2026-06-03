@@ -82,6 +82,7 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
+- [ ][Must Have] Split pak file into two, a cpu data and gpu data.
 - [ ][Must Have] Reading packed resource format during initialization
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
@@ -89,12 +90,15 @@
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
 - [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
+- [ ][Should Have] Change writing buffer list to use ring buffer for small writes to disk
 - [ ][Should Have] Light clustering for shading
 - [ ][Should Have] Render Graph resource aliasing and allocation
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Add shared read and write support to file io
+- [x][Must Have] Add file mapping to platform layer to map file to address space
 - [x][Must Have] Ring buffer for Inter-Process Communication
 - [x][Must Have] Resource packing tool to export spirv binaries as one blob
 - [x][Must Have] Packed resource format, only needs to support spriv for now
