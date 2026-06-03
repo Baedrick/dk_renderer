@@ -14,6 +14,10 @@ dk::RHI_OGL_Context *dk::rhi_ogl_context;
 
 auto dk::rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void {
 	(void)user;
+
+	// NOTE(Dedrick): Ignore insignificant error/warning codes.
+	if(id == 131169 || id == 131185 || id == 131218 || id == 131204) { return; }
+
 	String8 source_str = "Unknown"_str8;
 	String8 type_str = "Unknown"_str8;
 	String8 severity_str = "Unknown"_str8;
