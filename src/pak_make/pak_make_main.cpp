@@ -23,7 +23,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	log_select(log);
 	log_frame_begin();
 
-	// ~ Dedrick: Extract paths.
+	//~ Dedrick: Extract paths.
 	String8 const binary_dir = plt_get_process_info()->binary_dir;
 	String8 const project_dir = path_chop_last_slash(binary_dir);
 	String8 out_path = "resource.pak"_str8;
@@ -31,7 +31,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		out_path = cmd_line_value(cmd_line, "output"_str8);
 	}
 
-	// ~ Dedrick: Gather and process spir-v shaders.
+	//~ Dedrick: Gather and process spir-v shaders.
 	PAKM_ShaderList shaders = {};
 	{
 		ZoneScopedN("shaders");
@@ -96,7 +96,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		ZoneScopedN("textures");
 	}
 
-	// ~ Dedrick: Bake Strings.
+	//~ Dedrick: Bake Strings.
 	PAK_SectionElementType_StringTable *string_table = nullptr;
 	PAK_SectionElementType_StringData *string_data = nullptr;
 	u64 string_table_size = 0;
@@ -134,7 +134,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		DK_LOG_INFOF(" done\n");
 	}
 
-	// ~ Dedrick: Bake GPU Data.
+	//~ Dedrick: Bake GPU Data.
 	Buffer8 gpu_data_blob = {};
 	u64 *shader_gpu_offsets = nullptr;
 	{
@@ -156,7 +156,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		DK_LOG_INFOF(" done\n");
 	}
 
-	// ~ Dedrick: Bake Metadata.
+	//~ Dedrick: Bake Metadata.
 	PAK_SectionElementType_Shader *baked_shaders = nullptr;
 	u64 baked_shaders_size = 0;
 	{
@@ -177,7 +177,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		DK_LOG_INFOF(" done\n");
 	}
 
-	// ~ Dedrick: Package results.
+	//~ Dedrick: Package results.
 	PAKM_BakeBundle bundle = {};
 	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].data = string_table;
 	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].size = string_table_size;
@@ -188,7 +188,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	bundle.sections[PAK_SECTION_KIND_SHADER].data = baked_shaders;
 	bundle.sections[PAK_SECTION_KIND_SHADER].size = baked_shaders_size;
 
-	// Dedrick: Serialize bundles.
+	//~ Dedrick: Serialize bundles.
 	Buffer8List output_blobs = {};
 	{
 		ZoneScopedN("serialize bundles");
@@ -214,7 +214,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		DK_LOG_INFOF(" done\n");
 	}
 
-	// Dedrick: Write blobs.
+	//~ Dedrick: Write blobs.
 	{
 		ZoneScopedN("write output");
 		b8 const is_written = plt_write_bytes_list_to_file_path(out_path, &output_blobs);
@@ -226,7 +226,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 	}
 
-	// Dedrick: Write all logs.
+	//~ Dedrick: Write all logs.
 	LogFrameResult const log_frame = log_frame_end(pg_arena);
 	if (log_frame.list.count > 0) {
 		for (LogEntry *node = log_frame.list.first; node != nullptr; node = node->next) {
@@ -234,7 +234,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 	}
 
-	// Dedrick: Clean up.
+	//~ Dedrick: Clean up.
 	log_release(log);
 	arena_release(pg_arena);
 	return 0;

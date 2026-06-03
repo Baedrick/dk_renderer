@@ -3,7 +3,7 @@
 auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseStatus {
 	PAK_ParseStatus result = PAK_PARSE_STATUS_GOOD;
 
-	// ~ Dedrick: Extract header.
+	//~ Dedrick: Extract header.
 	PAK_Header *header = nullptr;
 	if (result == PAK_PARSE_STATUS_GOOD) {
 		if (sizeof(*header) <= size) {
@@ -19,13 +19,13 @@ auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseSta
 		}
 	}
 
-	// ~ Dedrick: Extract sections.
+	//~ Dedrick: Extract sections.
 	PAK_Section *sections = nullptr;
 	u32 section_count = 0;
 	if (result == PAK_PARSE_STATUS_GOOD) {
-		u64 const opl = static_cast<u64>(header->section_offset) + static_cast<u64>(header->section_count) * sizeof(PAK_SECTION);
+		u64 const opl = static_cast<u64>(header->section_offset) + static_cast<u64>(header->section_count) * sizeof(PAK_Section);
 		if (opl <= size) {
-			sections = static_cast<PAK_Section *>(data + header->section_offset);
+			sections = reinterpret_cast<PAK_Section *>(data + header->section_offset);
 			section_count = header->section_count;
 		}
 		if (sections == nullptr) {
@@ -33,7 +33,7 @@ auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseSta
 		}
 	}
 
-	// ~ Dedrick: Fill results.
+	//~ Dedrick: Fill results.
 	if (result == PAK_PARSE_STATUS_GOOD) {
 		out->raw_data = data;
 		out->raw_data_size = size;

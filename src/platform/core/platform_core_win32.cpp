@@ -265,7 +265,7 @@ auto dk::plt_file_write(PLT_Handle file, u64 begin, u64 end, void const *data) n
 
 auto dk::plt_full_path_from_path(Arena *arena, String8 path) noexcept -> String8 {
 	TempArena const scratch = scratch_begin(&arena, 1);
-	DWORD buffer_size = static_cast<DWORD>(max(MAX_PATH, path.size * 2) + 1);
+	DWORD buffer_size = static_cast<DWORD>(max<u64>(MAX_PATH, path.size * 2) + 1);
 	WCHAR *buffer = arena_push_array<WCHAR>(scratch.arena, buffer_size);
 	String16 const path16 = str16_from_8(scratch.arena, path);
 	DWORD path16_size = GetFullPathNameW(reinterpret_cast<WCHAR const *>(path16.data), buffer_size, buffer, nullptr);
