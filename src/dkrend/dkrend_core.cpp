@@ -129,7 +129,6 @@ auto dk::dkr_frame() noexcept -> b8 {
 	// TODO(Dedrick): Process asset unload events, process asset load events.
 
 	// TODO(Dedrick): Update scene stuff (camera, lights, etc.)
-	DK_LOG_INFOF("frame_dt: %.4f\n", dkr_context->frame_dt);
 
 	//~ Dedrick: Build UI.
 	{
