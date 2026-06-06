@@ -1,5 +1,25 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+auto dk::PAKM_ShaderArray::operator[](u64 index) noexcept -> PAKM_Shader & {
+	DK_ASSERT(index < count);
+	return data[index];
+}
+
+auto dk::PAKM_ShaderArray::operator[](u64 index) const noexcept -> PAKM_Shader const & {
+	DK_ASSERT(index < count);
+	return data[index];
+}
+
+auto dk::PAKM_TextureArray::operator[](u64 index) noexcept -> PAKM_Texture & {
+	DK_ASSERT(index < count);
+	return data[index];
+}
+
+auto dk::PAKM_TextureArray::operator[](u64 index) const noexcept -> PAKM_Texture const & {
+	DK_ASSERT(index < count);
+	return data[index];
+}
+
 auto dk::pakm_find_string_index(String8 str, String8Array arr) noexcept -> u32 {
 	// NOTE(Dedrick): Invariance: arr.count <= 32.
 	u32 result = 0;

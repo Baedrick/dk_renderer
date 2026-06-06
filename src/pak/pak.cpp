@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-dk::u64 const dk::pak_section_element_size_table[PAK_SECTION_KIND_COUNT] = {
+dk::u16 const dk::pak_section_element_size_table[] = {
 	sizeof(u8),
 	sizeof(PAK_SectionElementType_StringData),
 	sizeof(PAK_SectionElementType_StringTable),
@@ -9,6 +9,7 @@ dk::u64 const dk::pak_section_element_size_table[PAK_SECTION_KIND_COUNT] = {
 	sizeof(PAK_SectionElementType_GpuHeader),
 	sizeof(PAK_SectionElementType_GpuData)
 };
+static_assert(dk::array_count(dk::pak_section_element_size_table) == dk::PAK_SECTION_KIND_COUNT);
 
 auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseStatus {
 	PAK_ParseStatus result = PAK_PARSE_STATUS_GOOD;

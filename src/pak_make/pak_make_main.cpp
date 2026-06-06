@@ -12,6 +12,190 @@
 
 auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	using namespace dk;
+	(void)cmd_line;
+
+	ArenaParams constexpr pm_arena_params = {
+		.reserve_size = giga_bytes(1),
+		.commit_size = mega_bytes(64),
+		.flags = ARENA_DEFAULT_FLAGS
+	};
+	Arena *const pm_arena = arena_alloc(&pm_arena_params);
+
+	//~ Dedrick: Extract paths.
+	String8 const binary_dir = plt_get_process_info()->binary_dir;
+	String8 const project_dir = path_chop_last_slash(binary_dir);
+	String8 const res_dir = str8f(pm_arena, "%.*s/res", DK_STR8_VARG(project_dir));
+	String8 const spirv_dir = str8f(pm_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
+	String8 const out_path = str8f(pm_arena, "%.*s/%.*s", binary_dir, DK_STR8_VARG("dkrend.pak"_str8));
+
+	//~ Dedrick: Search shader directory, gather paths, load binaries.
+	PAKM_ShaderArray shaders = {};
+	{
+		struct ShaderTaskNode {
+			ShaderTaskNode *next;
+			PAK_ShaderKind shader_kind;
+			String8 shader_name;
+			String8 binary_path;
+		};
+		ShaderTaskNode *first_shader_task = nullptr;
+		ShaderTaskNode *last_shader_task = nullptr;
+		u64 shader_task_count = 0;
+
+		//~ Dedrick: Search shader build directory for files to consider.
+		std::printf("searching shaders in %.*s...", DK_STR8_VARG(spirv_dir));
+		PLT_Handle const iter = plt_dir_iter_begin(spirv_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
+		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pm_arena, iter, &file); ) {
+			if (!str8_equals(path_skip_last_period(file.name), "spv"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+				continue;
+			}
+			String8 const shader_name = path_chop_last_period(file.name);
+			String8 const shader_ext = path_skip_last_period(shader_name);
+			struct { String8 ext; PAK_ShaderKind kind; } const filters[] = {
+				{ "vert"_str8, PAK_SHADER_KIND_VERTEX },
+				{ "frag"_str8, PAK_SHADER_KIND_FRAGMENT },
+				{ "comp"_str8, PAK_SHADER_KIND_COMPUTE }
+			};
+			for (u64 i = 0; i < array_count(filters); ++i) {
+				if (str8_equals(shader_ext, filters[i].ext, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+					ShaderTaskNode *task = arena_push<ShaderTaskNode>(pm_arena);
+					task->binary_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(spirv_dir), DK_STR8_VARG(file.name));
+					task->shader_name = shader_name;
+					task->shader_kind = filters[i].kind;
+					forward_list_queue_push(&first_shader_task, &last_shader_task, task);
+					shader_task_count += 1;
+					break;
+				}
+			}
+		}
+		plt_dir_iter_end(iter);
+		std::printf(" found %llu\n", shader_task_count);
+
+		//~ Dedrick: Load shaders.
+		std::printf("processing shaders...");
+		PAKM_ShaderList shaders_list = {};
+		for (ShaderTaskNode const *task = first_shader_task; task != nullptr; task = task->next) {
+			Buffer8 const binary = plt_read_bytes_from_file_path(pm_arena, task->binary_path);
+			PAKM_ShaderNode *node = arena_push<PAKM_ShaderNode>(pm_arena);
+			node->shader.name = task->shader_name;
+			node->shader.binary = binary;
+			node->shader.kind = task->shader_kind;
+			forward_list_queue_push(&shaders_list.first, &shaders_list.last, node);
+			shaders_list.count += 1;
+		}
+		std::printf(" %llu shader files processed\n", shaders_list.count);
+
+		//~ Dedrick: Join all shaders.
+		shaders.data = arena_push_array<PAKM_Shader>(pm_arena, shaders_list.count);
+		shaders.count = shaders_list.count;
+		u64 shader_idx = 0;
+		for (PAKM_ShaderNode const *node = shaders_list.first; node != nullptr; node = node->next) {
+			shaders[shader_idx++] = node->shader;
+		}
+	}
+
+	//~ Dedrick: Recursively search resource directory for all files to consider.
+	String8List res_file_paths = {};
+	{
+		std::printf("searching %.*s...", DK_STR8_VARG(res_dir));
+		PLT_Handle const iter = plt_dir_iter_begin(res_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
+		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pm_arena, iter, &file); ) {
+			String8 const file_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(res_dir), DK_STR8_VARG(file.name));
+			if ((file.attributes.flags & PLT_FILE_FLAG_DIRECTORY) == 0) {
+				str8_list_push(pm_arena, &res_file_paths, file_path);
+			}
+		}
+		plt_dir_iter_end(iter);
+		std::printf(" %llu files found\n", res_file_paths.node_count);
+	}
+
+	//~ Dedrick: Parse all texture files in resource directory.
+	PAKM_TextureArray textures = {};
+	{
+		PAKM_TextureList textures_list = {};
+		struct DDS_PIXELFORMAT {
+			u32 dwSize;
+			u32 dwFlags;
+			u32 dwFourCC;
+			u32 dwRGBBitCount;
+			u32 dwRBitMask;
+			u32 dwGBitMask;
+			u32 dwBBitMask;
+			u32 dwABitMask;
+		};
+		struct DDS_HEADER {
+			u32 dwSize;
+			u32 dwFlags;
+			u32 dwHeight;
+			u32 dwWidth;
+			u32 dwLinearSize;
+			u32 dwDepth;
+			u32 dwMipMapCount;
+			u32 dwReserved1[11];
+			DDS_PIXELFORMAT ddspf;
+			u32 dwCaps;
+			u32 dwCaps2;
+			u32 dwCaps3;
+			u32 dwCaps4;
+			u32 dwReserved2;
+		};
+
+		//~ Dedrick: Parse textures.
+		std::printf("parsing textures...");
+		for (String8Node const *node = res_file_paths.first; node != nullptr; node = node->next) {
+			String8 const file_path = node->string;
+			String8 const file_ext = path_skip_last_period(file_path);
+			if (str8_equals(file_ext, "dds"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+				String8 const texture_name = path_skip_last_slash(file_path);
+
+
+			}
+		}
+		std::printf(" %llu textuers parsed\n", textures_list.count);
+
+
+		//~ Dedrick: Join all textures.
+		textures.data = arena_push_array<PAKM_Texture>(pm_arena, textures_list.count);
+		textures.count = textures_list.count;
+		u64 texture_idx = 0;
+		for (PAKM_TextureNode const *node = textures_list.first; node != nullptr; node = node->next) {
+			textures[texture_idx++] = node->texture;
+		}
+	}
+
+	//~ Dedrick: Bake strings.
+
+
+	//~ Dedrick: Bake GPU data.
+
+
+	//~ Dedrick: Bake CPU data.
+
+
+	//~ Dedrick: Package results.
+
+
+	//~ Dedrick: Serialize bundles.
+
+
+	//~ Dedrick: Write blobs.
+	{
+		ZoneScopedN("write output")
+		std::printf("write output to file\n");
+		b8 const is_written = plt_write_bytes_list_to_file_path(out_path, &output_blobs);
+		if (is_written) {
+			std::printf("written to %.*s\n", DK_STR8_VARG(out_path));
+		}
+		else {
+			std::printf("ERROR: failed to write file %.*s\n", DK_STR8_VARG(out_path));
+		}
+	}
+
+	// NOTE(Dedrick): Intentional leak because this is a short-lived application.
+}
+
+#if 0
+auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
+	using namespace dk;
 
 	ArenaParams constexpr pg_arena_params = {
 		.reserve_size = giga_bytes(1),
@@ -207,14 +391,10 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 	//~ Dedrick: Package results.
 	PAKM_BakeBundle bundle = {};
-	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].data = string_table;
-	bundle.sections[PAK_SECTION_KIND_STRING_TABLE].size = string_table_size;
-	bundle.sections[PAK_SECTION_KIND_STRING_DATA].data = string_data;
-	bundle.sections[PAK_SECTION_KIND_STRING_DATA].size = string_data_size;
-	bundle.sections[PAK_SECTION_KIND_GPU_SHADER].data = gpu_data_blob.data;
-	bundle.sections[PAK_SECTION_KIND_GPU_SHADER].size = gpu_data_blob.size;
-	bundle.sections[PAK_SECTION_KIND_SHADER].data = baked_shaders;
-	bundle.sections[PAK_SECTION_KIND_SHADER].size = baked_shaders_size;
+	bundle.sections[PAK_SECTION_KIND_STRING_TABLE] = { string_table, string_table_size };
+	bundle.sections[PAK_SECTION_KIND_STRING_DATA] = { string_data, string_data_size };
+	bundle.sections[PAK_SECTION_KIND_GPU_SHADER] = { gpu_data_blob.data, gpu_data_blob.size };
+	bundle.sections[PAK_SECTION_KIND_SHADER] = { baked_shaders, baked_shaders_size };
 
 	//~ Dedrick: Serialize bundles.
 	Buffer8List output_blobs = {};
@@ -267,3 +447,4 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	arena_release(pg_arena);
 	return 0;
 }
+#endif

@@ -62,7 +62,7 @@ namespace dk {
 		u64 name_hash;
 		u32 name_string_idx;
 		PAK_TextureKind kind;
-		PAK_TextureKind format;
+		PAK_TextureFormat format;
 		u32 width;
 		u32 height;
 		u32 depth;
@@ -90,7 +90,7 @@ namespace dk {
 	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_HEADER>   { using Type = PAK_SectionElementType_GpuHeader; };
 	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_DATA>     { using Type = PAK_SectionElementType_GpuData; };
 
-	extern u64 const pak_section_element_size_table[PAK_SECTION_KIND_COUNT];
+	extern u16 const pak_section_element_size_table[];
 
 	enum PAK_ParseStatus : u32 {
 		PAK_PARSE_STATUS_GOOD = 0,
