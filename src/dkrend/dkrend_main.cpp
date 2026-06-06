@@ -6,12 +6,14 @@
 #include "platform/platform.hpp"
 #include "rhi/rhi.hpp"
 #include "thirdparty/imgui/imgui_unity.hpp"
+#include "pak/pak.hpp"
 #include "dkrend/dkrend.hpp"
 
 #include "base/base.cpp"
 #include "platform/platform.cpp"
 #include "rhi/rhi.cpp"
 #include "thirdparty/imgui/imgui_unity.cpp"
+#include "pak/pak.cpp"
 #include "dkrend/dkrend.cpp"
 
 auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {

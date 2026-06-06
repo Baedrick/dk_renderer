@@ -7,13 +7,14 @@ namespace dk {
 	u64 constexpr PAK_MAGIC_CONSTANT = 0x006B61705F726B64;
 	u32 constexpr PAK_VERSION = 1;
 
-	using PAK_SectionKind = u32;
-	enum : u32 {
+	enum PAK_SectionKind : u32 {
 		PAK_SECTION_KIND_NULL = 0,
 		PAK_SECTION_KIND_STRING_DATA,
 		PAK_SECTION_KIND_STRING_TABLE,
 		PAK_SECTION_KIND_SHADER,
-		PAK_SECTION_KIND_GPU_SHADER,
+		PAK_SECTION_KIND_TEXTURE,
+		PAK_SECTION_KIND_GPU_HEADER,
+		PAK_SECTION_KIND_GPU_DATA,
 		PAK_SECTION_KIND_COUNT
 	};
 
@@ -22,8 +23,6 @@ namespace dk {
 		u32 version;
 		u32 section_offset;
 		u32 section_count;
-		u32 pad;
-		u64 gpu_offset;
 	};
 
 	struct PAK_Section {
@@ -36,8 +35,7 @@ namespace dk {
 		u64 size;
 	};
 
-	using PAK_ShaderKind = u32;
-	enum : u32 {
+	enum PAK_ShaderKind : u32 {
 		PAK_SHADER_KIND_VERTEX = 0,
 		PAK_SHADER_KIND_FRAGMENT,
 		PAK_SHADER_KIND_COMPUTE,
@@ -52,13 +50,49 @@ namespace dk {
 		u64 gpu_size;
 	};
 
+	enum PAK_TextureKind : u16 {
+		PAK_TEXTURE_KIND_3D
+	};
+
+	enum PAK_TextureFormat : u16 {
+		PAK_TEXTURE_KIND_RGB9E5
+	};
+
+	struct PAK_Texture {
+		u64 name_hash;
+		u32 name_string_idx;
+		PAK_TextureKind kind;
+		PAK_TextureKind format;
+		u32 width;
+		u32 height;
+		u32 depth;
+		u32 mip_count;
+		u64 gpu_offset;
+		u64 gpu_size;
+	};
+
+	struct PAK_GpuHeader {
+		u64 gpu_offset;
+	};
+
 	using PAK_SectionElementType_StringData = u8;
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
 	using PAK_SectionElementType_Shader = PAK_Shader;
-	using PAK_SectionElementType_GpuShader = u8;
+	using PAK_SectionElementType_Texture = PAK_Texture;
+	using PAK_SectionElementType_GpuHeader = PAK_GpuHeader;
+	using PAK_SectionElementType_GpuData = u8;
 
-	using PAK_ParseStatus = u32;
-	enum : u32 {
+	template <PAK_SectionKind Kind> struct PAK_SectionTraits;
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_DATA>  { using Type = PAK_SectionElementType_StringData; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_TABLE> { using Type = PAK_SectionElementType_StringTable; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_SHADER>       { using Type = PAK_SectionElementType_Shader; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_TEXTURE>      { using Type = PAK_SectionElementType_Texture; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_HEADER>   { using Type = PAK_SectionElementType_GpuHeader; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_DATA>     { using Type = PAK_SectionElementType_GpuData; };
+
+	extern u64 const pak_section_element_size_table[PAK_SECTION_KIND_COUNT];
+
+	enum PAK_ParseStatus : u32 {
 		PAK_PARSE_STATUS_GOOD = 0,
 		PAK_PARSE_STATUS_HEADER_DOES_NOT_MATCH,
 		PAK_PARSE_STATUS_UNSUPPORTED_VERSION,
@@ -74,5 +108,25 @@ namespace dk {
 
 	auto pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseStatus;
 
-	auto pak_find_shader_index(PAK_Parsed const *pak, String8 name) noexcept -> u32;
+	auto pak_section_raw_data_from_kind(PAK_Parsed const *pak, PAK_SectionKind kind, u64 *out_size) noexcept -> void *;
+	auto pak_section_raw_table_from_kind(PAK_Parsed const *pak, PAK_SectionKind kind, u64 *out_count) noexcept -> void *;
+	auto pak_section_raw_element_from_kind_idx(PAK_Parsed const *pak, PAK_SectionKind kind, u64 idx) noexcept -> void *;
+
+	template <PAK_SectionKind Kind>
+	auto pak_table_from_kind(PAK_Parsed const *pak, u64 *out_count) noexcept -> typename PAK_SectionTraits<Kind>::Type * {
+		return static_cast<typename PAK_SectionTraits<Kind>::Type *>(
+			pak_section_raw_table_from_kind(pak, Kind, out_count)
+		);
+	}
+	template <PAK_SectionKind Kind>
+	auto pak_element_from_kind_idx(PAK_Parsed const *pak, u64 idx) noexcept -> typename PAK_SectionTraits<Kind>::Type * {
+		return static_cast<typename PAK_SectionTraits<Kind>::Type *>(
+			pak_section_raw_element_from_kind_idx(pak, Kind, idx)
+		);
+	}
+
+	auto pak_string_from_idx(PAK_Parsed const *pak, u64 idx) noexcept -> String8;
+
+	auto pak_shader_from_name(PAK_Parsed const *pak, String8 name) noexcept -> PAK_Shader *;
+	auto pak_texture_from_name(PAK_Parsed const *pak, String8 name) noexcept -> PAK_Texture *;
 }

@@ -29,6 +29,34 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		scratch_end(scratch);
 	}
 
+	//~ Dedrick: Load pak.
+	{
+		//~ Dedrick: Open file.
+		PLT_Handle const file = plt_file_open("dkrend.pak"_str8, PLT_ACCESS_FLAG_READ);
+		PLT_Handle const file_map = plt_file_map_open(file, PLT_ACCESS_FLAG_READ);
+		PLT_FileAttributes const file_attribs = plt_attributes_from_file(file);
+		void *const file_base = plt_file_map_view_open(file_map, PLT_ACCESS_FLAG_READ, 0, file_attribs.size);
+
+		//~ Dedrick: Parse pak.
+		PAK_Parsed pak = {};
+		PAK_ParseStatus const parse_status = pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak);
+		if (parse_status != PAK_PARSE_STATUS_GOOD) {
+			plt_abort(0);
+		}
+		(void)parse_status;
+
+		// TODO(Dedrick): Initialize shaders.
+
+
+		// TODO(Dedrick): Initialize textures.
+
+
+		//~ Dedrick: Close file.
+		plt_file_map_view_close(file_map, file_base, 0, file_attribs.size);
+		plt_file_map_close(file_map);
+		plt_file_close(file);
+	}
+
 	//~ Dedrick: Set up main window.
 	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	rhi_window_equip(dkr_context->window);
@@ -53,14 +81,12 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	}
 
 	//~ Dedrick: Initialize ImGui.
-	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO &io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		ImGui_ImplRgfw_InitForOpenGL(dkr_context->window, true);
-		ImGui_ImplOpenGL3_Init();
-	}
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO &io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	ImGui_ImplRgfw_InitForOpenGL(dkr_context->window, true);
+	ImGui_ImplOpenGL3_Init();
 
 	//~ Dedrick: Begin measuring actual per-frame work.
 	dkr_context->last_frame_time_us = plt_now_microseconds();
@@ -133,15 +159,16 @@ auto dk::dkr_frame() noexcept -> b8 {
 	//~ Dedrick: Build UI.
 	{
 		ZoneScopedN("build ui");
-		ImGui::ShowDemoWindow();
 
 		//~ Dedrick: Adjust ImGui for HiDPI screens.
-		// TODO(Dedrick): Only adjust when moving window.
+		// TODO(Dedrick): Only adjust when moving window because it can be moved to another monitor.
 		ImGuiIO &io = ImGui::GetIO();
 		float const old_scale = io.FontGlobalScale;
 		float const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
 		io.FontGlobalScale = content_scale;
 		ImGui::GetStyle().ScaleAllSizes(content_scale / old_scale);
+
+		ImGui::Text("Frame Time: %.5f", dkr_context->frame_dt);
 
 		ImGui::Render();
 	}

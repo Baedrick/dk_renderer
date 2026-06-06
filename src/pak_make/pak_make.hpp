@@ -14,6 +14,14 @@ namespace dk {
 		u64 count;
 	};
 
+	struct PAKM_TextureNode {
+
+	};
+
+	struct PAKM_TextureList {
+
+	};
+
 	struct PAKM_BakeSection {
 		void *data;
 		u64 size;
@@ -23,5 +31,6 @@ namespace dk {
 		PAKM_BakeSection sections[PAK_SECTION_KIND_COUNT];
 	};
 
+	auto pakm_strings_sorted_from_unsorted_in_place(String8Array arr) noexcept -> String8Array;
 	auto pakm_find_string_index(String8 str, String8Array arr) noexcept -> u32;
 }

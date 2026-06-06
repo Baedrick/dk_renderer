@@ -94,6 +94,34 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	// TODO(Dedrick): Gather and process textures.
 	{
 		ZoneScopedN("textures");
+
+		//~ Dedrick: Read Header.
+		struct DDS_PIXELFORMAT {
+			u32 dwSize;
+			u32 dwFlags;
+			u32 dwFourCC;
+			u32 dwRGBBitCount;
+			u32 dwRBitMask;
+			u32 dwGBitMask;
+			u32 dwBBitMask;
+			u32 dwABitMask;
+		};
+		struct DDS_HEADER {
+			u32 dwSize;
+			u32 dwFlags;
+			u32 dwHeight;
+			u32 dwWidth;
+			u32 dwLinearSize;
+			u32 dwDepth;
+			u32 dwMipMapCount;
+			u32 dwReserved1[11];
+			DDS_PIXELFORMAT ddspf;
+			u32 dwCaps;
+			u32 dwCaps2;
+			u32 dwCaps3;
+			u32 dwCaps4;
+			u32 dwReserved2;
+		};
 	}
 
 	//~ Dedrick: Bake Strings.
