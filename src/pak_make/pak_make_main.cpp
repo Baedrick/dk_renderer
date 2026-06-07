@@ -26,14 +26,13 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	String8 const project_dir = path_chop_last_slash(binary_dir);
 	String8 const res_dir = str8f(pm_arena, "%.*s/res", DK_STR8_VARG(project_dir));
 	String8 const spirv_dir = str8f(pm_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
-	String8 const out_path = str8f(pm_arena, "%.*s/%.*s", binary_dir, DK_STR8_VARG("dkrend.pak"_str8));
+	String8 const out_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(binary_dir), DK_STR8_VARG("dkrend.pak"_str8));
 
 	//~ Dedrick: Search shader directory, gather paths, load binaries.
 	PAKM_ShaderArray shaders = {};
 	{
 		struct ShaderTaskNode {
 			ShaderTaskNode *next;
-			PAK_ShaderKind shader_kind;
 			String8 shader_name;
 			String8 binary_path;
 		};
@@ -50,17 +49,16 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			}
 			String8 const shader_name = path_chop_last_period(file.name);
 			String8 const shader_ext = path_skip_last_period(shader_name);
-			struct { String8 ext; PAK_ShaderKind kind; } const filters[] = {
-				{ "vert"_str8, PAK_SHADER_KIND_VERTEX },
-				{ "frag"_str8, PAK_SHADER_KIND_FRAGMENT },
-				{ "comp"_str8, PAK_SHADER_KIND_COMPUTE }
+			String8 const filters[] = {
+				{ "vert"_str8 },
+				{ "frag"_str8 },
+				{ "comp"_str8 }
 			};
 			for (u64 i = 0; i < array_count(filters); ++i) {
-				if (str8_equals(shader_ext, filters[i].ext, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+				if (str8_equals(shader_ext, filters[i], STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
 					ShaderTaskNode *task = arena_push<ShaderTaskNode>(pm_arena);
 					task->binary_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(spirv_dir), DK_STR8_VARG(file.name));
 					task->shader_name = shader_name;
-					task->shader_kind = filters[i].kind;
 					forward_list_queue_push(&first_shader_task, &last_shader_task, task);
 					shader_task_count += 1;
 					break;
@@ -78,7 +76,6 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			PAKM_ShaderNode *node = arena_push<PAKM_ShaderNode>(pm_arena);
 			node->shader.name = task->shader_name;
 			node->shader.binary = binary;
-			node->shader.kind = task->shader_kind;
 			forward_list_queue_push(&shaders_list.first, &shaders_list.last, node);
 			shaders_list.count += 1;
 		}
@@ -93,65 +90,118 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 	}
 
-	//~ Dedrick: Recursively search resource directory for all files to consider.
-	String8List res_file_paths = {};
+	//~ Dedrick: Gather files in resource directory to consider.
+	String8List dds_file_paths = {};
 	{
 		std::printf("searching %.*s...", DK_STR8_VARG(res_dir));
 		PLT_Handle const iter = plt_dir_iter_begin(res_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
 		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pm_arena, iter, &file); ) {
 			String8 const file_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(res_dir), DK_STR8_VARG(file.name));
-			if ((file.attributes.flags & PLT_FILE_FLAG_DIRECTORY) == 0) {
-				str8_list_push(pm_arena, &res_file_paths, file_path);
+			String8 const file_ext = path_skip_last_period(file_path);
+			struct { String8 ext; String8List *file_paths_list; } const file_path_table[] = {
+				{ ".dds"_str8, &dds_file_paths }
+			};
+			for (u64 i = 0; i < array_count(file_path_table); ++i) {
+				if (str8_equals(file_ext, file_path_table[i].ext, STRING_MATCH_FLAG_NONE)) {
+					str8_list_push(pm_arena, file_path_table[i].file_paths_list, file_path);
+				}
 			}
 		}
 		plt_dir_iter_end(iter);
-		std::printf(" %llu files found\n", res_file_paths.node_count);
+		std::printf(" %llu textures found\n", dds_file_paths.node_count);
 	}
 
 	//~ Dedrick: Parse all texture files in resource directory.
 	PAKM_TextureArray textures = {};
 	{
 		PAKM_TextureList textures_list = {};
-		struct DDS_PIXELFORMAT {
-			u32 dwSize;
-			u32 dwFlags;
-			u32 dwFourCC;
-			u32 dwRGBBitCount;
-			u32 dwRBitMask;
-			u32 dwGBitMask;
-			u32 dwBBitMask;
-			u32 dwABitMask;
+		struct DDS_PixelFormat {
+			u32 size;
+			u32 flags;
+			u32 four_cc;
+			u32 rgb_bit_count;
+			u32 r_bit_mask;
+			u32 g_bit_mask;
+			u32 b_bit_mask;
+			u32 a_bit_mask;
 		};
-		struct DDS_HEADER {
-			u32 dwSize;
-			u32 dwFlags;
-			u32 dwHeight;
-			u32 dwWidth;
-			u32 dwLinearSize;
-			u32 dwDepth;
-			u32 dwMipMapCount;
-			u32 dwReserved1[11];
-			DDS_PIXELFORMAT ddspf;
-			u32 dwCaps;
-			u32 dwCaps2;
-			u32 dwCaps3;
-			u32 dwCaps4;
-			u32 dwReserved2;
+		struct DDS_Header {
+			u32 size;
+			u32 flags;
+			u32 height;
+			u32 width;
+			u32 linear_size;
+			u32 depth;
+			u32 mip_map_count;
+			u32 reserved1[11];
+			DDS_PixelFormat pixel_format;
+			u32 caps;
+			u32 caps2;
+			u32 caps3;
+			u32 caps4;
+			u32 reserved2;
 		};
+		struct DDS_HeaderDx10 {
+			u32 dxgi_format;
+			u32 resource_dimension;
+			u32 misc_flag;
+			u32 array_size;
+			u32 misc_flags2;
+		};
+		u32 constexpr DDS_MAGIC = 0x20534444; // "DDS "
+		u32 constexpr DDS_DX10_EXT_MAGIC = 0x30315844; // "DX10"
+		u32 constexpr DDS_DDPF_FOURCC = 0x4;
 
 		//~ Dedrick: Parse textures.
 		std::printf("parsing textures...");
-		for (String8Node const *node = res_file_paths.first; node != nullptr; node = node->next) {
-			String8 const file_path = node->string;
-			String8 const file_ext = path_skip_last_period(file_path);
-			if (str8_equals(file_ext, "dds"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
-				String8 const texture_name = path_skip_last_slash(file_path);
+		for (String8Node const *path = dds_file_paths.first; path != nullptr; path = path->next) {
+			String8 const file_path = path->string;
+			Buffer8 const file_data = plt_read_bytes_from_file_path(pm_arena, file_path);
+			u8 *ptr = file_data.data;
+			u8 *const opl = file_data.data + file_data.size;
 
+			if (ptr + sizeof(u32) + sizeof(DDS_Header) <= opl) {
+				u32 *const magic = reinterpret_cast<u32 *>(file_data.data);
+				ptr += sizeof(u32);
+				DDS_Header *const header = reinterpret_cast<DDS_Header *>(ptr);
+				ptr += sizeof(DDS_Header);
 
+				if (*magic == DDS_MAGIC && header->size == 124) {
+					PAK_TextureKind tex_kind = PAK_TEXTURE_KIND_2D;
+					if (header->depth > 1) {
+						tex_kind = PAK_TEXTURE_KIND_3D;
+					}
+					PAK_TextureFormat tex_format = PAK_TEXTURE_FORMAT_NULL;
+					b8 const has_dx10 = (header->pixel_format.flags & DDS_DDPF_FOURCC) != 0 && header->pixel_format.four_cc == DDS_DX10_EXT_MAGIC;
+					if (has_dx10 && ptr + sizeof(DDS_HeaderDx10) <= opl) {
+						DDS_HeaderDx10 *dx10_header = reinterpret_cast<DDS_HeaderDx10 *>(ptr);
+						ptr += sizeof(DDS_HeaderDx10);
+						// NOTE(Dedrick): Values taken from here:
+						// https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format
+						switch (dx10_header->dxgi_format) {
+							case 67: tex_format = PAK_TEXTURE_FORMAT_RGB9E5; break;
+							default: break;
+						}
+					}
+					if (tex_format != PAK_TEXTURE_FORMAT_NULL) {
+						u64 const pixels_size = static_cast<u64>(opl - ptr);
+						String8 const tex_name = path_skip_last_slash(file_path);
+						PAKM_TextureNode *const node = arena_push<PAKM_TextureNode>(pm_arena);
+						node->texture.kind = tex_kind;
+						node->texture.format = tex_format;
+						node->texture.width = header->width;
+						node->texture.height = header->height;
+						node->texture.depth = header->depth > 0 ? header->depth : 1;
+						node->texture.mip_count = header->mip_map_count > 0 ? header->mip_map_count : 1;
+						node->texture.name = tex_name;
+						node->texture.pixels = buf8(ptr, pixels_size);
+						forward_list_queue_push(&textures_list.first, &textures_list.last, node);
+						textures_list.count += 1;
+					}
+				}
 			}
 		}
-		std::printf(" %llu textuers parsed\n", textures_list.count);
-
+		std::printf(" %llu textures parsed\n", textures_list.count);
 
 		//~ Dedrick: Join all textures.
 		textures.data = arena_push_array<PAKM_Texture>(pm_arena, textures_list.count);
@@ -175,7 +225,10 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 
 	//~ Dedrick: Serialize bundles.
-
+	Buffer8List output_blobs = {};
+	{
+		// TODO
+	}
 
 	//~ Dedrick: Write blobs.
 	{
@@ -191,6 +244,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	}
 
 	// NOTE(Dedrick): Intentional leak because this is a short-lived application.
+	return 0;
 }
 
 #if 0
@@ -278,34 +332,6 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	// TODO(Dedrick): Gather and process textures.
 	{
 		ZoneScopedN("textures");
-
-		//~ Dedrick: Read Header.
-		struct DDS_PIXELFORMAT {
-			u32 dwSize;
-			u32 dwFlags;
-			u32 dwFourCC;
-			u32 dwRGBBitCount;
-			u32 dwRBitMask;
-			u32 dwGBitMask;
-			u32 dwBBitMask;
-			u32 dwABitMask;
-		};
-		struct DDS_HEADER {
-			u32 dwSize;
-			u32 dwFlags;
-			u32 dwHeight;
-			u32 dwWidth;
-			u32 dwLinearSize;
-			u32 dwDepth;
-			u32 dwMipMapCount;
-			u32 dwReserved1[11];
-			DDS_PIXELFORMAT ddspf;
-			u32 dwCaps;
-			u32 dwCaps2;
-			u32 dwCaps3;
-			u32 dwCaps4;
-			u32 dwReserved2;
-		};
 	}
 
 	//~ Dedrick: Bake Strings.

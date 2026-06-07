@@ -35,27 +35,21 @@ namespace dk {
 		u64 size;
 	};
 
-	enum PAK_ShaderKind : u32 {
-		PAK_SHADER_KIND_VERTEX = 0,
-		PAK_SHADER_KIND_FRAGMENT,
-		PAK_SHADER_KIND_COMPUTE,
-		PAK_SHADER_KIND_COUNT
-	};
-
 	struct PAK_Shader {
 		u64 name_hash;
 		u32 name_string_idx;
-		PAK_ShaderKind kind;
 		u64 gpu_offset;
 		u64 gpu_size;
 	};
 
 	enum PAK_TextureKind : u16 {
+		PAK_TEXTURE_KIND_2D,
 		PAK_TEXTURE_KIND_3D
 	};
 
 	enum PAK_TextureFormat : u16 {
-		PAK_TEXTURE_KIND_RGB9E5
+		PAK_TEXTURE_FORMAT_NULL = 0,
+		PAK_TEXTURE_FORMAT_RGB9E5
 	};
 
 	struct PAK_Texture {
