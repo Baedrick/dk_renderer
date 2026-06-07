@@ -1,0 +1,14 @@
+// Project tasks configuration. See gram://docs/tasks for documentation.
+[
+  {
+    "label": "Apply MSVC Dev Env",
+    "command": "cmd.exe",
+    "args": [
+      "/k",
+      ".gram\\call_vs_dev_cmd.bat"
+    ],
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always"
+  },
+]
