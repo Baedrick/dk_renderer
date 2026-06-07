@@ -212,11 +212,71 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		}
 	}
 
-	//~ Dedrick: Bake strings.
+	//~ Dedrick: Build strings.
+	String8Array strings = {};
+	{
+		String8List strings_list = {};
 
+		//~ Dedrick: Push strings from shaders.
+		for (u64 shader_idx = 0; shader_idx < shaders.count; ++shader_idx) {
+			str8_list_push(pm_arena, &strings_list, shaders[shader_idx].name);
+		}
+
+		//~ Dedrick: Push strings from textures.
+		for (u64 texture_idx = 0; texture_idx < textures.count; ++texture_idx) {
+			str8_list_push(pm_arena, &strings_list, textures[texture_idx].name);
+		}
+
+		//~ Dedrick: Join all strings.
+		strings.data = arena_push_array<String8>(pm_arena, strings_list.node_count);
+		strings.count = strings_list.node_count;
+		u64 string_idx = 0;
+		for (String8Node const *node = strings_list.first; node != nullptr; node = node->next) {
+			strings[string_idx++] = node->string;
+		}
+
+		//~ Dedrick: Sort.
+		strings = pakm_strings_sorted_from_unsorted_in_place(strings);
+	}
+
+	//~ Dedrick: Bake strings.
+	struct BakedStrings {
+		PAK_SectionElementType_StringTable *string_tables;
+		u64 string_tables_count;
+		PAK_SectionElementType_StringData *string_data;
+		u64 string_data_size;
+	};
+	BakedStrings baked_strings = {};
+	{
+		//~ Dedrick: Set up.
+		baked_strings.string_tables_count = strings.count + 1;
+		baked_strings.string_tables = arena_push_array<PAK_SectionElementType_StringTable>(pm_arena, baked_strings.string_tables_count);
+		u64 offset_cursor = 0;
+		for (u64 str_idx = 0; str_idx < strings.count; ++str_idx) {
+			String8 const str = strings[str_idx];
+			baked_strings.string_tables[str_idx + 1] = { offset_cursor, str.size };
+			offset_cursor += str.size;
+		}
+
+		//~ Dedrick: Fill.
+		baked_strings.string_data_size = offset_cursor;
+		baked_strings.string_data = arena_push_array<PAK_SectionElementType_StringData>(pm_arena, baked_strings.string_data_size);
+		for (u64 str_idx = 0; str_idx < strings.count; ++str_idx) {
+			String8 const str = strings[str_idx];
+			u64 const dst_offset = baked_strings.string_tables[str_idx + 1].offset;
+			std::memcpy(baked_strings.string_data + dst_offset, str.data, str.size);
+		}
+	}
+
+	//~ Dedrick: Build GPU data.
+	{
+
+	}
 
 	//~ Dedrick: Bake GPU data.
+	{
 
+	}
 
 	//~ Dedrick: Bake CPU data.
 
@@ -232,8 +292,6 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 	//~ Dedrick: Write blobs.
 	{
-		ZoneScopedN("write output")
-		std::printf("write output to file\n");
 		b8 const is_written = plt_write_bytes_list_to_file_path(out_path, &output_blobs);
 		if (is_written) {
 			std::printf("written to %.*s\n", DK_STR8_VARG(out_path));
