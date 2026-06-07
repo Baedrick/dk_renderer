@@ -3,8 +3,7 @@
 #pragma once
 
 namespace dk {
-	// "dkr_pak\0"
-	u64 constexpr PAK_MAGIC_CONSTANT = 0x006B61705F726B64;
+	u64 constexpr PAK_MAGIC_CONSTANT = 0x006B61705F726B64; // "dkr_pak\0"
 	u32 constexpr PAK_VERSION = 1;
 
 	enum PAK_SectionKind : u32 {
