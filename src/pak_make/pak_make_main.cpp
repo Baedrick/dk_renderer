@@ -99,7 +99,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			String8 const file_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(res_dir), DK_STR8_VARG(file.name));
 			String8 const file_ext = path_skip_last_period(file_path);
 			struct { String8 ext; String8List *file_paths_list; } const file_path_table[] = {
-				{ ".dds"_str8, &dds_file_paths }
+				{ "dds"_str8, &dds_file_paths }
 			};
 			for (u64 i = 0; i < array_count(file_path_table); ++i) {
 				if (str8_equals(file_ext, file_path_table[i].ext, STRING_MATCH_FLAG_NONE)) {
@@ -269,13 +269,60 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	}
 
 	//~ Dedrick: Build GPU data.
+	Buffer8Array gpu_data = {};
 	{
+		Buffer8List gpu_data_list = {};
 
+		//~ Dedrick: Push data from shaders.
+		for (u64 shader_idx = 0; shader_idx < shaders.count; ++shader_idx) {
+			buf8_list_push(pm_arena, &gpu_data_list, shaders[shader_idx].binary);
+		}
+
+		//~ Dedrick: Push data from textures.
+		for (u64 texture_idx = 0; texture_idx < textures.count; ++texture_idx) {
+			buf8_list_push(pm_arena, &gpu_data_list, textures[texture_idx].pixels);
+		}
+
+		//~ Dedrick: Join all buffers.
+		gpu_data.data = arena_push_array<Buffer8>(pm_arena, gpu_data_list.node_count);
+		gpu_data.count = gpu_data_list.node_count;
+		u64 buffer_idx = 0;
+		for (Buffer8Node const *node = gpu_data_list.first; node != nullptr; node = node->next) {
+			gpu_data[buffer_idx++] = node->buffer;
+		}
 	}
 
 	//~ Dedrick: Bake GPU data.
+	struct GpuDataEntry {
+		u64 offset;
+		u64 size;
+	};
+	struct BakedGpuData {
+		GpuDataEntry *gpu_entries;
+		u64 gpu_entries_count;
+		PAK_SectionElementType_GpuData *gpu_data;
+		u64 gpu_data_size;
+	};
+	BakedGpuData baked_gpu_data = {};
 	{
+		//~ Dedrick: Set up.
+		baked_gpu_data.gpu_entries_count = gpu_data.count + 1;
+		baked_gpu_data.gpu_entries = arena_push_array<GpuDataEntry>(pm_arena, baked_gpu_data.gpu_entries_count);
+		u64 offset_cursor = 0;
+		for (u64 buf_idx = 0; buf_idx < gpu_data.count; ++buf_idx) {
+			Buffer8 const buf = gpu_data[buf_idx];
+			baked_gpu_data.gpu_entries[buf_idx + 1] = { offset_cursor, buf.size };
+			offset_cursor += buf.size;
+		}
 
+		//~ Dedrick: Fill.
+		baked_gpu_data.gpu_data_size = offset_cursor;
+		baked_gpu_data.gpu_data = arena_push_array<PAK_SectionElementType_GpuData>(pm_arena, baked_gpu_data.gpu_data_size);
+		for (u64 buf_idx = 0; buf_idx < gpu_data.count; ++buf_idx) {
+			Buffer8 const buf = gpu_data[buf_idx];
+			u64 const dst_offset = baked_gpu_data.gpu_entries[buf_idx + 1].offset;
+			std::memcpy(baked_gpu_data.gpu_data + dst_offset, buf.data, buf.size);
+		}
 	}
 
 	//~ Dedrick: Bake CPU data.

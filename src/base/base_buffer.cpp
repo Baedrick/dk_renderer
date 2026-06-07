@@ -10,6 +10,16 @@ auto dk::Buffer8::operator[](u64 index) const noexcept -> u8 const & {
 	return data[index];
 }
 
+auto dk::Buffer8Array::operator[](u64 index) noexcept -> Buffer8 & {
+	DK_ASSERT(index < count);
+	return data[index];
+}
+
+auto dk::Buffer8Array::operator[](u64 index) const noexcept -> Buffer8 const & {
+	DK_ASSERT(index < count);
+	return data[index];
+}
+
 auto dk::buf8(void *data, u64 size) noexcept -> Buffer8 {
 	return { .data = static_cast<u8 *>(data), .size = size };
 }
@@ -63,7 +73,7 @@ auto dk::buf8_list_push_align(Arena *arena, Buffer8List *list, u64 align) noexce
 
 auto dk::buf8_list_copy(Arena *arena, Buffer8List const *list) noexcept -> Buffer8List {
 	Buffer8List result = {};
-	for (Buffer8Node *node = list->first; node != nullptr; node = node->next) {
+	for (Buffer8Node const *node = list->first; node != nullptr; node = node->next) {
 		buf8_list_push(arena, &result, buf8_copy(arena, node->buffer));
 	}
 	return result;
@@ -72,9 +82,20 @@ auto dk::buf8_list_copy(Arena *arena, Buffer8List const *list) noexcept -> Buffe
 auto dk::buf8_list_join(Arena *arena, Buffer8List const *list) noexcept -> Buffer8 {
 	u8 *arr = arena_push_array<u8>(arena, list->total_size);
 	u8 *p = arr;
-	for (Buffer8Node *node = list->first; node != nullptr; node = node->next) {
+	for (Buffer8Node const *node = list->first; node != nullptr; node = node->next) {
 		std::memcpy(p, node->buffer.data, node->buffer.size);
 		p += node->buffer.size;
 	}
 	return { .data = arr, .size = list->total_size };
+}
+
+auto dk::buf8_array_from_list(Arena *arena, Buffer8List const *list) noexcept -> Buffer8Array {
+	Buffer8Array array = {};
+	array.count = list->node_count;
+	array.data = arena_push_array<Buffer8>(arena, array.count);
+	u64 idx = 0;
+	for (Buffer8Node const *node = list->first; node != nullptr; node = node->next) {
+		array[idx++] = node->buffer;
+	}
+	return array;
 }

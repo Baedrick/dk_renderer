@@ -21,6 +21,14 @@ namespace dk {
 		u64 total_size;
 	};
 
+	struct Buffer8Array {
+		Buffer8 *data;
+		u64 count;
+
+		auto operator[](u64 index) noexcept -> Buffer8 &;
+		auto operator[](u64 index) const noexcept -> Buffer8 const &;
+	};
+
 	auto buf8(void *data, u64 size) noexcept -> Buffer8;
 
 	auto buf8_compare(Buffer8 b1, Buffer8 b2) noexcept -> s32;
@@ -34,4 +42,6 @@ namespace dk {
 	auto buf8_list_copy(Arena *arena, Buffer8List const *list) noexcept -> Buffer8List;
 
 	auto buf8_list_join(Arena *arena, Buffer8List const *list) noexcept -> Buffer8;
+
+	auto buf8_array_from_list(Arena *arena, Buffer8List const *list) noexcept -> Buffer8Array;
 }
