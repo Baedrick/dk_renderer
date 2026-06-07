@@ -49,18 +49,21 @@ build release
 ```
 You should have similar output to the following:
 ```
-[debug mode]
+[release mode]
 [msvc compile]
 [building all targets]
+dkcook_main.cpp
+dkrend_main.cpp
 [building shaders]
 ..\src\shaders\hello_triangle.vert
 ..\src\shaders\hello_triangle.frag
-dkcook_main.cpp
-dkrend_main.cpp
-[building dkpakgen]
-dkpakgen_main.cpp
-[running dkpakgen]
-searching C:\Users\dedri\Desktop\Projects\dk_renderer/src...170 files found
+pak_make_main.cpp
+[running pak_make]
+searching shaders in C:\dev\dk_renderer/src/shaders/.spirv... found 2
+processing shaders... 2 shader files processed
+searching C:\dev\dk_renderer/res... 1 textures found
+parsing textures... 1 textures parsed
+written to C:\dev\dk_renderer\bin/dkrend.pak
 ```
 If everything worked correctly, there will be a `bin` folder containing all
 artifacts required for the viewer to function. By default, `build.bat` builds
