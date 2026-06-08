@@ -33,7 +33,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	{
 		//~ Dedrick: Open file.
 		TempArena const scratch = scratch_begin(nullptr, 0);
-		String8 const pak_path = str8f(scratch.arena, "%.*s/dkrend.pak", plt_get_process_info()->binary_dir);
+		String8 const pak_path = str8f(scratch.arena, "%.*s/dkrend.pak", DK_STR8_VARG(plt_get_process_info()->binary_dir));
 		PLT_Handle const file = plt_file_open(pak_path, PLT_ACCESS_FLAG_READ);
 		PLT_Handle const file_map = plt_file_map_open(file, PLT_ACCESS_FLAG_READ);
 		PLT_FileAttributes const file_attribs = plt_attributes_from_file(file);
@@ -43,31 +43,90 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		PAK_Parsed pak = {};
 		b8 const pak_good = pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak);
 		if (!pak_good) {
-			plt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid dkrend.pak; build it with `build assets`."_str8, true);
+			plt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid dkrend.pak; rebuild with `build assets`."_str8, true);
 			plt_abort(0);
 		}
 
-		//~ Dedrick: Initialize shaders.
-		String8 const vert_shader_name_table[] = {
-			"hello_triangle.vert"_str8
+		//~ Dedrick: Obtain start of gpu binary data of pak.
+		PAK_GpuHeader const *gpu_header = pak_element_from_kind_idx<PAK_SECTION_KIND_GPU_HEADER>(&pak, 0);
+		u8 const *const gpu_base = pak.raw_data + gpu_header->gpu_offset;
+
+		//~ Dedrick: Unpack shader modules and compile them.
+		enum ShaderModule : u32 {
+			SHADER_MODULE_HELLO_TRIANGLE_VERT,
+			SHADER_MODULE_HELLO_TRIANGLE_FRAG,
+			SHADER_MODULE_DUMMY_COMP,
+			SHADER_MODULE_COUNT
 		};
-		String8 const frag_shader_name_table[] = {
-			"hello_triangle.frag"_str8
+		struct { ShaderModule id; GLenum type; String8 name; GLuint out; String8 errors; }
+		shader_module_table[] = {
+			{ SHADER_MODULE_HELLO_TRIANGLE_VERT, GL_VERTEX_SHADER,   "hello_triangle.vert"_str8, 0 },
+			{ SHADER_MODULE_HELLO_TRIANGLE_FRAG, GL_FRAGMENT_SHADER, "hello_triangle.frag"_str8, 0 },
+			{ SHADER_MODULE_DUMMY_COMP,          GL_COMPUTE_SHADER,  "dummy.comp"_str8, 0 },
 		};
-		for (u64 kind = 0; kind < 1; ++kind) {
-			struct { GLenum type; String8 name; GLuint out; String8 errors; } stages[] = {
-				{ GL_VERTEX_SHADER, vert_shader_name_table[kind], 0 },
-				{ GL_FRAGMENT_SHADER, frag_shader_name_table[kind], 0 },
-			};
+		static_assert(array_count(shader_module_table) == SHADER_MODULE_COUNT, "Mismatch shader modules count");
+		for (u64 m = 0; m < array_count(shader_module_table); ++m) {
+			DK_ASSERT(shader_module_table[m].id == m);
+
+			//~ Dedrick: Unpack shader module from pak.
+			PAK_Shader const *pak_shader = pak_shader_from_name(&pak, shader_module_table[m].name);
+			u8 const *shader_data = gpu_base + pak_shader->gpu_offset;
+			u64 const shader_size = pak_shader->gpu_size;
+
+			//~ Dedrick: Compile shader module.
+			shader_module_table[m].out = glCreateShader(shader_module_table[m].type);
+			glShaderBinary(1, &shader_module_table[m].out, GL_SHADER_BINARY_FORMAT_SPIR_V, shader_data, static_cast<GLsizei>(shader_size));
+			glSpecializeShader(shader_module_table[m].out, "main", 0, nullptr, nullptr);
+
+			// TODO(Dedrick): Log errors.
+			GLint compile_status = 0;
+			glGetShaderiv(shader_module_table[m].out, GL_COMPILE_STATUS, &compile_status);
 		}
 
+		//~ Dedrick: Link shader programs.
+		enum ShaderKind { SHADER_KIND_SURFACE, SHADER_KIND_COMPUTE };
+		struct ShaderDesc {
+			ShaderKind kind;
+			union {
+				struct { u32 vs; u32 fs; } surface;
+				struct { u32 cs; } compute;
+			};
+		} const shader_table[] = {
+			{ SHADER_KIND_SURFACE, { .surface = { SHADER_MODULE_HELLO_TRIANGLE_VERT, SHADER_MODULE_HELLO_TRIANGLE_FRAG } } },
+			{ SHADER_KIND_COMPUTE, { .compute = { SHADER_MODULE_DUMMY_COMP } } }
+		};
+		for (u64 s = 0; s < DKR_SHADER_KIND_COUNT; ++s) {
+			GLuint const shader = glCreateProgram();
+			ShaderDesc const *desc = &shader_table[s];
+			switch (desc->kind) {
+				case SHADER_KIND_SURFACE: {
+					glAttachShader(shader, shader_module_table[desc->surface.vs].out);
+					glAttachShader(shader, shader_module_table[desc->surface.fs].out);
+					break;
+				}
+				case SHADER_KIND_COMPUTE: {
+					glAttachShader(shader, shader_module_table[desc->compute.cs].out);
+					break;
+				}
+			}
+			glLinkProgram(shader);
+
+			// TODO(Dedrick): Log errors.
+			GLint link_status = 0;
+			glGetProgramiv(shader, GL_LINK_STATUS, &link_status);
+
+			dkr_context->render.shaders[s] = shader;
+		}
+
+#if 0
 		//~ Dedrick: Initialize textures.
 		String8 const texture_name_table[] = {
 			"tony_mc_mapface.dds"_str8
 		};
-		for (u64 kind = 0; kind < 1; ++kind) {
+		for (u64 kind = 0; kind < DKR_TEXTURE_KIND_COUNT; ++kind) {
 			(void)texture_name_table[kind];
 		}
+#endif
 
 		//~ Dedrick: Close file.
 		plt_file_map_view_close(file_map, file_base, 0, file_attribs.size);
@@ -200,6 +259,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
+	glUseProgram(dkr_context->render.shaders[DKR_SHADER_KIND_HELLO_TRIANGLE]);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

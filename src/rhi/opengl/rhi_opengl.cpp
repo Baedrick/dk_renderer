@@ -103,32 +103,6 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 		ZoneScopedN("create vertex array");
 		glCreateVertexArrays(1, &rhi_ogl_context->all_purpose_vao);
 	}
-	#if 0
-	{
-		ZoneScopedN("create program");
-		TempArena const scratch = scratch_begin(nullptr, 0);
-		struct { GLenum type; String8 path; GLuint out; String8 errors; } stages[] = {
-			{ GL_VERTEX_SHADER, "shaders/hello_triangle.vert.spv"_str8, 0 },
-			{ GL_FRAGMENT_SHADER, "shaders/hello_triangle.frag.spv"_str8, 0 },
-		};
-		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
-			Buffer8 const bytes = plt_read_bytes_from_file_path(scratch.arena, stages[stage_idx].path);
-			stages[stage_idx].out = glCreateShader(stages[stage_idx].type);
-			glShaderBinary(1, &stages[stage_idx].out, GL_SHADER_BINARY_FORMAT_SPIR_V, bytes.data, static_cast<GLsizei>(bytes.size));
-			glSpecializeShader(stages[stage_idx].out, "main", 0, nullptr, nullptr);
-		}
-		GLuint program = glCreateProgram();
-		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
-			glAttachShader(program, stages[stage_idx].out);
-		}
-		glLinkProgram(program);
-		for (u32 stage_idx = 0; stage_idx < 2; ++stage_idx) {
-			glDeleteShader(stages[stage_idx].out);
-		}
-		rhi_ogl_context->shader = program;
-		scratch_end(scratch);
-	}
-	#endif
 }
 
 auto dk::rhi_shutdown() noexcept -> void {

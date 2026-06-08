@@ -12,7 +12,7 @@ dk::u16 const dk::pak_section_element_size_table[] = {
 static_assert(dk::array_count(dk::pak_section_element_size_table) == dk::PAK_SECTION_KIND_COUNT);
 
 auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> b8 {
-	b8 good = true;
+	b8 good = false;
 	if (size >= sizeof(PAK_Header)) {
 		PAK_Header *const header = reinterpret_cast<PAK_Header *>(data);
 		if (header->magic == PAK_MAGIC_CONSTANT && header->version == PAK_VERSION) {

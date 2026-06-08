@@ -9,6 +9,16 @@ namespace dk {
 		DKR_CMD_KIND_COUNT
 	};
 
+	enum DKR_ShaderKind : u32 {
+		DKR_SHADER_KIND_HELLO_TRIANGLE,
+		DKR_SHADER_KIND_DUMMY,
+		DKR_SHADER_KIND_COUNT
+	};
+
+	struct DKR_RenderContext {
+		GLuint shaders[DKR_SHADER_KIND_COUNT];
+	};
+
 	struct DKR_Context {
 		Arena *arena;
 		b8 quit;
@@ -31,6 +41,9 @@ namespace dk {
 		s64 time_averager_residual;
 		u32 time_averager_head;
 		f32 frame_dt;
+
+		//~ Dedrick: Rendering
+		DKR_RenderContext render;
 
 		//~ Dedrick: Window.
 		RGFW_window *window;
