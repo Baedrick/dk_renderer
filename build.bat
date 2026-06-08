@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 cd /D "%~dp0"
 
-:: -- Usage (2026/05/22) -------------------------------------------------------
+:: --- Usage (2026/05/22) ------------------------------------------------------
 ::
 :: Derived from RADDBG build.bat
 ::
@@ -49,7 +49,7 @@ set cl_link=    /link /MANIFEST:EMBED /INCREMENTAL:NO /pdbaltpath:%%%%_PDB%%%% /
 set cl_out=     /out:
 set cl_linker=
 
-:: --- Shader Compile Definitions ------------------------------------------------------
+:: --- Shader Compile Definitions ----------------------------------------------
 set glslang= ..\tools\glslangValidator.exe
 set glslang_include= --preamble-text "#extension GL_GOOGLE_include_directive : require" -I..\src\shaders\
 
@@ -66,7 +66,7 @@ if not exist bin mkdir bin
 if not exist .tmp mkdir .tmp
 if not exist src\shaders\.spirv mkdir src\shaders\.spirv
 
-:: --- Build (@build_targets)---------------------------------------------------
+:: --- Build (@build_targets) --------------------------------------------------
 pushd bin
 if "%all%"=="1" (
     echo [building all targets]
