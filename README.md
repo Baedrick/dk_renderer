@@ -2,15 +2,14 @@
 Real-time, physically based, gpu-driven toy renderer build with OpenGL.
 
 # AI Usage Declaration
-I used Large Language Models (LLMs) as a tool to assist with specific
-development tasks without replacing the core work of building the rendering
-engine. AI was primarily used to help understand and debug complex external
-libraries or inadequately documented APIs. I also used AI to generate initial
-proof-of-concept ideas/implementations for isolated features. In all cases,
-these prototypes served only as references; they are completely rewritten by
-hand to ensure they meet the renderer's paradigms and performance constraints.
-Finally, I used AI to check spelling and improve the phrasing of my
-documentation for better clarity.
+I used local Large Language Models (LLMs) as an offline tool to support
+development without replacing the core work of building the rendering engine. I
+used AI to interpret platform libraries and debug poorly documented APIs, and to
+generate throwaway code to test technical ideas. These mockups served only as a
+quick check to see if an approach was viable within academic timelines. I
+rewrote all final code from scratch to meet the performance and architectural
+needs of the codebase. Finally, I used AI to check grammar and phrasing in my
+development journal and documentation.
 
 Beyond these specific uses, I am solely responsible for the project's design,
 architecture, and every line of code in the final implementation.
