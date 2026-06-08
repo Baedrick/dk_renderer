@@ -95,6 +95,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 			{ SHADER_KIND_SURFACE, { .surface = { SHADER_MODULE_HELLO_TRIANGLE_VERT, SHADER_MODULE_HELLO_TRIANGLE_FRAG } } },
 			{ SHADER_KIND_COMPUTE, { .compute = { SHADER_MODULE_DUMMY_COMP } } }
 		};
+		static_assert(array_count(shader_table) == DKR_SHADER_KIND_COUNT, "Mismatch shader table count");
 		for (u64 s = 0; s < DKR_SHADER_KIND_COUNT; ++s) {
 			GLuint const shader = glCreateProgram();
 			ShaderDesc const *desc = &shader_table[s];
