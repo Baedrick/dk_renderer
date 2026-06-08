@@ -103,6 +103,7 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 		ZoneScopedN("create vertex array");
 		glCreateVertexArrays(1, &rhi_ogl_context->all_purpose_vao);
 	}
+	#if 0
 	{
 		ZoneScopedN("create program");
 		TempArena const scratch = scratch_begin(nullptr, 0);
@@ -127,6 +128,7 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 		rhi_ogl_context->shader = program;
 		scratch_end(scratch);
 	}
+	#endif
 }
 
 auto dk::rhi_shutdown() noexcept -> void {

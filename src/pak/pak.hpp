@@ -85,13 +85,6 @@ namespace dk {
 
 	extern u16 const pak_section_element_size_table[];
 
-	enum PAK_ParseStatus : u32 {
-		PAK_PARSE_STATUS_GOOD = 0,
-		PAK_PARSE_STATUS_HEADER_DOES_NOT_MATCH,
-		PAK_PARSE_STATUS_UNSUPPORTED_VERSION,
-		PAK_PARSE_STATUS_INVALID_SECTIONS
-	};
-
 	struct PAK_Parsed {
 		u8 *raw_data;
 		u64 raw_data_size;
@@ -99,7 +92,7 @@ namespace dk {
 		u64 section_count;
 	};
 
-	auto pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> PAK_ParseStatus;
+	auto pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> b8;
 
 	auto pak_section_raw_data_from_kind(PAK_Parsed const *pak, PAK_SectionKind kind, u64 *out_size) noexcept -> void *;
 	auto pak_section_raw_table_from_kind(PAK_Parsed const *pak, PAK_SectionKind kind, u64 *out_count) noexcept -> void *;

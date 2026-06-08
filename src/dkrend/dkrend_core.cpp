@@ -32,29 +32,48 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	//~ Dedrick: Load pak.
 	{
 		//~ Dedrick: Open file.
-		PLT_Handle const file = plt_file_open("dkrend.pak"_str8, PLT_ACCESS_FLAG_READ);
+		TempArena const scratch = scratch_begin(nullptr, 0);
+		String8 const pak_path = str8f(scratch.arena, "%.*s/dkrend.pak", plt_get_process_info()->binary_dir);
+		PLT_Handle const file = plt_file_open(pak_path, PLT_ACCESS_FLAG_READ);
 		PLT_Handle const file_map = plt_file_map_open(file, PLT_ACCESS_FLAG_READ);
 		PLT_FileAttributes const file_attribs = plt_attributes_from_file(file);
 		void *const file_base = plt_file_map_view_open(file_map, PLT_ACCESS_FLAG_READ, 0, file_attribs.size);
 
 		//~ Dedrick: Parse pak.
 		PAK_Parsed pak = {};
-		PAK_ParseStatus const parse_status = pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak);
-		if (parse_status != PAK_PARSE_STATUS_GOOD) {
+		b8 const pak_good = pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak);
+		if (!pak_good) {
+			plt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid dkrend.pak; build it with `build assets`."_str8, true);
 			plt_abort(0);
 		}
-		(void)parse_status;
 
-		// TODO(Dedrick): Initialize shaders.
+		//~ Dedrick: Initialize shaders.
+		String8 const vert_shader_name_table[] = {
+			"hello_triangle.vert"_str8
+		};
+		String8 const frag_shader_name_table[] = {
+			"hello_triangle.frag"_str8
+		};
+		for (u64 kind = 0; kind < 1; ++kind) {
+			struct { GLenum type; String8 name; GLuint out; String8 errors; } stages[] = {
+				{ GL_VERTEX_SHADER, vert_shader_name_table[kind], 0 },
+				{ GL_FRAGMENT_SHADER, frag_shader_name_table[kind], 0 },
+			};
+		}
 
-
-		// TODO(Dedrick): Initialize textures.
-
+		//~ Dedrick: Initialize textures.
+		String8 const texture_name_table[] = {
+			"tony_mc_mapface.dds"_str8
+		};
+		for (u64 kind = 0; kind < 1; ++kind) {
+			(void)texture_name_table[kind];
+		}
 
 		//~ Dedrick: Close file.
 		plt_file_map_view_close(file_map, file_base, 0, file_attribs.size);
 		plt_file_map_close(file_map);
 		plt_file_close(file);
+		scratch_end(scratch);
 	}
 
 	//~ Dedrick: Set up main window.
@@ -181,7 +200,6 @@ auto dk::dkr_frame() noexcept -> b8 {
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
-	glUseProgram(rhi_ogl_context->shader);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
