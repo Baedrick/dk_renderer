@@ -48,7 +48,8 @@ namespace dk {
 
 	enum PAK_TextureFormat : u16 {
 		PAK_TEXTURE_FORMAT_NULL = 0,
-		PAK_TEXTURE_FORMAT_RGB9E5
+		PAK_TEXTURE_FORMAT_RGB9E5,
+		PAK_TEXTURE_FORMAT_COUNT
 	};
 
 	struct PAK_Texture {

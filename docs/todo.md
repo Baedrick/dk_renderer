@@ -70,6 +70,7 @@
 - [ ][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][Nice To Have] Hot-reloading of cooked model binaries
 - [x][Must Have] Stable dt frame timing calculation
+- [x][Must Have] Clean up state resource when hot reloading
 - [x][Must Have] Hot reloading packed resource format during runtime
 - [x][Must Have] Reading packed resource format during initialization
 - [x][Must Have] Application command/event list
