@@ -79,6 +79,7 @@ if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %co
 if "%assets%"=="1" (
     set didbuild=1
     echo [building shaders]
+    del /q "..\src\shaders\.spirv\*.spv"
     for %%f in (..\src\shaders\*.vert ..\src\shaders\*.frag ..\src\shaders\*.comp) do (
         %glslang% %glslang_include% -G -o "..\src\shaders\.spirv\%%~nxf.spv" "%%f" || exit /b 1
     )
