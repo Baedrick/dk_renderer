@@ -66,10 +66,13 @@
 - [ ][Must Have] Reading of cooker logs to display
 - [ ][Must Have] Console in UI to show logs
 - [ ][Must Have] Hello Model to validate graphics code
-- [ ][Must Have] Application command/event list
 - [ ][Must Have] Inter-Process Communication with Toy Cooker
 - [ ][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][Nice To Have] Hot-reloading of cooked model binaries
+- [x][Must Have] Stable dt frame timing calculation
+- [x][Must Have] Hot reloading packed resource format during runtime
+- [x][Must Have] Reading packed resource format during initialization
+- [x][Must Have] Application command/event list
 - [x][Must Have] ImGui show demo window
 - [x][Must Have] Hello Triangle to validate graphics code
 - [x][Must Have] Hello Triangle shader code
@@ -82,14 +85,12 @@
 - [x][Must Have] Update build script to have cooker as a build target
 
 ### Codebase
-- [ ][Must Have] Split pak file into two, a cpu data and gpu data.
-- [ ][Must Have] Reading packed resource format during initialization
+- [ ][Must Have] Log functions to concatinate log strings into a string list
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
-- [ ][Must Have] Set up UI layer
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
-- [ ][Must Have] Real-time global illumination (VXGI, DDGI, Surfels)
+- [ ][Must Have] Real-time global illumination (Blurred Froxels, VXGI, DDGI, Surfels)
 - [ ][Should Have] Change writing buffer list to use ring buffer for small writes to disk
 - [ ][Should Have] Light clustering for shading
 - [ ][Should Have] Render Graph resource aliasing and allocation
@@ -97,6 +98,8 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Update resource paking tool logic to pack in a sane order
+- [x][Must Have] Update resouce packing format to support dds texture
 - [x][Must Have] Add shared read and write support to file io
 - [x][Must Have] Add file mapping to platform layer to map file to address space
 - [x][Must Have] Ring buffer for Inter-Process Communication
