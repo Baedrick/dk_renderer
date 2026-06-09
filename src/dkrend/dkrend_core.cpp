@@ -279,8 +279,9 @@ auto dk::dkr_frame() noexcept -> b8 {
 	ImGui_ImplRgfw_NewFrame();
 	ImGui::NewFrame();
 
-	// TODO(Dedrick): Process asset unload events, process asset load events.
 	// TODO(Dedrick): Wait for gpu fences
+	// TODO(Dedrick): Process asset unload events (defragment here?)
+	// TODO(Dedrick): Process asset load events
 
 	//~ Dedrick: Process platform (window) events -> push application events.
 	{
