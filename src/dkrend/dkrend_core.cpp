@@ -6,6 +6,42 @@ auto dk::dkr_frame_arena() noexcept -> Arena * {
 	return dkr_context->frame_arenas[dkr_context->frame_index % array_count(dkr_context->frame_arenas)];
 }
 
+auto dk::dkr_event_list_push(Arena *arena, DKR_EventList *events, DKR_Event const *event) noexcept -> void {
+	DKR_EventNode *node = arena_push<DKR_EventNode>(arena);
+	node->event.kind = event->kind;
+	// NOTE(Dedrick): Attach payload, if required.
+	switch (event->kind) {
+		case DKR_EVENT_KIND_RELOAD_PAK : {
+			node->event.reload_pak.file_path = str8_copy(arena, event->reload_pak.file_path);
+			break;
+		}
+	}
+	list_push_back(&events->first, &events->last, node);
+	events->count += 1;
+}
+
+auto dk::dkr_push_event(DKR_Event const *event) noexcept -> void {
+	dkr_event_list_push(dkr_frame_arena(), &dkr_context->events[0], event);
+}
+
+auto dk::dkr_push_event_kind(DKR_EventKind kind) noexcept -> void {
+	DKR_Event const event = { kind };
+	dkr_event_list_push(dkr_frame_arena(), &dkr_context->events[0], &event);
+}
+
+auto dk::dkr_next_event(DKR_Event **event) noexcept -> b8 {
+	DKR_EventNode *node = dkr_context->events[1].first;
+	if (*event != nullptr) {
+		node = DK_CAST_FROM_MEMBER(DKR_EventNode, event, *event);
+		node = node->next;
+	}
+	*event = nullptr;
+	if (node != nullptr) {
+		*event = &node->event;
+	}
+	return *event != nullptr;
+}
+
 auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	(void)cmd_line;
@@ -116,7 +152,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 			GLint link_status = 0;
 			glGetProgramiv(shader, GL_LINK_STATUS, &link_status);
 
-			dkr_context->render.shaders[s] = shader;
+			dkr_context->render_globals.shaders[s] = shader;
 		}
 
 #if 0
@@ -215,6 +251,8 @@ auto dk::dkr_frame() noexcept -> b8 {
 
 	//~ Dedrick: Do per-frame resets.
 	arena_clear(dkr_frame_arena());
+	dkr_context->events[1] = dkr_context->events[0];
+	dkr_context->events[0] = {};
 
 	//~ Dedrick: Begin frame scope.
 	log_frame_begin();
@@ -222,16 +260,38 @@ auto dk::dkr_frame() noexcept -> b8 {
 	ImGui_ImplRgfw_NewFrame();
 	ImGui::NewFrame();
 
-	// TODO(Dedrick): Process platform (window) events -> push application events.
-	for (RGFW_event event = {}; RGFW_window_checkEvent(dkr_context->window, &event); ) {
-		if (event.type == RGFW_windowClose) {
-			dkr_context->quit = true;
+	// TODO(Dedrick): Process asset unload events, process asset load events.
+	// TODO(Dedrick): Wait for gpu fences
+
+	//~ Dedrick: Process platform (window) events -> push application events.
+	{
+		ZoneScopedN("process platform events");
+		for (RGFW_event event = {}; RGFW_window_checkEvent(dkr_context->window, &event); ) {
+			switch (event.type) {
+				case RGFW_windowClose: {
+					dkr_push_event_kind(DKR_EVENT_KIND_QUIT);
+					break;
+				}
+			}
 		}
 	}
 
-	// TODO(Dedrick): Process application events -> push asset system events.
-
-	// TODO(Dedrick): Process asset unload events, process asset load events.
+	//~ Dedrick: Process application events.
+	{
+		ZoneScopedN("process application events");
+		for (DKR_Event *event = nullptr; dkr_next_event(&event); ) {
+			switch (event->kind) {
+				case DKR_EVENT_KIND_QUIT: {
+					dkr_context->quit = true;
+					break;
+				}
+				case DKR_EVENT_KIND_RELOAD_PAK: {
+					// TODO(Dedrick): Reload pak.
+					break;
+				}
+			}
+		}
+	}
 
 	// TODO(Dedrick): Update scene stuff (camera, lights, etc.)
 
@@ -260,7 +320,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
-	glUseProgram(dkr_context->render.shaders[DKR_SHADER_KIND_HELLO_TRIANGLE]);
+	glUseProgram(dkr_context->render_globals.shaders[DKR_SHADER_KIND_HELLO_TRIANGLE]);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

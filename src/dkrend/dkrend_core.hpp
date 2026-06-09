@@ -3,10 +3,33 @@
 #pragma once
 
 namespace dk {
-	enum DKR_CmdKind : u32 {
-		DKR_CMD_KIND_NULL = 0,
-		DKR_CMD_KIND_OPEN_WINDOW,
-		DKR_CMD_KIND_COUNT
+	enum DKR_EventKind : u32 {
+		DKR_EVENT_KIND_NULL = 0,
+		DKR_EVENT_KIND_QUIT,
+		DKR_EVENT_KIND_RELOAD_PAK,
+		DKR_EVENT_KIND_COUNT
+	};
+
+	struct DKR_EventReloadPak {
+		DKR_EventKind kind;
+		String8 file_path;
+	};
+
+	union DKR_Event {
+		DKR_EventKind kind;
+		DKR_EventReloadPak reload_pak;
+	};
+
+	struct DKR_EventNode {
+		DKR_EventNode *next;
+		DKR_EventNode *prev;
+		DKR_Event event;
+	};
+
+	struct DKR_EventList {
+		DKR_EventNode *first;
+		DKR_EventNode *last;
+		u64 count;
 	};
 
 	enum DKR_ShaderKind : u32 {
@@ -15,8 +38,18 @@ namespace dk {
 		DKR_SHADER_KIND_COUNT
 	};
 
-	struct DKR_RenderContext {
+	enum DKR_TextureKind : u32 {
+		DKR_TEXTURE_KIND_TONY_MC_MAPFACE,
+		DKR_TEXTURE_KIND_COUNT,
+	};
+
+	struct DKR_RenderGlobals {
 		GLuint shaders[DKR_SHADER_KIND_COUNT];
+		GLuint textures[DKR_TEXTURE_KIND_COUNT];
+	};
+
+	struct DKR_RenderContext {
+
 	};
 
 	struct DKR_Context {
@@ -42,8 +75,12 @@ namespace dk {
 		u32 time_averager_head;
 		f32 frame_dt;
 
-		//~ Dedrick: Rendering
+		//~ Dedrick: Events.
+		DKR_EventList events[2];
+
+		//~ Dedrick: Rendering.
 		DKR_RenderContext render;
+		DKR_RenderGlobals render_globals;
 
 		//~ Dedrick: Window.
 		RGFW_window *window;
@@ -52,6 +89,13 @@ namespace dk {
 	extern DKR_Context *dkr_context;
 
 	auto dkr_frame_arena() noexcept -> Arena *;
+
+	auto dkr_event_list_push(Arena *arena, DKR_EventList *events, DKR_Event const *event) noexcept -> void;
+	auto dkr_push_event(DKR_Event const *event) noexcept -> void;
+	auto dkr_push_event_kind(DKR_EventKind kind) noexcept -> void;
+	auto dkr_next_event(DKR_Event **event) noexcept -> b8;
+
+	// TODO(Dedrick): pak helpers
 
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
 	auto dkr_frame() noexcept -> b8;
