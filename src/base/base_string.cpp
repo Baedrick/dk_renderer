@@ -566,7 +566,7 @@ auto dk::path_skip_last_slash(String8 path) noexcept -> String8 {
 	}
 	if (slash_found) {
 		path.data += slash_idx + 1;
-		path.size -= slash_idx - 1;
+		path.size -= slash_idx + 1;
 	}
 	return path;
 }
