@@ -43,7 +43,7 @@ namespace dk {
 		DKR_TEXTURE_KIND_COUNT,
 	};
 
-	struct DKR_RenderGlobals {
+	struct DKR_RenderAssets {
 		GLuint shaders[DKR_SHADER_KIND_COUNT];
 		GLuint textures[DKR_TEXTURE_KIND_COUNT];
 	};
@@ -80,7 +80,7 @@ namespace dk {
 
 		//~ Dedrick: Rendering.
 		DKR_RenderContext render;
-		DKR_RenderGlobals render_globals;
+		DKR_RenderAssets render_assets;
 
 		//~ Dedrick: Window.
 		RGFW_window *window;
@@ -95,7 +95,8 @@ namespace dk {
 	auto dkr_push_event_kind(DKR_EventKind kind) noexcept -> void;
 	auto dkr_next_event(DKR_Event **event) noexcept -> b8;
 
-	// TODO(Dedrick): pak helpers
+	auto dkr_asset_pak_path(Arena *arena) noexcept -> String8;
+	auto dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
 
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
 	auto dkr_frame() noexcept -> b8;
