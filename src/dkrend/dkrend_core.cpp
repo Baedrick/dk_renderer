@@ -322,7 +322,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 						DKR_RenderAssets assets = {};
 						good = dkr_render_assets_load(&pak, &assets);
 						if (good) {
-							DKR_RenderAssets *stale_assets = &dkr_context->render_assets;
+							DKR_RenderAssets *const stale_assets = &dkr_context->render_assets;
 							for (u64 k = 0; k < DKR_SHADER_KIND_COUNT; ++k) {
 								glDeleteProgram(stale_assets->shaders[k]);
 							}
