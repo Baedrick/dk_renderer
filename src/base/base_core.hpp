@@ -53,6 +53,8 @@
 #	define DK_ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #endif
 
+#define DK_CAST_FROM_MEMBER(T, m, ptr) reinterpret_cast<T *>(reinterpret_cast<u8 *>(ptr) - offsetof(T, m))
+
 #define DK_STRINGIFY_(x) #x
 #define DK_STRINGIFY(x) DK_STRINGIFY_(x)
 
