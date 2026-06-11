@@ -1,7 +1,8 @@
-// NOTE(Dedrick): This has been modified to support the codebase. This is NOT an
-// unmodified copy of the original RGFW 2.0.0-dev code. Changes are:
+// [DK_RENDERER]
+// NOTE(Dedrick): This has been modified to support the codebase. Changes are:
 // 1. Added pointers for RGFW_window to construct a linked list for the
 //    graphical platform layer.
+// Grep for [DK_RENDERER] to find the changes.
 
 /*
 *
@@ -3017,10 +3018,9 @@ typedef struct RGFW_windowInternal {
 } RGFW_windowInternal;
 
 struct RGFW_window {
-	// NOTE(Dedrick): Additions for platform graphical layer vvv
+	// [DK_RENDERER]: Additions for platform graphical layer.
 	RGFW_window *next;
 	RGFW_window *prev;
-	// NOTE(Dedrick): Additions for platform graphical layer ^^^
 
 	RGFW_window_src src; /*!< src window data */
 	RGFW_windowInternal internal; /*!< internal window data that is not specific to the OS */

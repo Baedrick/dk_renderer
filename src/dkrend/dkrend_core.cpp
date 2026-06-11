@@ -397,11 +397,8 @@ auto dk::dkr_frame() noexcept -> b8 {
 	dkr_context->events[1] = dkr_context->events[0];
 	dkr_context->events[0] = {};
 
-	//~ Dedrick: Begin frame scope.
+	//~ Dedrick: Begin log frame scope.
 	log_frame_begin();
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplRgfw_NewFrame();
-	ImGui::NewFrame();
 
 	// TODO(Dedrick): Wait for gpu fences
 	// TODO(Dedrick): Process asset unload events (defragment here?)
@@ -419,6 +416,17 @@ auto dk::dkr_frame() noexcept -> b8 {
 			}
 		}
 	}
+
+	//~ Dedrick: Begin ImGui frame scope.
+	//
+	// NOTE(Dedrick): Override the backend's raw delta time with our snapped
+	// engine time. This prevents micro-stutter in UI animations and keeps ImGui
+	// timers in sync.
+	//
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplRgfw_NewFrame();
+	ImGui::GetIO().DeltaTime = dkr_context->frame_dt;
+	ImGui::NewFrame();
 
 	//~ Dedrick: Process application events.
 	{
@@ -479,13 +487,22 @@ auto dk::dkr_frame() noexcept -> b8 {
 	{
 		ZoneScopedN("build ui");
 
-		//~ Dedrick: Adjust ImGui for HiDPI screens.
-		// TODO(Dedrick): Only adjust when moving window because it can be moved to another monitor.
 		ImGuiIO &io = ImGui::GetIO();
-		float const old_scale = io.FontGlobalScale;
-		float const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
-		io.FontGlobalScale = content_scale;
-		ImGui::GetStyle().ScaleAllSizes(content_scale / old_scale);
+
+		//~ Dedrick: Adjust ImGui for HiDPI screens.
+		// https://github.com/ocornut/imgui/discussions/3925
+		//
+		// FIXME(Dedrick): Seems like RGFW is not handling DPI changes correctly
+		// at the monitor level. Monitor scales does not update during runtime.
+		// Might be caused by the platform gfx layer setting the DPI awareness.
+		//
+		f32 const old_scale = io.FontGlobalScale;
+		f32 const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
+		if (abs(content_scale - old_scale) > 1e-5f) {
+			f32 const scale_factor = content_scale / old_scale;
+			io.FontGlobalScale = content_scale;
+			ImGui::GetStyle().ScaleAllSizes(scale_factor);
+		}
 
 		ImGui::Text("Frame Time: %.5f", dkr_context->frame_dt);
 
@@ -506,6 +523,8 @@ auto dk::dkr_frame() noexcept -> b8 {
 	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
 	glUseProgram(dkr_context->render_assets.shaders[DKR_SHADER_KIND_HELLO_TRIANGLE]);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	//~ Dedrick: Draw UI.
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	rhi_surface_present(dkr_context->window);
