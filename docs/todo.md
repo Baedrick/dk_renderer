@@ -1,37 +1,62 @@
-### Timeline
-- 15 June 2026 - Milestone 1
-    - Focus: Project scaffolding, Asset Pipeline, Basic Rendering
-    - Project proposal submission
-    - Build script for both viewer and cooker targets
-    - Process launching, joining, and pipe reading to read the cooker's stdout to viewer's ui
-    - Toy Cooker: Parse basic glTF files and serialize them into a custom binary format
-    - Toy Viewer: Load custom binary format and display viewer
-    - Hello Model via simple forward rendering pass to validate graphics code
-      - Damaged Helmet as sample model to validate
-    - View imported model resource in ui as a tree of resources (materials, textures, meshes)
-    - Main light shadows
-- 9 Aug 2026 - Milestone 2
-    - Focus: GPU-Driven Core & Render Graph
-    - General memory allocator for persistent GPU buffer mapping
-    - GPU-driven drawing with frustum culling and indirect draw commands
-    - Render Graph for automatic pass ordering and synchronization barriers
-    - Skybox/HDRI for the background and ambient light
-    - Deferred shading of opaque objects
-    - Forward shading of transparent objects
-- 6 December 2026 - Milestone 3
-    - Focus: Advanced Lighting & Debug Rendering
-    - Implement real-time global illumination (VXGI, DDGI, or Surfels)
-    - Light clustering for efficient shading of multiple light sources
-    - Debug rendering of passes
-- 19 Feb 2027 - Career Fair
-    - Focus: Minimum viable project (MVP) to show potential employers
-    - Must have everything planned implemented but doesn't need to be polished.
-    - Command palette for quick access to rendering configurations and settings.
-- 22 Mar 2027 - Milestone 4
-    - Focus: Academic deliverables
-    - Polish from feedback during career fair.
-    - Draft final thesis, highlighting how classroom knowledge was applied and expanded on.
-    - Prepare presentation slides and rehearse oral demonstration.
+### Timeline - Updated 11 June 2026
+14 Jun 2026 - Milestone 1 (Proposal)
+- Focus: Project scaffolding & Basic Graphics Setup
+- Deliverables:
+  - Project proposal
+  - Base layer STL replacement
+  - Platform abstractions for core execution, windowing, and native dialogs 
+  - dkcook stub functions
+  - Shader binary compilation and custom dds texture parsing
+  - Custom resource binary format layout and compilation pipeline
+  - dkrend resource binary loading and runtime hot-reloading
+  - Tracy profiler integration
+  - Build scripts configured for resource binary, renderer, and cooker targets
+  - OpenGL boostrapping and initial triangle rendering pass to validate graphics pipline
+  - ImGui library integration into dkrend and show demo ui
+  - Application event queue setup and frame time snapping calculation logic
+
+9 Aug 2026 - Milestone 2 (Trimester 1)
+- Focus: Model Compiling, Inter-Process Communication (IPC), Asset Engine
+- Deliverables:
+  - Model binary format specification
+  - glTF parsing to model binary format
+  - Multithreaded asset compilation tasks
+  - IPC between dkcook and dkrend to signal work completion and transfer logs
+  - Async asset engine tick function for model loading tasks in dkrend
+  - Persistent general-purpose GPU memory allocator for global buffer
+  - dkrend forward rendering graphics pass to load and display glTF damaged helmet
+  - dkrend free fly camera
+  
+6 Dec 2026 - Milestone 3 (Trimester 2)
+- Focus: GPU-Driven Rendering & Render Graph
+- Deliverables:
+  - UI tree view to inspect imported model hirarchies, materials, textures, meshes
+  - GPU-driven drawing pipeline using frustum culling and indirect draw commands
+  - Render Graph to automate pass execution order and synchronization barrier
+  - Frustum light clustering
+  - Clustered forward rendering opaque and transparent objects with sorting
+  - Skybox and HDRI support for background rendering and ambient environment lighting calculations
+  - Debug views for intermediate rendering passes and bounding boxes
+  
+19 Feb 2027 - Milestone 4 (Career Fair)
+- Focus: Feature-complete final production build
+- Deliverables:
+  - Dedicated schedule buffer to complete any delayed or blocked features from previous milestones
+  - Real-time global illumination system implementation
+    - Voxel Cone Tracing or Light Propagation Volumes
+  - Command palette interface for runtime access to engine settings and pipeline toggles
+  - Polishing of dkrend to showcase to potential employers
+  
+22 Mar 2027 - Milestone 5 (Trimester 3)
+- Focus: Software stabilization, Thesis Documentation, and Defense Preparation
+- Deliverables:
+  - Codebase updates and stability fixes from by career fair demonstration
+  - Code freeze
+  - Completed final thesis manuscript:
+    - Engine architecture
+    - Allocator designs
+    - Clustering math
+    - Performance metrics
 
 ### Capstone Assessment Domains
 - Quantity and Quality of Technical Work
@@ -191,3 +216,5 @@
 - [x][Must Have] Move main from viewer compile file to platform layer for common code initialization
 - [x][Must Have] Create stub files and core defines for the base layer
 - [x][Must Have] Batch script for building as unity build
+
+### Milestone 1 Completed
