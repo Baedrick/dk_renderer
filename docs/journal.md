@@ -1,5 +1,52 @@
 ### 2026-06-13: Milestone 1 completed
 
+### 2026-06-09: Asset Compilation and Reloading
+The previous asset pipeline was too slow for fast iteration. I rewrote the 
+archive generator into a standalone tool called `pak_make`. It packs raw data, 
+like DDS textures, directly into a contiguous block of memory. This matches the 
+exact layout the engine expects, meaning almost zero parsing happens at runtime.
+
+To improve my workflow, I added a way to reload the asset archive while the 
+renderer is running. Normal file reading requires the operating system to copy 
+data from the disk into a kernel buffer, then into a user-space buffer, before 
+the engine can hand it to the graphics driver. That extra copying wastes memory 
+bandwidth. I used memory-mapped files to fix this. When I trigger a reload event 
+from the UI, the engine maps the `.pak` archive directly into memory. Bypassing 
+the user-space copy allows the engine to point the driver directly at the mapped 
+pages during asset initialization. After successfully compiling the new shaders 
+and uploading the textures, the engine deletes the stale assets and unmaps the 
+file.
+
+### 2026-06-08: Shader Initialization Passes
+I changed how the engine builds shaders. Previously, the system treated each 
+shader program as a monolithic unit. Looking closely at how graphics APIs work, 
+the linking stage only cares about linking an arbitrary number of shader modules 
+together. It makes no sense to upload a vertex shader to the driver multiple 
+times just because it gets paired with different fragment shaders.
+
+I split the initialization pipeline into two distinct passes. The first pass 
+loads the pre-compiled SPIR-V binaries from the mapped archive and specializes 
+them into OpenGL shader modules. The second pass acts as a mixer. It takes those 
+intermediate modules and links them into the final programs the engine needs. 
+This removes redundant driver work. I also added static asserts to ensure the 
+shader definition tables always match the enumeration counts, catching missing 
+entries at compile time.
+
+### 2026-06-03: Frame Timing and Snapping
+I added a consistent frame timing system. Raw variable delta time causes 
+problems for camera movement and user interactions. If the OS stutters and 
+hands the engine a massive delta time, the camera jumps erratically and 
+input feels broken. 
+
+To fix this, the engine queries the active monitor's refresh rate and builds a 
+table of expected frame durations. If the measured frame time falls close to one 
+of these multiples, the engine snaps the delta to that exact duration. It also 
+runs the delta through a history ring buffer to average out micro-stutters. This 
+creates a smooth baseline for animations. I also implemented a double-buffered 
+application event queue using the per-frame memory arena. Handling window events 
+through a deferred queue instead of immediate callbacks keeps the control flow 
+predictable.
+
 ### 2026-05-29: Worries About The Future Of This Project
 I just learned that the capstone project requires my work to directly benefit 
 my internship company. The university assumes we use company time to work on 
