@@ -1,4 +1,6 @@
-### 2025-05-29: Worries About The Future Of This Project
+### 2026-06-13: Milestone 1 completed
+
+### 2026-05-29: Worries About The Future Of This Project
 I just learned that the capstone project requires my work to directly benefit 
 my internship company. The university assumes we use company time to work on 
 the capstone. I think that rule is ridiculous. The common case for company-led 
@@ -26,7 +28,7 @@ struggle to build a narrative of my personal growth. Technical art tasks are
 usually fragmented across random production needs, whereas building an engine 
 from scratch tells a clear story from start to finish.
 
-### 2025-05-28: File Directory Iteration & First-Pass PAK Implementation
+### 2026-05-28: File Directory Iteration & First-Pass PAK Implementation
 I wrote the file directory iterator in the platform layer and finished the 
 first-pass implementation of the PAK format. I took inspiration from the Rad 
 Debug Information (RDI) format. I really like the idea of putting things into 
@@ -44,7 +46,7 @@ avoids loading heavy geometry into system RAM. I plan to investigate unbuffered
 I/O later to speed up the GPU uploads. Right now, I am starting the second pass 
 of `pakgen` to refine the data structures.
 
-### 2025-05-24: RGFW ImGui Backend
+### 2026-05-24: RGFW ImGui Backend
 I wrote my own backend for RGFW ImGui to support the latest library version. 
 The existing integration was out of date. I submitted a pull request to merge 
 my new backend into the official GitHub repository, but that is up to the 
@@ -52,7 +54,7 @@ author to accept. I also modified the coordinate handling to ensure that HiDPI
 screens are supported properly. Writing the backend myself ensures the renderer 
 scales correctly across monitors without waiting on a third party.
 
-### 2025-05-22: Shipping Resource Binary
+### 2026-05-22: Shipping Resource Binary
 Working on the hello triangle milestone showed me that reading individual shader 
 files from disk at runtime is too fragile. Missing files or read errors create 
 unnecessary points of failure. I want the build and execution process to be 

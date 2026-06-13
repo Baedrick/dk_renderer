@@ -6,6 +6,7 @@ namespace dk {
 	enum DKR_EventKind : u32 {
 		DKR_EVENT_KIND_NULL = 0,
 		DKR_EVENT_KIND_QUIT,
+		DKR_EVENT_KIND_OPEN_CONSOLE,
 		DKR_EVENT_KIND_RELOAD_PAK,
 		DKR_EVENT_KIND_COUNT
 	};
@@ -84,6 +85,11 @@ namespace dk {
 
 		//~ Dedrick: Window.
 		RGFW_window *window;
+
+		//~ Dedrick: Console.
+		b8 console_is_open;
+
+
 	};
 
 	extern DKR_Context *dkr_context;

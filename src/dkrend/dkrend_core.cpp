@@ -316,7 +316,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	}
 
 	//~ Dedrick: Set up main window.
-	dkr_context->window = plt_window_open("RGFW"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
+	dkr_context->window = plt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	rhi_window_equip(dkr_context->window);
 
 	//~ Dedrick: Pick target frame time.
@@ -417,17 +417,6 @@ auto dk::dkr_frame() noexcept -> b8 {
 		}
 	}
 
-	//~ Dedrick: Begin ImGui frame scope.
-	//
-	// NOTE(Dedrick): Override the backend's raw delta time with our snapped
-	// engine time. This prevents micro-stutter in UI animations and keeps ImGui
-	// timers in sync.
-	//
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplRgfw_NewFrame();
-	ImGui::GetIO().DeltaTime = dkr_context->frame_dt;
-	ImGui::NewFrame();
-
 	//~ Dedrick: Process application events.
 	{
 		ZoneScopedN("process application events");
@@ -477,6 +466,10 @@ auto dk::dkr_frame() noexcept -> b8 {
 					plt_file_close(file);
 					break;
 				}
+				case DKR_EVENT_KIND_OPEN_CONSOLE : {
+					dkr_context->console_is_open = true;
+					break;
+				}
 			}
 		}
 	}
@@ -487,14 +480,26 @@ auto dk::dkr_frame() noexcept -> b8 {
 	{
 		ZoneScopedN("build ui");
 
+		//~ Dedrick: Begin ImGui frame scope.
+		//
+		// NOTE(Dedrick): Override the backend's raw delta time with our snapped
+		// engine time. This prevents micro-stutter in UI animations and keeps ImGui
+		// timers in sync.
+		//
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplRgfw_NewFrame();
+		ImGui::GetIO().DeltaTime = dkr_context->frame_dt;
+		ImGui::NewFrame();
+
 		ImGuiIO &io = ImGui::GetIO();
 
 		//~ Dedrick: Adjust ImGui for HiDPI screens.
 		// https://github.com/ocornut/imgui/discussions/3925
 		//
-		// FIXME(Dedrick): Seems like RGFW is not handling DPI changes correctly
-		// at the monitor level. Monitor scales does not update during runtime.
-		// Might be caused by the platform gfx layer setting the DPI awareness.
+		// NOTE(Dedrick): RGFW uses a small 32-slot event buffer. Moving a window
+		// across monitor boundaries floods the queue and overflows this buffer.
+		// Instead of increasing the buffer size to 256 for a single edge case,
+		// we poll the window's content scale every frame.
 		//
 		f32 const old_scale = io.FontGlobalScale;
 		f32 const content_scale = ImGui_ImplRgfw_GetContentScaleForWindow(dkr_context->window);
@@ -504,15 +509,35 @@ auto dk::dkr_frame() noexcept -> b8 {
 			ImGui::GetStyle().ScaleAllSizes(scale_factor);
 		}
 
-		ImGui::Text("Frame Time: %.5f", dkr_context->frame_dt);
+		if (ImGui::Begin("dkrend - Rendering Engine")) {
+			ImGui::Text("Frame Time: %.5f", dkr_context->frame_dt);
 
-		if (ImGui::Button("Reload Pak")) {
-			dkr_push_event_kind(DKR_EVENT_KIND_RELOAD_PAK);
+			// TODO(Dedrick): Buttons to open "editors".
+			// Scene editor
+			// Post process
+			// Global illumination
+			// Camera
+			// Developer options
+
+			if (ImGui::Button("Console")) {
+				dkr_push_event_kind(DKR_EVENT_KIND_OPEN_CONSOLE);
+			}
+
+			if (ImGui::Button("Reload Pak")) {
+				dkr_push_event_kind(DKR_EVENT_KIND_RELOAD_PAK);
+			}
+
+			//~ Dedrick: Console Widget.
+			if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
+
+			}
+			ImGui::End();
 		}
-
+		ImGui::End();
 		ImGui::Render();
 	}
 
+	//~ Dedrick: Render Scene.
 	{
 		s32 width = 0, height = 0;
 		RGFW_window_getSizeInPixels(dkr_context->window, &width, &height);
