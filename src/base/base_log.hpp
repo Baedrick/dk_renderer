@@ -9,29 +9,34 @@ namespace dk {
 		LOG_KIND_COUNT
 	};
 
-	struct LogEntry {
-		LogEntry *next;
-		LogEntry *kind_next;
+	struct LogNode {
+		LogNode *next;
 		String8 string;
 		LogKind kind;
-	};
-
-	struct LogEntryList {
-		LogEntry *first;
-		LogEntry *last;
-		u64 count;
 	};
 
 	struct LogFrame {
 		LogFrame *next;
 		u64 arena_start_pos;
-		LogEntryList list;
-		LogEntryList kind_lists[LOG_KIND_COUNT];
+		LogNode *first;
+		LogNode *last;
+		u64 node_count;
+		u64 total_string_size;
+		u64 kind_counts[LOG_KIND_COUNT];
+	};
+
+	struct LogEntry {
+		u64 offset;
+		u32 size;
+		LogKind kind;
 	};
 
 	struct LogFrameResult {
-		LogEntryList list;
-		LogEntryList kind_lists[LOG_KIND_COUNT];
+		String8 string;
+		LogEntry *entries;
+		u64 count;
+		u64 *kind_indices[LOG_KIND_COUNT];
+		u64 kind_counts[LOG_KIND_COUNT];
 	};
 
 	struct LogContext {
