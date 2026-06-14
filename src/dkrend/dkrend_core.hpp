@@ -53,6 +53,22 @@ namespace dk {
 
 	};
 
+	struct DKR_ConsoleLine {
+		u64 offset;
+		u32 size;
+		LogKind kind;
+	};
+
+	struct DKR_Console {
+		u8 *text_buffer;
+		u64 text_buffer_size;
+		u64 text_write_pos;
+		DKR_ConsoleLine *lines;
+		u64 max_lines;
+		u64 line_write_pos;
+		u64 line_read_pos;
+	};
+
 	struct DKR_Context {
 		Arena *arena;
 		b8 quit;
@@ -88,8 +104,7 @@ namespace dk {
 
 		//~ Dedrick: Console.
 		b8 console_is_open;
-
-
+		DKR_Console console;
 	};
 
 	extern DKR_Context *dkr_context;

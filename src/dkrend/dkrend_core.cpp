@@ -285,6 +285,15 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		scratch_end(scratch);
 	}
 
+	//~ Dedrick: Set up console.
+	{
+		DKR_Console *console = &dkr_context->console;
+		console->text_buffer_size = mega_bytes(1);
+		console->text_buffer = arena_push_array<u8>(dkr_context->arena, console->text_buffer_size);
+		console->max_lines = 4096;
+		console->lines = arena_push_array<DKR_ConsoleLine>(dkr_context->arena, console->max_lines);
+	}
+
 	//~ Dedrick: Load pak.
 	{
 		//~ Dedrick: Open file.
@@ -537,7 +546,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 		ImGui::Render();
 	}
 
-	//~ Dedrick: Render Scene.
+	//~ Dedrick: Draw Scene.
 	{
 		s32 width = 0, height = 0;
 		RGFW_window_getSizeInPixels(dkr_context->window, &width, &height);
@@ -561,13 +570,68 @@ auto dk::dkr_frame() noexcept -> b8 {
 	{
 		ZoneScopedN("collect logs");
 		LogFrameResult const log = log_frame_end(scratch.arena);
-		// TODO(Dedrick): Log to console buffer.
-		(void)log;
 		if (log.list.count > 0) {
-			for (LogEntry *node = log.list.first; node != nullptr; node = node->next) {
-				std::fprintf(stdout, "%.*s", DK_STR8_VARG(node->string));
+			DKR_Console *const console = &dkr_context->console;
+			u64 line_start_offset = c->text_write_pos;
+			u32 line_size = 0;
+			LogKind line_kind = log.entries[0].kind;
+			for (u64 i = 0; i < log.count; ++i) {
+				LogEntry const *entry = &log.entries[i];
+				u8 const *chunk_ptr = log.string.data + entry->offset;
+				u32 const chunk_size = entry->size;
+				// NOTE(Dedrick): Log kind chaning midline. I dont think this is possible.
+				if (line_size > 0 && line_kind != entry->kind) {
+					if ((c->line_write_pos - c->line_read_pos) >= c->max_lines) {
+						c->line_read_pos += 1;
+					}
+					DKR_ConsoleLine *line = &c->lines[c->line_write_pos % c->max_lines];
+					line->offset = line_start_offset;
+					line->size = line_size;
+					line->kind = line_kind;
+					c->line_write_pos += 1;
+
+					line_start_offset = c->text_write_pos;
+					line_size = 0;
+				}
+				line_kind = entry->kind;
+				for (u32 j = 0; j < chunk_size; ++j) {
+					u8 const ch = chunk_ptr[j];
+					c->text_buffer[c->text_write_pos % c->text_buffer_size] = ch;
+					c->text_write_pos += 1;
+					line_size += 1;
+
+					if (ch == '\n') {
+						if ((c->line_write_pos - c->line_read_pos) >= c->max_lines) {
+							c->line_read_pos += 1;
+						}
+						DKR_ConsoleLine *line = &c->lines[c->line_write_pos % c->max_lines];
+						line->offset = line_start_offset;
+						line->size = line_size;
+						line->kind = line_kind;
+						c->line_write_pos += 1;
+
+						line_start_offset = c->text_write_pos;
+						line_size = 0;
+					}
+				}
+				while ((c->line_read_pos < c->line_write_pos) &&
+					   ((c->text_write_pos - c->lines[c->line_read_pos % c->max_lines].offset) > c->text_buffer_size)) {
+					c->line_read_pos += 1;
+				}
+			}
+			//~ Dedrick: Commit last line.
+			if (line_size > 0) {
+				if ((c->line_write_pos - c->line_read_pos) >= c->max_lines) {
+					c->line_read_pos += 1;
+				}
+				DKR_ConsoleLine *line = &c->lines[c->line_write_pos % c->max_lines];
+				line->offset = line_start_offset;
+				line->size = line_size;
+				line->kind = line_kind;
+				c->line_write_pos += 1;
 			}
 		}
+		// TODO(Dedrick): Append to log file.
 	}
 	scratch_end(scratch);
 	return dkr_context->quit;
@@ -575,6 +639,9 @@ auto dk::dkr_frame() noexcept -> b8 {
 
 auto dk::dkr_shutdown() noexcept -> void {
 	ZoneScoped;
+	// NOTE(Dedrick): We intentionally skip freeing memory arenas and internal
+	// resources for a faster shutdown. The OS will bulk-reclaim the process
+	// memory. We only clean up resources that require graceful termination.
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplRgfw_Shutdown();
 	ImGui::DestroyContext();
