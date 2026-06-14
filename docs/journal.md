@@ -1,4 +1,12 @@
-### 2026-06-13: Milestone 1 completed
+### 2026-06-13: Milestone 1 Completed
+I had to rework the schedule today while drafting the capstone proposal. The
+original timeline was too packed, and the updated version probably still is, but
+I need to get further into development to see how the pace holds up. I still
+lack a complete image of what the final software will look like. Finding the
+exact directions I want to investigate is going to take time and manual
+experimentation. The proposal outline is done so the faculty knows what I am
+tackling for my thesis, but the actual roadmap will stay fluid until the core
+systems are running.
 
 ### 2026-06-09: Asset Compilation and Reloading
 The previous asset pipeline was too slow for fast iteration. I rewrote the 
