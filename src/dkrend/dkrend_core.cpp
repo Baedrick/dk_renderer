@@ -292,6 +292,8 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		console->text_buffer = arena_push_array<u8>(dkr_context->arena, console->text_buffer_size);
 		console->max_lines = 4096;
 		console->lines = arena_push_array<DKR_ConsoleLine>(dkr_context->arena, console->max_lines);
+		console->filter_mask = static_cast<u32>(-1);
+		console->auto_scroll = true;
 	}
 
 	//~ Dedrick: Load pak.
