@@ -592,21 +592,36 @@ auto dk::dkr_frame() noexcept -> b8 {
 				}
 				line_kind = entry->kind;
 
-				//~ Dedrick: Copy string chunk into console ring buffer.
-				u64 const write_idx = text_write % console->text_buffer_size;
+				//~ Dedrick: Ensure lines occupy contiguous memory.
+				u64 write_idx = text_write % console->text_buffer_size;
 				if (write_idx + chunk_size > console->text_buffer_size) {
-					u64 const first_part_size = console->text_buffer_size - write_idx;
-					std::memcpy(console->text_buffer + write_idx, chunk, first_part_size);
-					std::memcpy(console->text_buffer, chunk + first_part_size, chunk_size - first_part_size);
-				} else {
-					std::memcpy(console->text_buffer + write_idx, chunk, chunk_size);
+					if (line_size > 0) {
+						if (line_write - line_read >= console->max_lines) {
+							line_read += 1;
+						}
+						DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
+						line->offset = line_start_offset;
+						line->size = line_size;
+						line->kind = line_kind;
+						line_write += 1;
+						line_size = 0;
+					}
+					u64 const skip_amount = console->text_buffer_size - write_idx;
+					text_write += skip_amount;
+					line_start_offset = text_write;
+					write_idx = 0;
 				}
 
-				for (u32 j = 0; j < chunk_size; ++j) {
+				//~ Dedrick: Copy string chunk into console ring buffer.
+				DK_ASSERT(chunk_size <= console->text_buffer_size);
+				std::memcpy(console->text_buffer + write_idx, chunk, chunk_size);
+
+				//~ Dedrick: Split new lines and push to console line buffer.
+				for (u32 i = 0; i < chunk_size; ++i) {
 					text_write += 1;
 					line_size += 1;
-					if (chunk[j] == '\n') {
-						if ((line_write - line_read) >= console->max_lines) {
+					if (chunk[i] == '\n') {
+						if (line_write - line_read >= console->max_lines) {
 							line_read += 1;
 						}
 						DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
@@ -619,14 +634,18 @@ auto dk::dkr_frame() noexcept -> b8 {
 					}
 				}
 
-				while ((line_read < line_write) &&
-					   ((text_write - console->lines[line_read % console->max_lines].offset) > console->text_buffer_size)) {
-					line_read += 1;
+				//~ Dedrick: Advance console line ring buffer.
+				for (; line_read < line_write; ++line_read) {
+					DKR_ConsoleLine *oldest_line = &console->lines[line_read % console->max_lines];
+					bool const stomped = (text_write - oldest_line->offset) > console->text_buffer_size;
+					if (!stomped) {
+						break;
+					}
 				}
 
 				//~ Dedrick: Commit last line.
 				if (line_size > 0) {
-					if ((line_write - line_read) >= console->max_lines) {
+					if (line_write - line_read >= console->max_lines) {
 						line_read += 1;
 					}
 					DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
