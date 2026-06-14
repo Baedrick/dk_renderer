@@ -537,10 +537,12 @@ auto dk::dkr_frame() noexcept -> b8 {
 			}
 
 			//~ Dedrick: Console Widget.
-			if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
+			if (dkr_context->console_is_open) {
+				if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
 
+				}
+				ImGui::End();
 			}
-			ImGui::End();
 		}
 		ImGui::End();
 		ImGui::Render();
@@ -570,68 +572,76 @@ auto dk::dkr_frame() noexcept -> b8 {
 	{
 		ZoneScopedN("collect logs");
 		LogFrameResult const log = log_frame_end(scratch.arena);
-		if (log.list.count > 0) {
+		if (log.count > 0) {
+			// TODO(Dedrick): Append to log file.
+
+			//~ Dedrick: Parse to console.
 			DKR_Console *const console = &dkr_context->console;
-			u64 line_start_offset = c->text_write_pos;
+			u64 text_write = console->text_write_pos;
+			u64 line_write = console->line_write_pos;
+			u64 line_read  = console->line_read_pos;
+			u64 line_start_offset = console->text_write_pos;
 			u32 line_size = 0;
 			LogKind line_kind = log.entries[0].kind;
-			for (u64 i = 0; i < log.count; ++i) {
-				LogEntry const *entry = &log.entries[i];
-				u8 const *chunk_ptr = log.string.data + entry->offset;
+			for (u64 log_idx = 0; log_idx < log.count; ++log_idx) {
+				LogEntry const *entry = &log.entries[log_idx];
+				u8 const *chunk = log.string.data + entry->offset;
 				u32 const chunk_size = entry->size;
-				// NOTE(Dedrick): Log kind chaning midline. I dont think this is possible.
-				if (line_size > 0 && line_kind != entry->kind) {
-					if ((c->line_write_pos - c->line_read_pos) >= c->max_lines) {
-						c->line_read_pos += 1;
-					}
-					DKR_ConsoleLine *line = &c->lines[c->line_write_pos % c->max_lines];
-					line->offset = line_start_offset;
-					line->size = line_size;
-					line->kind = line_kind;
-					c->line_write_pos += 1;
-
-					line_start_offset = c->text_write_pos;
-					line_size = 0;
+				if (chunk_size == 0) {
+					continue;
 				}
 				line_kind = entry->kind;
-				for (u32 j = 0; j < chunk_size; ++j) {
-					u8 const ch = chunk_ptr[j];
-					c->text_buffer[c->text_write_pos % c->text_buffer_size] = ch;
-					c->text_write_pos += 1;
-					line_size += 1;
 
-					if (ch == '\n') {
-						if ((c->line_write_pos - c->line_read_pos) >= c->max_lines) {
-							c->line_read_pos += 1;
+				//~ Dedrick: Copy string chunk into console ring buffer.
+				u64 const write_idx = text_write % console->text_buffer_size;
+				if (write_idx + chunk_size > console->text_buffer_size) {
+					u64 const first_part_size = console->text_buffer_size - write_idx;
+					std::memcpy(console->text_buffer + write_idx, chunk, first_part_size);
+					std::memcpy(console->text_buffer, chunk + first_part_size, chunk_size - first_part_size);
+				} else {
+					std::memcpy(console->text_buffer + write_idx, chunk, chunk_size);
+				}
+
+				for (u32 j = 0; j < chunk_size; ++j) {
+					text_write += 1;
+					line_size += 1;
+					if (chunk[j] == '\n') {
+						if ((line_write - line_read) >= console->max_lines) {
+							line_read += 1;
 						}
-						DKR_ConsoleLine *line = &c->lines[c->line_write_pos % c->max_lines];
+						DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
 						line->offset = line_start_offset;
 						line->size = line_size;
 						line->kind = line_kind;
-						c->line_write_pos += 1;
-
-						line_start_offset = c->text_write_pos;
+						line_write += 1;
+						line_start_offset = text_write;
 						line_size = 0;
 					}
 				}
-				while ((c->line_read_pos < c->line_write_pos) &&
-					   ((c->text_write_pos - c->lines[c->line_read_pos % c->max_lines].offset) > c->text_buffer_size)) {
-					c->line_read_pos += 1;
+
+				while ((line_read < line_write) &&
+					   ((text_write - console->lines[line_read % console->max_lines].offset) > console->text_buffer_size)) {
+					line_read += 1;
 				}
-			}
-			//~ Dedrick: Commit last line.
-			if (line_size > 0) {
-				if ((c->line_write_pos - c->line_read_pos) >= c->max_lines) {
-					c->line_read_pos += 1;
+
+				//~ Dedrick: Commit last line.
+				if (line_size > 0) {
+					if ((line_write - line_read) >= console->max_lines) {
+						line_read += 1;
+					}
+					DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
+					line->offset = line_start_offset;
+					line->size = line_size;
+					line->kind = line_kind;
+					line_write += 1;
 				}
-				DKR_ConsoleLine *line = &c->lines[c->line_write_pos % c->max_lines];
-				line->offset = line_start_offset;
-				line->size = line_size;
-				line->kind = line_kind;
-				c->line_write_pos += 1;
+
+				//~ Dedrick: Commit buffer positions.
+				console->text_write_pos = text_write;
+				console->line_write_pos = line_write;
+				console->line_read_pos = line_read;
 			}
 		}
-		// TODO(Dedrick): Append to log file.
 	}
 	scratch_end(scratch);
 	return dkr_context->quit;

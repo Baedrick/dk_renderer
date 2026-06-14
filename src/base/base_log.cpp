@@ -48,11 +48,12 @@ auto dk::log_frame_end(Arena *arena) noexcept -> LogFrameResult {
 		LogFrame *frame = local_log_context->stack;
 		if (frame != nullptr) {
 			forward_list_stack_pop(&local_log_context->stack);
-			if (arena != nullptr && frame->total_count > 0) {
+			if (arena != nullptr && frame->node_count > 0) {
 				result.count = frame->node_count;
 				result.entries = arena_push_array<LogEntry>(arena, result.count);
 				result.string.size = frame->total_string_size;
-				result.string.data = arena_push_array<u8>(arena, result.string.size);
+				u8 *str = arena_push_array<u8>(arena, result.string.size);
+				result.string.data = str;
 				for (u32 k = 0; k < LOG_KIND_COUNT; ++k) {
 					result.kind_counts[k] = frame->kind_counts[k];
 					result.kind_indices[k] = arena_push_array<u64>(arena, result.kind_counts[k]);
@@ -61,7 +62,7 @@ auto dk::log_frame_end(Arena *arena) noexcept -> LogFrameResult {
 				u64 write_idx = 0;
 				u64 kind_write_idx[LOG_KIND_COUNT] = {};
 				for (LogNode const *node = frame->first; node != nullptr; node = node->next) {
-					std::memcpy(result.string.data + write_offset, node->string.data, node->string.size);
+					std::memcpy(str + write_offset, node->string.data, node->string.size);
 					LogEntry *entry = &result.entries[write_idx];
 					entry->offset = write_offset;
 					entry->size = static_cast<u32>(node->string.size);
