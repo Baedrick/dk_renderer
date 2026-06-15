@@ -550,18 +550,18 @@ auto dk::dkr_frame() noexcept -> b8 {
 			// TODO(Dedrick): Remove
 			if (ImGui::Button("[Debug] Emit 10 logs")) {
 				static u64 gen = 0;
-				String8 const categories[LOG_KIND_COUNT] = { String8{}, "ERROR:"_str8 };
+				String8 const categories[LOG_KIND_COUNT] = { String8{}, "ERROR: "_str8 };
 				String8 const words[] = { "Bumfuzzled"_str8, "Cattywampus"_str8, "Snickersnee"_str8, "Abibliophobia"_str8, "Absquatulate"_str8, "Nincompoop"_str8, "Pauciloquent"_str8 };
 				for (u64 n = 0; n < 10; ++n) {
 					String8 const category = categories[gen % array_count(categories)];
 					String8 const word = words[gen % array_count(words)];
 					switch (gen % array_count(categories)) {
 						case LOG_KIND_INFO: DK_LOG_INFOF(
-							"[%05d] %.*s Hello, current time is %.1f, here's a word: '%.*s'\n",
+							"[%05d] %.*sHello, current time is %.1f, here's a word: '%.*s'\n",
 							ImGui::GetFrameCount(), DK_STR8_VARG(category), ImGui::GetTime(), DK_STR8_VARG(word)
 						); break;
 						case LOG_KIND_ERROR: DK_LOG_ERRORF(
-							"[%05d] %.*s Hello, current time is %.1f, here's a word: '%.*s'\n",
+							"[%05d] %.*sHello, current time is %.1f, here's a word: '%.*s'\n",
 							ImGui::GetFrameCount(), DK_STR8_VARG(category), ImGui::GetTime(), DK_STR8_VARG(word)
 						); break;
 					}
@@ -572,7 +572,6 @@ auto dk::dkr_frame() noexcept -> b8 {
 		ImGui::End();
 
 		//~ Dedrick: @ui_console Console Widget.
-		// TODO(Dedrick): Clean up.
 		if (dkr_context->console_is_open) {
 			ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
@@ -584,62 +583,65 @@ auto dk::dkr_frame() noexcept -> b8 {
 				}
 				ImGui::SameLine();
 				ImGui::TextUnformatted("Filters:");
-				struct { LogKind kind; char const *name; } const filters[] = {
+				struct { LogKind kind; char const *name; }
+				const filters[] = {
 					{ LOG_KIND_INFO, "Info" },
 					{ LOG_KIND_ERROR, "Error" }
 				};
 				for (u32 f = 0; f < array_count(filters); ++f) {
 					ImGui::SameLine();
-					u32 const bit = 1u << filters[f].kind;
-					b8 active = (console->hide_mask & bit) == 0;
-					if (ImGui::Checkbox(filters[f].name, &active)) {
-						if (active) { console->hide_mask &= ~bit; }
-						else { console->hide_mask |= bit; }
+					u32 const filter_bit = 1u << filters[f].kind;
+					b8 filter_active = (console->hide_mask & filter_bit) == 0;
+					if (ImGui::Checkbox(filters[f].name, &filter_active)) {
+						if (filter_active) {
+							console->hide_mask &= ~filter_bit;
+						}
+						else {
+							console->hide_mask |= filter_bit;
+						}
 					}
 				}
 				ImGui::Separator();
 
 				//~ Dedrick: Text region.
-				if (ImGui::BeginChild("LogRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar)) {
+				if (ImGui::BeginChild("TextRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar)) {
+					//~ Dedrick: Filter lines to show.
 					u64 const max_possible_visible = console->line_write_pos - console->line_read_pos;
 					u64 *visible_indices = arena_push_array<u64>(scratch.arena, max_possible_visible);
 					u64 visible_count = 0;
-					for (u64 i = console->line_read_pos; i < console->line_write_pos; ++i) {
-						DKR_ConsoleLine const *line = &console->lines[i % console->max_lines];
+					for (u64 visible_idx = console->line_read_pos; visible_idx < console->line_write_pos; ++visible_idx) {
+						DKR_ConsoleLine const *line = &console->lines[visible_idx % console->max_lines];
 						if ((console->hide_mask & (1u << line->kind)) == 0) {
-							visible_indices[visible_count] = i;
+							visible_indices[visible_count] = visible_idx;
 							visible_count += 1;
 						}
 					}
 
-					// NOTE(Dedrick): Push text closer to each other.
-					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1));
-
+					//~ Dedrick: Clip and draw lines.
 					ImGuiListClipper clipper = {};
 					clipper.Begin(static_cast<int>(visible_count));
 					while (clipper.Step()) {
 						for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+							//~ Dedrick: Clip line.
 							u64 const line_idx = visible_indices[i];
 							DKR_ConsoleLine const *line = &console->lines[line_idx % console->max_lines];
 							u64 const text_idx = line->offset % console->text_buffer_size;
 							char const *text_start = reinterpret_cast<char const *>(console->text_buffer + text_idx);
 							char const *text_end = text_start + line->size;
 
-							ImVec4 color;
-							bool has_color = false;
+							//~ Dedrick: Draw line.
+							ImVec4 color = ImGui::GetStyle().Colors[ImGuiCol_Text];
 							switch (line->kind) {
-								case LOG_KIND_INFO:  { color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f); has_color = true; } break;
-								case LOG_KIND_ERROR: { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; } break;
-								default: break;
+								case LOG_KIND_ERROR: { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); } break;
 							}
-							if (has_color) { ImGui::PushStyleColor(ImGuiCol_Text, color); }
+							ImGui::PushStyleColor(ImGuiCol_Text, color);
 							ImGui::TextUnformatted(text_start, text_end);
-							if (has_color) { ImGui::PopStyleColor(); }
+							ImGui::PopStyleColor();
 						}
 					}
 					clipper.End();
-					ImGui::PopStyleVar();
 
+					//~ Dedrick: Autoscroll at bottom.
 					if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
 						ImGui::SetScrollHereY(1.0f);
 					}
@@ -648,6 +650,8 @@ auto dk::dkr_frame() noexcept -> b8 {
 			}
 			ImGui::End();
 		}
+
+		//~ Dedrick: Build UI draw list.
 		ImGui::Render();
 	}
 
