@@ -67,8 +67,7 @@ namespace dk {
 		u64 max_lines;
 		u64 line_write_pos;
 		u64 line_read_pos;
-		u32 filter_mask;
-		b8 auto_scroll;
+		u32 hide_mask;
 	};
 
 	struct DKR_Context {

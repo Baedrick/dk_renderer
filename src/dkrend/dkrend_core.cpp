@@ -292,8 +292,6 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		console->text_buffer = arena_push_array<u8>(dkr_context->arena, console->text_buffer_size);
 		console->max_lines = 4096;
 		console->lines = arena_push_array<DKR_ConsoleLine>(dkr_context->arena, console->max_lines);
-		console->filter_mask = static_cast<u32>(-1);
-		console->auto_scroll = true;
 	}
 
 	//~ Dedrick: Load pak.
@@ -570,22 +568,19 @@ auto dk::dkr_frame() noexcept -> b8 {
 						console->line_read_pos = console->line_write_pos;
 					}
 					ImGui::SameLine();
-					ImGui::Checkbox("Auto-scroll", &console->auto_scroll);
-					ImGui::SameLine();
 					ImGui::TextUnformatted("Filters:");
-					ImGui::SameLine();
 					struct { LogKind kind; char const *name; } const filters[] = {
 						{ LOG_KIND_INFO, "Info" },
 						{ LOG_KIND_ERROR, "Error" }
 					};
 					for (u32 f = 0; f < array_count(filters); ++f) {
+						ImGui::SameLine();
 						u32 const bit = 1u << filters[f].kind;
-						b8 active = (console->filter_mask & bit) != 0;
+						b8 active = (console->hide_mask & bit) == 0;
 						if (ImGui::Checkbox(filters[f].name, &active)) {
-							if (active) { console->filter_mask |= bit; }
-							else { console->filter_mask &= ~bit; }
+							if (active) { console->hide_mask &= ~bit; }
+							else { console->hide_mask |= bit; }
 						}
-						if (f < array_count(filters) - 1) { ImGui::SameLine(); }
 					}
 					ImGui::Separator();
 
@@ -596,7 +591,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 						u64 visible_count = 0;
 						for (u64 i = console->line_read_pos; i < console->line_write_pos; ++i) {
 							DKR_ConsoleLine const *line = &console->lines[i % console->max_lines];
-							if (console->filter_mask & (1u << line->kind)) {
+							if ((console->hide_mask & (1u << line->kind)) == 0) {
 								visible_indices[visible_count] = i;
 								visible_count += 1;
 							}
@@ -630,7 +625,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 						clipper.End();
 						ImGui::PopStyleVar();
 
-						if (console->auto_scroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+						if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
 							ImGui::SetScrollHereY(1.0f);
 						}
 					}
