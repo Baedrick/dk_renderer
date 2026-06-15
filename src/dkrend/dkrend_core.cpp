@@ -568,86 +568,86 @@ auto dk::dkr_frame() noexcept -> b8 {
 					gen += 1;
 				}
 			}
-
-			//~ Dedrick: @ui_console Console Widget.
-			// TODO(Dedrick): Clean up.
-			if (dkr_context->console_is_open) {
-				ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-				if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
-					DKR_Console *const console = &dkr_context->console;
-
-					//~ Dedrick: Toolbar.
-					if (ImGui::Button("Clear")) {
-						console->line_read_pos = console->line_write_pos;
-					}
-					ImGui::SameLine();
-					ImGui::TextUnformatted("Filters:");
-					struct { LogKind kind; char const *name; } const filters[] = {
-						{ LOG_KIND_INFO, "Info" },
-						{ LOG_KIND_ERROR, "Error" }
-					};
-					for (u32 f = 0; f < array_count(filters); ++f) {
-						ImGui::SameLine();
-						u32 const bit = 1u << filters[f].kind;
-						b8 active = (console->hide_mask & bit) == 0;
-						if (ImGui::Checkbox(filters[f].name, &active)) {
-							if (active) { console->hide_mask &= ~bit; }
-							else { console->hide_mask |= bit; }
-						}
-					}
-					ImGui::Separator();
-
-					//~ Dedrick: Text region.
-					if (ImGui::BeginChild("LogRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar)) {
-						u64 const max_possible_visible = console->line_write_pos - console->line_read_pos;
-						u64 *visible_indices = arena_push_array<u64>(scratch.arena, max_possible_visible);
-						u64 visible_count = 0;
-						for (u64 i = console->line_read_pos; i < console->line_write_pos; ++i) {
-							DKR_ConsoleLine const *line = &console->lines[i % console->max_lines];
-							if ((console->hide_mask & (1u << line->kind)) == 0) {
-								visible_indices[visible_count] = i;
-								visible_count += 1;
-							}
-						}
-
-						// NOTE(Dedrick): Push text closer to each other.
-						ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1));
-
-						ImGuiListClipper clipper = {};
-						clipper.Begin(static_cast<int>(visible_count));
-						while (clipper.Step()) {
-							for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
-								u64 const line_idx = visible_indices[i];
-								DKR_ConsoleLine const *line = &console->lines[line_idx % console->max_lines];
-								u64 const text_idx = line->offset % console->text_buffer_size;
-								char const *text_start = reinterpret_cast<char const *>(console->text_buffer + text_idx);
-								char const *text_end = text_start + line->size;
-
-								ImVec4 color;
-								bool has_color = false;
-								switch (line->kind) {
-									case LOG_KIND_INFO:  { color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f); has_color = true; } break;
-									case LOG_KIND_ERROR: { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; } break;
-									default: break;
-								}
-								if (has_color) { ImGui::PushStyleColor(ImGuiCol_Text, color); }
-								ImGui::TextUnformatted(text_start, text_end);
-								if (has_color) { ImGui::PopStyleColor(); }
-							}
-						}
-						clipper.End();
-						ImGui::PopStyleVar();
-
-						if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-							ImGui::SetScrollHereY(1.0f);
-						}
-					}
-					ImGui::EndChild();
-				}
-				ImGui::End();
-			}
 		}
 		ImGui::End();
+
+		//~ Dedrick: @ui_console Console Widget.
+		// TODO(Dedrick): Clean up.
+		if (dkr_context->console_is_open) {
+			ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
+				DKR_Console *const console = &dkr_context->console;
+
+				//~ Dedrick: Toolbar.
+				if (ImGui::Button("Clear")) {
+					console->line_read_pos = console->line_write_pos;
+				}
+				ImGui::SameLine();
+				ImGui::TextUnformatted("Filters:");
+				struct { LogKind kind; char const *name; } const filters[] = {
+					{ LOG_KIND_INFO, "Info" },
+					{ LOG_KIND_ERROR, "Error" }
+				};
+				for (u32 f = 0; f < array_count(filters); ++f) {
+					ImGui::SameLine();
+					u32 const bit = 1u << filters[f].kind;
+					b8 active = (console->hide_mask & bit) == 0;
+					if (ImGui::Checkbox(filters[f].name, &active)) {
+						if (active) { console->hide_mask &= ~bit; }
+						else { console->hide_mask |= bit; }
+					}
+				}
+				ImGui::Separator();
+
+				//~ Dedrick: Text region.
+				if (ImGui::BeginChild("LogRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar)) {
+					u64 const max_possible_visible = console->line_write_pos - console->line_read_pos;
+					u64 *visible_indices = arena_push_array<u64>(scratch.arena, max_possible_visible);
+					u64 visible_count = 0;
+					for (u64 i = console->line_read_pos; i < console->line_write_pos; ++i) {
+						DKR_ConsoleLine const *line = &console->lines[i % console->max_lines];
+						if ((console->hide_mask & (1u << line->kind)) == 0) {
+							visible_indices[visible_count] = i;
+							visible_count += 1;
+						}
+					}
+
+					// NOTE(Dedrick): Push text closer to each other.
+					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1));
+
+					ImGuiListClipper clipper = {};
+					clipper.Begin(static_cast<int>(visible_count));
+					while (clipper.Step()) {
+						for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+							u64 const line_idx = visible_indices[i];
+							DKR_ConsoleLine const *line = &console->lines[line_idx % console->max_lines];
+							u64 const text_idx = line->offset % console->text_buffer_size;
+							char const *text_start = reinterpret_cast<char const *>(console->text_buffer + text_idx);
+							char const *text_end = text_start + line->size;
+
+							ImVec4 color;
+							bool has_color = false;
+							switch (line->kind) {
+								case LOG_KIND_INFO:  { color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f); has_color = true; } break;
+								case LOG_KIND_ERROR: { color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); has_color = true; } break;
+								default: break;
+							}
+							if (has_color) { ImGui::PushStyleColor(ImGuiCol_Text, color); }
+							ImGui::TextUnformatted(text_start, text_end);
+							if (has_color) { ImGui::PopStyleColor(); }
+						}
+					}
+					clipper.End();
+					ImGui::PopStyleVar();
+
+					if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+						ImGui::SetScrollHereY(1.0f);
+					}
+				}
+				ImGui::EndChild();
+			}
+			ImGui::End();
+		}
 		ImGui::Render();
 	}
 
