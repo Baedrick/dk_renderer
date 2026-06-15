@@ -262,6 +262,17 @@ auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_ass
 	return success;
 }
 
+auto dk::dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void {
+	if (console->line_write_pos - console->line_read_pos >= console->max_lines) {
+		console->line_read_pos += 1;
+	}
+	DKR_ConsoleLine *line = &console->lines[console->line_write_pos % console->max_lines];
+	line->offset = offset;
+	line->size = size;
+	line->kind = kind;
+	console->line_write_pos += 1;
+}
+
 auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	(void)cmd_line;
@@ -536,6 +547,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 				dkr_push_event_kind(DKR_EVENT_KIND_RELOAD_PAK);
 			}
 
+			// TODO(Dedrick): Remove
 			if (ImGui::Button("[Debug] Emit 10 logs")) {
 				static u64 gen = 0;
 				String8 const categories[LOG_KIND_COUNT] = { String8{}, "ERROR:"_str8 };
@@ -558,6 +570,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 			}
 
 			//~ Dedrick: @ui_console Console Widget.
+			// TODO(Dedrick): Clean up.
 			if (dkr_context->console_is_open) {
 				ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
 				if (ImGui::Begin("Console", &dkr_context->console_is_open)) {
@@ -668,8 +681,6 @@ auto dk::dkr_frame() noexcept -> b8 {
 			//~ Dedrick: Parse to console.
 			DKR_Console *const console = &dkr_context->console;
 			u64 text_write = console->text_write_pos;
-			u64 line_write = console->line_write_pos;
-			u64 line_read  = console->line_read_pos;
 			u64 line_start_offset = console->text_write_pos;
 			u32 line_size = 0;
 			LogKind line_kind = log.entries[0].kind;
@@ -680,20 +691,20 @@ auto dk::dkr_frame() noexcept -> b8 {
 				if (chunk_size == 0) {
 					continue;
 				}
+
+				//~ Dedrick: Flush pending line when log kind changes.
+				if (line_size > 0 && line_kind != entry->kind) {
+					dkr_console_commit_line(console, line_start_offset, line_size, line_kind);
+					line_start_offset = text_write;
+					line_size = 0;
+				}
 				line_kind = entry->kind;
 
 				//~ Dedrick: Ensure lines occupy contiguous memory.
 				u64 write_idx = text_write % console->text_buffer_size;
 				if (write_idx + chunk_size > console->text_buffer_size) {
 					if (line_size > 0) {
-						if (line_write - line_read >= console->max_lines) {
-							line_read += 1;
-						}
-						DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
-						line->offset = line_start_offset;
-						line->size = line_size;
-						line->kind = line_kind;
-						line_write += 1;
+						dkr_console_commit_line(console, line_start_offset, line_size, line_kind);
 						line_size = 0;
 					}
 					u64 const skip_amount = console->text_buffer_size - write_idx;
@@ -711,23 +722,16 @@ auto dk::dkr_frame() noexcept -> b8 {
 					text_write += 1;
 					line_size += 1;
 					if (chunk[i] == '\n') {
-						if (line_write - line_read >= console->max_lines) {
-							line_read += 1;
-						}
-						DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
-						line->offset = line_start_offset;
-						line->size = line_size;
-						line->kind = line_kind;
-						line_write += 1;
+						dkr_console_commit_line(console, line_start_offset, line_size, line_kind);
 						line_start_offset = text_write;
 						line_size = 0;
 					}
 				}
 
 				//~ Dedrick: Advance console line ring buffer.
-				for (; line_read < line_write; ++line_read) {
-					DKR_ConsoleLine *oldest_line = &console->lines[line_read % console->max_lines];
-					bool const stomped = (text_write - oldest_line->offset) > console->text_buffer_size;
+				for (; console->line_read_pos < console->line_write_pos; ++console->line_read_pos) {
+					DKR_ConsoleLine *line = &console->lines[console->line_read_pos % console->max_lines];
+					b8 const stomped = (text_write - line->offset) > console->text_buffer_size;
 					if (!stomped) {
 						break;
 					}
@@ -735,20 +739,11 @@ auto dk::dkr_frame() noexcept -> b8 {
 
 				//~ Dedrick: Commit last line.
 				if (line_size > 0) {
-					if (line_write - line_read >= console->max_lines) {
-						line_read += 1;
-					}
-					DKR_ConsoleLine *line = &console->lines[line_write % console->max_lines];
-					line->offset = line_start_offset;
-					line->size = line_size;
-					line->kind = line_kind;
-					line_write += 1;
+					dkr_console_commit_line(console, line_start_offset, line_size, line_kind);
 				}
 
 				//~ Dedrick: Commit buffer positions.
 				console->text_write_pos = text_write;
-				console->line_write_pos = line_write;
-				console->line_read_pos = line_read;
 			}
 		}
 	}

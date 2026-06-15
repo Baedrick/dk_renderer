@@ -120,6 +120,8 @@ namespace dk {
 	auto dkr_asset_pak_path(Arena *arena) noexcept -> String8;
 	auto dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
 
+	auto dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void;
+
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
 	auto dkr_frame() noexcept -> b8;
 	auto dkr_shutdown() noexcept -> void;
