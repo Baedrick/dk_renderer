@@ -96,6 +96,7 @@
 - [ ][dkrend][Nice To Have] Hot-reloading of cooked model binaries
 - [ ][dkcook][Must Have] Inter-Process Communication with dkrend
 - [ ][Must Have] Asset engine stubs
+- [x][Must Have] Import cgltf
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Path helpers and normalization
