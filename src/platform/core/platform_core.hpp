@@ -106,6 +106,7 @@ namespace dk {
 	auto plt_write_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;
 	auto plt_write_bytes_list_to_file_path(String8 path, Buffer8List const *list) noexcept -> b8;
 	auto plt_append_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> b8;
+	auto plt_append_text_to_file_path(String8 path, String8 text) noexcept -> b8;
 
 	auto plt_dir_iter_begin(String8 dir, PLT_DirIterFlags flags) noexcept -> PLT_Handle;
 	auto plt_dir_iter_next(Arena *arena, PLT_Handle dir_iter, PLT_DirIterResult *out_result) noexcept -> b8;

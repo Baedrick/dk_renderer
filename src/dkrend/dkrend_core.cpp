@@ -691,7 +691,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 		ZoneScopedN("collect logs");
 		LogFrameResult const log = log_frame_end(scratch.arena);
 		if (log.count > 0) {
-			// TODO(Dedrick): Append to log file.
+			plt_append_text_to_file_path(dkr_context->log_path, log.string);
 
 			//~ Dedrick: Parse to console.
 			DKR_Console *const console = &dkr_context->console;

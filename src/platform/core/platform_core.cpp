@@ -69,3 +69,17 @@ auto dk::plt_append_bytes_to_file_path(String8 path, Buffer8 bytes) noexcept -> 
 	}
 	return good;
 }
+
+auto dk::plt_append_text_to_file_path(String8 path, String8 text) noexcept -> b8 {
+	b8 good = false;
+	if (text.size != 0) {
+		PLT_Handle const file = plt_file_open(path, PLT_ACCESS_FLAG_APPEND);
+		if (file != plt_handle_invalid()) {
+			u64 const file_pos = plt_attributes_from_file(file).size;
+			u64 const bytes_written = plt_file_write(file, file_pos, file_pos + text.size, text.data);
+			good = bytes_written == text.size;
+			plt_file_close(file);
+		}
+	}
+	return good;
+}
