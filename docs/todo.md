@@ -96,8 +96,6 @@
 - [ ][dkrend][Nice To Have] Hot-reloading of cooked model binaries
 - [ ][dkcook][Must Have] Inter-Process Communication with dkrend
 - [ ][Must Have] Asset engine stubs
-- [x][Must Have] Import cgltf
-- [x][Must Have] Import meshoptimizer
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Path helpers and normalization
@@ -111,6 +109,8 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Import cgltf
+- [x][Must Have] Import meshoptimizer
 - [x][Must Have] Manual initialization of layers before entry point
 - [x][Must Have] Append logs to log file
 - [x][Must Have] Append string to file platform helper
