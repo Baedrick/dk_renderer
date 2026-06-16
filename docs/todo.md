@@ -96,12 +96,12 @@
 - [ ][dkrend][Nice To Have] Hot-reloading of cooked model binaries
 - [ ][dkcook][Must Have] Inter-Process Communication with dkrend
 - [ ][Must Have] Asset engine stubs
-- [ ][Must Have] Manual initialization of layers before entry point
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
-- [ ][Must Have] Real-time global illumination (Blurred Froxels, VXGI, DDGI, Surfels)
+- [ ][Must Have] Real-time global illumination (Voxel Cone Tracing)
+- [ ][Should Have] Multi-core by default, SPMD lane abstraction
 - [ ][Should Have] Change writing buffer list to use ring buffer for small writes to disk
 - [ ][Should Have] Light clustering for shading
 - [ ][Should Have] Render Graph resource aliasing and allocation
@@ -109,6 +109,7 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Manual initialization of layers before entry point
 - [x][Must Have] Append logs to log file
 - [x][Must Have] Append string to file platform helper
 - [x][Must Have] Structure log frame result as buffer of text and lines

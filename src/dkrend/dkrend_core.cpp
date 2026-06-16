@@ -369,6 +369,19 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	dkr_context->last_frame_time_us = plt_now_microseconds();
 }
 
+auto dk::dkr_shutdown() noexcept -> void {
+	ZoneScoped;
+	// NOTE(Dedrick): We intentionally skip freeing memory arenas and internal
+	// resources for a faster shutdown. The OS will bulk-reclaim the process
+	// memory. We only clean up resources that require graceful termination.
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplRgfw_Shutdown();
+	ImGui::DestroyContext();
+	log_release(dkr_context->log);
+	rhi_window_unequip(dkr_context->window);
+	plt_window_close(dkr_context->window);
+}
+
 auto dk::dkr_frame() noexcept -> b8 {
 	ZoneScoped;
 	TempArena const scratch = scratch_begin(nullptr, 0);
@@ -764,17 +777,4 @@ auto dk::dkr_frame() noexcept -> b8 {
 	}
 	scratch_end(scratch);
 	return dkr_context->quit;
-}
-
-auto dk::dkr_shutdown() noexcept -> void {
-	ZoneScoped;
-	// NOTE(Dedrick): We intentionally skip freeing memory arenas and internal
-	// resources for a faster shutdown. The OS will bulk-reclaim the process
-	// memory. We only clean up resources that require graceful termination.
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplRgfw_Shutdown();
-	ImGui::DestroyContext();
-	log_release(dkr_context->log);
-	rhi_window_unequip(dkr_context->window);
-	plt_window_close(dkr_context->window);
 }

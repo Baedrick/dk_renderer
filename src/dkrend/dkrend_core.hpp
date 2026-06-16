@@ -127,6 +127,6 @@ namespace dk {
 	auto dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void;
 
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
-	auto dkr_frame() noexcept -> b8;
 	auto dkr_shutdown() noexcept -> void;
+	auto dkr_frame() noexcept -> b8;
 }

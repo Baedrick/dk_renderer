@@ -14,19 +14,19 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	}
 	CmdLine cmd_line = cmd_line_from_string_list(scratch.arena, cmd_line_strings);
 
-#if defined(DK_PLATFORM_GFX_INCLUDED)
+#if defined(DK_PLATFORM_GFX_INCLUDED) && !defined(DK_PLATFORM_GFX_INIT_MANUAL)
 	plt_gfx_init();
 #endif
-#if defined(DK_RHI_INCLUDED)
+#if defined(DK_RHI_INCLUDED) && !defined(DK_RHI_INIT_MANUAL)
 	rhi_init(&cmd_line);
 #endif
 
 	int const result = entry_point(&cmd_line);
 
-#if defined(DK_RHI_INCLUDED)
+#if defined(DK_RHI_INCLUDED) && !defined(DK_RHI_INIT_MANUAL)
 	rhi_shutdown();
 #endif
-#if defined(DK_PLATFORM_GFX_INCLUDED)
+#if defined(DK_PLATFORM_GFX_INCLUDED) && !defined(DK_PLATFORM_GFX_INIT_MANUAL)
 	plt_gfx_shutdown();
 #endif
 
