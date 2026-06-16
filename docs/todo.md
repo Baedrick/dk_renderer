@@ -87,31 +87,16 @@
     skills through the preparation and delivery of a project presentation, and
     optionally demonstration of the completed works
 
-### dkrend
-- [ ][Must Have] Reading of cooker logs to display
-- [ ][Must Have] Console in UI to show logs
-- [ ][Must Have] Hello Model to validate graphics code
-- [ ][Must Have] Inter-Process Communication with Toy Cooker
-- [ ][Must Have] View imported model resources in the UI as a tree of resources
-- [ ][Nice To Have] Hot-reloading of cooked model binaries
-- [x][Must Have] Stable dt frame timing calculation
-- [x][Must Have] Clean up state resource when hot reloading
-- [x][Must Have] Hot reloading packed resource format during runtime
-- [x][Must Have] Reading packed resource format during initialization
-- [x][Must Have] Application command/event list
-- [x][Must Have] ImGui show demo window
-- [x][Must Have] Hello Triangle to validate graphics code
-- [x][Must Have] Hello Triangle shader code
-- [x][Must Have] Top level functions for init, update, and shutdown
-- [x][Must Have] Update build script to have viewer as a build target
-
-### dkcook
-- [ ][Must Have] Inter-Process Communication with Toy Viewer
-- [x][Must Have] Top level functions for entry to cooking
-- [x][Must Have] Update build script to have cooker as a build target
-
-### Codebase
-- [ ][Must Have] Log functions to concatinate log strings into a string list
+### Tasks
+- [ ][dkrend][Must Have] Reading of cooker logs to display
+- [ ][dkrend][Must Have] Console in UI to show logs
+- [ ][dkrend][Must Have] Hello Model to validate graphics code
+- [ ][dkrend][Must Have] Inter-Process Communication with Toy Cooker
+- [ ][dkrend][Must Have] View imported model resources in the UI as a tree of resources
+- [ ][dkrend][Nice To Have] Hot-reloading of cooked model binaries
+- [ ][dkcook][Must Have] Inter-Process Communication with dkrend
+- [ ][Must Have] Asset engine stubs
+- [ ][Must Have] Manual initialization of layers before entry point
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Path helpers and normalization
@@ -124,6 +109,23 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Append logs to log file
+- [x][Must Have] Append string to file platform helper
+- [x][Must Have] Structure log frame result as buffer of text and lines
+
+### Milestone 1 Completed
+- [x][dkrend][Must Have] Stable dt frame timing calculation
+- [x][dkrend][Must Have] Clean up state resource when hot reloading
+- [x][dkrend][Must Have] Hot reloading packed resource format during runtime
+- [x][dkrend][Must Have] Reading packed resource format during initialization
+- [x][dkrend][Must Have] Application command/event list
+- [x][dkrend][Must Have] ImGui show demo window
+- [x][dkrend][Must Have] Hello Triangle to validate graphics code
+- [x][dkrend][Must Have] Hello Triangle shader code
+- [x][dkrend][Must Have] Top level functions for init, update, and shutdown
+- [x][dkrend][Must Have] Update build script to have viewer as a build target
+- [x][dkcook][Must Have] Top level functions for entry to cooking
+- [x][dkcook][Must Have] Update build script to have cooker as a build target
 - [x][Must Have] Update resource paking tool logic to pack in a sane order
 - [x][Must Have] Update resouce packing format to support dds texture
 - [x][Must Have] Add shared read and write support to file io
@@ -216,5 +218,3 @@
 - [x][Must Have] Move main from viewer compile file to platform layer for common code initialization
 - [x][Must Have] Create stub files and core defines for the base layer
 - [x][Must Have] Batch script for building as unity build
-
-### Milestone 1 Completed
