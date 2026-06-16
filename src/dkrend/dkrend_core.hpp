@@ -6,8 +6,9 @@ namespace dk {
 	enum DKR_EventKind : u32 {
 		DKR_EVENT_KIND_NULL = 0,
 		DKR_EVENT_KIND_QUIT,
-		DKR_EVENT_KIND_OPEN_CONSOLE,
+		DKR_EVENT_KIND_UPDATE_TARGET_FRAME_RATE,
 		DKR_EVENT_KIND_RELOAD_PAK,
+		DKR_EVENT_KIND_OPEN_CONSOLE,
 		DKR_EVENT_KIND_COUNT
 	};
 
@@ -102,6 +103,7 @@ namespace dk {
 
 		//~ Dedrick: Window.
 		RGFW_window *window;
+		RGFW_monitor const *monitor;
 
 		//~ Dedrick: Console.
 		b8 console_is_open;
@@ -116,6 +118,8 @@ namespace dk {
 	auto dkr_push_event(DKR_Event const *event) noexcept -> void;
 	auto dkr_push_event_kind(DKR_EventKind kind) noexcept -> void;
 	auto dkr_next_event(DKR_Event **event) noexcept -> b8;
+
+	auto dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void;
 
 	auto dkr_asset_pak_path(Arena *arena) noexcept -> String8;
 	auto dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;

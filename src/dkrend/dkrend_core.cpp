@@ -42,6 +42,22 @@ auto dk::dkr_next_event(DKR_Event **event) noexcept -> b8 {
 	return *event != nullptr;
 }
 
+auto dk::dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void {
+	f32 target_refresh_rate = 60.0f;
+	if (monitor->mode.refreshRate > 0.0f) {
+		target_refresh_rate = monitor->mode.refreshRate;
+	}
+	dkr_context->target_frame_time_us = static_cast<s64>(1e+6f / target_refresh_rate);
+	dkr_context->vsync_max_error_us = 200; // 0.2ms
+	for (u32 i = 0; i < array_count(dkr_context->snap_frequencies); ++i) {
+		dkr_context->snap_frequencies[i] = dkr_context->target_frame_time_us * (i + 1);
+	}
+	for (u32 i = 0; i < array_count(dkr_context->time_averager); ++i) {
+		dkr_context->time_averager[i] = dkr_context->target_frame_time_us;
+	}
+	dkr_context->time_averager_residual = 0;
+}
+
 auto dk::dkr_asset_pak_path(Arena *arena) noexcept -> String8 {
 	return str8f(arena, "%.*s/dkrend.pak", DK_STR8_VARG(plt_get_process_info()->binary_dir));
 }
@@ -337,26 +353,9 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 
 	//~ Dedrick: Set up main window.
 	dkr_context->window = plt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
+	dkr_context->monitor = RGFW_window_getMonitor(dkr_context->window);
+	dkr_target_frame_time_update(dkr_context->monitor);
 	rhi_window_equip(dkr_context->window);
-
-	//~ Dedrick: Pick target frame time.
-	// TODO(Dedrick): Query vsync when window is moved.
-	{
-		f32 target_refresh_rate = 60.0f;
-		RGFW_monitor const *monitor = RGFW_window_getMonitor(dkr_context->window);
-		if (monitor->mode.refreshRate > 0.0f) {
-			target_refresh_rate = monitor->mode.refreshRate;
-		}
-		dkr_context->target_frame_time_us = static_cast<s64>(1e+6f / target_refresh_rate);
-		dkr_context->vsync_max_error_us = 200; // 0.2ms
-		for (u32 i = 0; i < array_count(dkr_context->snap_frequencies); ++i) {
-			dkr_context->snap_frequencies[i] = dkr_context->target_frame_time_us * (i + 1);
-		}
-		for (u32 i = 0; i < array_count(dkr_context->time_averager); ++i) {
-			dkr_context->time_averager[i] = dkr_context->target_frame_time_us;
-		}
-		dkr_context->time_averager_residual = 0;
-	}
 
 	//~ Dedrick: Initialize ImGui.
 	IMGUI_CHECKVERSION();
@@ -433,6 +432,14 @@ auto dk::dkr_frame() noexcept -> b8 {
 					dkr_push_event_kind(DKR_EVENT_KIND_QUIT);
 					break;
 				}
+				case RGFW_windowMoved: {
+					RGFW_monitor const *monitor = RGFW_window_getMonitor(dkr_context->window);
+					if (monitor != dkr_context->monitor) {
+						dkr_context->monitor = monitor;
+						dkr_push_event_kind(DKR_EVENT_KIND_UPDATE_TARGET_FRAME_RATE);
+					}
+					break;
+				}
 			}
 		}
 	}
@@ -444,6 +451,10 @@ auto dk::dkr_frame() noexcept -> b8 {
 			switch (event->kind) {
 				case DKR_EVENT_KIND_QUIT: {
 					dkr_context->quit = true;
+					break;
+				}
+				case DKR_EVENT_KIND_UPDATE_TARGET_FRAME_RATE: {
+					dkr_target_frame_time_update(dkr_context->monitor);
 					break;
 				}
 				case DKR_EVENT_KIND_RELOAD_PAK: {
