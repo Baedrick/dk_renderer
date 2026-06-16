@@ -97,6 +97,7 @@
 - [ ][dkcook][Must Have] Inter-Process Communication with dkrend
 - [ ][Must Have] Asset engine stubs
 - [x][Must Have] Import cgltf
+- [x][Must Have] Import meshoptimizer
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Path helpers and normalization
