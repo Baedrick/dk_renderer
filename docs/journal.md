@@ -1,3 +1,5 @@
+### 2026-06-16: Renderer Console
+
 ### 2026-06-13: Milestone 1 Completed
 I had to rework the schedule today while drafting the capstone proposal. The
 original timeline was too packed, and the updated version probably still is, but
