@@ -95,6 +95,7 @@
 - [ ][dkrend][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][dkrend][Nice To Have] Hot-reloading of cooked model binaries
 - [ ][dkcook][Must Have] Inter-Process Communication with dkrend
+- [ ][Must Have] Fix cyclic dependecy of base and platform layer
 - [ ][Must Have] Asset engine stubs
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
