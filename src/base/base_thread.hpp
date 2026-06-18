@@ -55,7 +55,7 @@ namespace dk {
 
 	auto semaphore_alloc(u32 initial_count, u32 max_count, String8 name) noexcept -> Semaphore;
 	auto semaphore_release(Semaphore semaphore) noexcept -> void;
-	auto semaphore_open(Semaphore name) noexcept -> Semaphore;
+	auto semaphore_open(String8 name) noexcept -> Semaphore;
 	auto semaphore_close(Semaphore semaphore) noexcept -> void;
 	auto semaphore_wait(Semaphore semaphore, u64 end_time_us) noexcept -> b8;
 	auto semaphore_signal(Semaphore semaphore) noexcept -> void;

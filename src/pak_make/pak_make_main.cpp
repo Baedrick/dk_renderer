@@ -1,12 +1,10 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 #include "base/base.hpp"
-#include "platform/platform.hpp"
 #include "pak/pak.hpp"
 #include "pak_make/pak_make.hpp"
 
 #include "base/base.cpp"
-#include "platform/platform.cpp"
 #include "pak/pak.cpp"
 #include "pak_make/pak_make.cpp"
 
@@ -22,7 +20,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	Arena *const pm_arena = arena_alloc(&pm_arena_params);
 
 	//~ Dedrick: Extract paths.
-	String8 const binary_dir = plt_get_process_info()->binary_dir;
+	String8 const binary_dir = get_process_info()->binary_dir;
 	String8 const project_dir = path_chop_last_slash(binary_dir);
 	String8 const res_dir = str8f(pm_arena, "%.*s/res", DK_STR8_VARG(project_dir));
 	String8 const spirv_dir = str8f(pm_arena, "%.*s/src/shaders/.spirv", DK_STR8_VARG(project_dir));
@@ -42,8 +40,8 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 		//~ Dedrick: Search shader build directory for files to consider.
 		std::printf("searching shaders in %.*s...", DK_STR8_VARG(spirv_dir));
-		PLT_Handle const iter = plt_dir_iter_begin(spirv_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
-		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pm_arena, iter, &file); ) {
+		DirIter const iter = dir_iter_begin(spirv_dir, DIR_ITER_FLAG_SKIP_FOLDERS);
+		for (DirIterResult file = {}; dir_iter_next(pm_arena, iter, &file); ) {
 			if (!str8_equals(path_skip_last_period(file.name), "spv"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
 				continue;
 			}
@@ -65,14 +63,14 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 				}
 			}
 		}
-		plt_dir_iter_end(iter);
+		dir_iter_end(iter);
 		std::printf(" found %llu\n", shader_task_count);
 
 		//~ Dedrick: Load shaders.
 		std::printf("processing shaders...");
 		PAKM_ShaderList shaders_list = {};
 		for (ShaderTaskNode const *task = first_shader_task; task != nullptr; task = task->next) {
-			Buffer8 const binary = plt_read_bytes_from_file_path(pm_arena, task->binary_path);
+			Buffer const binary = read_bytes_from_file_path(pm_arena, task->binary_path);
 			PAKM_ShaderNode *node = arena_push<PAKM_ShaderNode>(pm_arena);
 			node->shader.name = task->shader_name;
 			node->shader.binary = binary;
@@ -94,8 +92,8 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	String8List dds_file_paths = {};
 	{
 		std::printf("searching %.*s...", DK_STR8_VARG(res_dir));
-		PLT_Handle const iter = plt_dir_iter_begin(res_dir, PLT_DIR_ITER_FLAG_SKIP_FOLDERS);
-		for (PLT_DirIterResult file = {}; plt_dir_iter_next(pm_arena, iter, &file); ) {
+		DirIter const iter = dir_iter_begin(res_dir, DIR_ITER_FLAG_SKIP_FOLDERS);
+		for (DirIterResult file = {}; dir_iter_next(pm_arena, iter, &file); ) {
 			String8 const file_path = str8f(pm_arena, "%.*s/%.*s", DK_STR8_VARG(res_dir), DK_STR8_VARG(file.name));
 			String8 const file_ext = path_skip_last_period(file_path);
 			struct { String8 ext; String8List *file_paths_list; } const file_path_table[] = {
@@ -107,7 +105,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 				}
 			}
 		}
-		plt_dir_iter_end(iter);
+		dir_iter_end(iter);
 		std::printf(" %llu textures found\n", dds_file_paths.node_count);
 	}
 
@@ -156,7 +154,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		std::printf("parsing textures...");
 		for (String8Node const *path = dds_file_paths.first; path != nullptr; path = path->next) {
 			String8 const file_path = path->string;
-			Buffer8 const file_data = plt_read_bytes_from_file_path(pm_arena, file_path);
+			Buffer const file_data = read_bytes_from_file_path(pm_arena, file_path);
 			u8 *ptr = file_data.data;
 			u8 *const opl = file_data.data + file_data.size;
 
@@ -194,7 +192,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 						node->texture.depth = header->depth > 0 ? header->depth : 1;
 						node->texture.mip_count = header->mip_map_count > 0 ? header->mip_map_count : 1;
 						node->texture.name = tex_name;
-						node->texture.pixels = buf8(ptr, pixels_size);
+						node->texture.pixels = buf(ptr, pixels_size);
 						forward_list_queue_push(&textures_list.first, &textures_list.last, node);
 						textures_list.count += 1;
 					}
@@ -269,25 +267,25 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	}
 
 	//~ Dedrick: Build GPU data.
-	Buffer8Array gpu_data = {};
+	BufferArray gpu_data = {};
 	{
-		Buffer8List gpu_data_list = {};
+		BufferList gpu_data_list = {};
 
 		//~ Dedrick: Push data from shaders.
 		for (u64 shader_idx = 0; shader_idx < shaders.count; ++shader_idx) {
-			buf8_list_push(pm_arena, &gpu_data_list, shaders[shader_idx].binary);
+			buf_list_push(pm_arena, &gpu_data_list, shaders[shader_idx].binary);
 		}
 
 		//~ Dedrick: Push data from textures.
 		for (u64 texture_idx = 0; texture_idx < textures.count; ++texture_idx) {
-			buf8_list_push(pm_arena, &gpu_data_list, textures[texture_idx].pixels);
+			buf_list_push(pm_arena, &gpu_data_list, textures[texture_idx].pixels);
 		}
 
 		//~ Dedrick: Join all buffers.
-		gpu_data.data = arena_push_array<Buffer8>(pm_arena, gpu_data_list.node_count);
+		gpu_data.data = arena_push_array<Buffer>(pm_arena, gpu_data_list.node_count);
 		gpu_data.count = gpu_data_list.node_count;
 		u64 buffer_idx = 0;
-		for (Buffer8Node const *node = gpu_data_list.first; node != nullptr; node = node->next) {
+		for (BufferNode const *node = gpu_data_list.first; node != nullptr; node = node->next) {
 			gpu_data[buffer_idx++] = node->buffer;
 		}
 	}
@@ -310,7 +308,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		baked_gpu_data.gpu_entries = arena_push_array<GpuDataEntry>(pm_arena, baked_gpu_data.gpu_entries_count);
 		u64 offset_cursor = 0;
 		for (u64 buf_idx = 0; buf_idx < gpu_data.count; ++buf_idx) {
-			Buffer8 const buf = gpu_data[buf_idx];
+			Buffer const buf = gpu_data[buf_idx];
 			offset_cursor = align_pow2(offset_cursor, 16);
 			baked_gpu_data.gpu_entries[buf_idx + 1] = { offset_cursor, buf.size };
 			offset_cursor += buf.size;
@@ -320,7 +318,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		baked_gpu_data.gpu_data_size = offset_cursor;
 		baked_gpu_data.gpu_data = arena_push_array<PAK_SectionElementType_GpuData>(pm_arena, baked_gpu_data.gpu_data_size);
 		for (u64 buf_idx = 0; buf_idx < gpu_data.count; ++buf_idx) {
-			Buffer8 const buf = gpu_data[buf_idx];
+			Buffer const buf = gpu_data[buf_idx];
 			u64 const dst_offset = baked_gpu_data.gpu_entries[buf_idx + 1].offset;
 			std::memcpy(reinterpret_cast<u8 *>(baked_gpu_data.gpu_data) + dst_offset, buf.data, buf.size);
 		}
@@ -384,7 +382,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	}
 
 	//~ Dedrick: Serialize bundles.
-	Buffer8List output_blobs = {};
+	BufferList output_blobs = {};
 	{
 		PAK_Header *header = arena_push<PAK_Header>(pm_arena);
 		header->magic = PAK_MAGIC_CONSTANT;
@@ -393,15 +391,15 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		header->section_offset = sizeof(PAK_Header);
 
 		PAK_Section *pak_sections = arena_push_array<PAK_Section>(pm_arena, PAK_SECTION_KIND_COUNT);
-		buf8_list_push(pm_arena, &output_blobs, Buffer8{ reinterpret_cast<u8 *>(header), sizeof(PAK_Header) });
-		buf8_list_push(pm_arena, &output_blobs, Buffer8{ reinterpret_cast<u8 *>(pak_sections), PAK_SECTION_KIND_COUNT * sizeof(PAK_Section) });
+		buf_list_push(pm_arena, &output_blobs, Buffer{ reinterpret_cast<u8 *>(header), sizeof(PAK_Header) });
+		buf_list_push(pm_arena, &output_blobs, Buffer{ reinterpret_cast<u8 *>(pak_sections), PAK_SECTION_KIND_COUNT * sizeof(PAK_Section) });
 
 		for (u32 i = 0; i < PAK_SECTION_KIND_COUNT; ++i) {
-			buf8_list_push_align(pm_arena, &output_blobs, 16);
+			buf_list_push_align(pm_arena, &output_blobs, 16);
 			pak_sections[i].offset = output_blobs.total_size;
 			pak_sections[i].size = bundle.sections[i].size;
 			if (bundle.sections[i].size > 0) {
-				buf8_list_push(pm_arena, &output_blobs, Buffer8{ static_cast<u8 *>(bundle.sections[i].data), bundle.sections[i].size });
+				buf_list_push(pm_arena, &output_blobs, Buffer{ static_cast<u8 *>(bundle.sections[i].data), bundle.sections[i].size });
 			}
 		}
 
@@ -410,7 +408,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 	//~ Dedrick: Write blobs.
 	{
-		b8 const is_written = plt_write_bytes_list_to_file_path(out_path, &output_blobs);
+		b8 const is_written = write_bytes_list_to_file_path(out_path, &output_blobs);
 		if (is_written) {
 			std::printf("written to %.*s\n", DK_STR8_VARG(out_path));
 		}

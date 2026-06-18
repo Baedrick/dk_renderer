@@ -58,9 +58,9 @@ namespace dk {
 	auto write_bytes_list_to_file_path(String8 path, BufferList const *list) noexcept -> b8;
 	auto append_bytes_to_file_path(String8 path, Buffer bytes) noexcept -> b8;
 
-	auto read_text_from_file_path(Arena *arena, String8 path) noexcept -> String8;
-	auto write_text_to_file_path(String8 path, String8 text) noexcept -> b8;
-	auto append_text_to_file_path(String8 path, String8 text) noexcept -> b8;
+	auto read_string_from_file_path(Arena *arena, String8 path) noexcept -> String8;
+	auto write_string_to_file_path(String8 path, String8 str) noexcept -> b8;
+	auto append_string_to_file_path(String8 path, String8 str) noexcept -> b8;
 
 	auto file_open(String8 path, FileAccessFlags flags) noexcept -> File;
 	auto file_close(File file) noexcept -> void;

@@ -80,12 +80,12 @@ namespace dk {
 
 	extern W32_Context w32_context;
 
-	auto w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> PLT_FileFlags;
+	auto w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> FileFlags;
 
 	auto w32_sleep_ms_from_end_time_us(u64 end_time_us) noexcept -> DWORD;
 
-	auto w32_entity_alloc(PLT_W32_EntityKind kind) noexcept -> PLT_W32_Entity *;
-	auto w32_entity_release(PLT_W32_Entity *entity) noexcept -> void;
+	auto w32_entity_alloc(W32_EntityKind kind) noexcept -> W32_Entity *;
+	auto w32_entity_release(W32_Entity *entity) noexcept -> void;
 
 	auto w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> int;
 	auto w32_thread_entry_caller(void *params) noexcept -> DWORD;

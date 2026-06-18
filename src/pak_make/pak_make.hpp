@@ -3,7 +3,7 @@
 namespace dk {
 	struct PAKM_Shader {
 		String8 name;
-		Buffer8 binary;
+		Buffer binary;
 	};
 
 	struct PAKM_ShaderNode {
@@ -33,7 +33,7 @@ namespace dk {
 		u32 depth;
 		u32 mip_count;
 		String8 name;
-		Buffer8 pixels;
+		Buffer pixels;
 	};
 
 	struct PAKM_TextureNode {

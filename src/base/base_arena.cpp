@@ -12,7 +12,7 @@ auto dk::arena_alloc(ArenaParams const *params) noexcept -> Arena * {
 
 	if (memory == nullptr) [[unlikely]] {
 		// TODO(Dedrick): Fatal error graphical message.
-		plt_abort(1);
+		abort_self(1);
 	}
 
 	Arena *arena = static_cast<Arena *>(memory);
@@ -84,7 +84,7 @@ auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept ->
 		u8 *commit_ptr = reinterpret_cast<u8 *>(current) + current->committed;
 
 		if (!memory_commit(commit_ptr, commit_size)) {
-			plt_abort(1);
+			abort_self(1);
 		}
 		DK_ASAN_POISON_MEMORY_REGION(commit_ptr, commit_size);
 		current->committed = commit_pos_clamped;
@@ -100,7 +100,7 @@ auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept ->
 
 	if (result == nullptr) [[unlikely]] {
 		// TODO(Dedrick): Fatal error graphical message.
-		plt_abort(1);
+		abort_self(1);
 	}
 
 	return result;
@@ -129,7 +129,7 @@ auto dk::arena_pop_to(Arena *arena, u64 pos) noexcept -> void {
 	Arena *current = arena->current;
 	for (Arena *next = nullptr; current->base_pos >= clamped_pos; current = next) {
 		next = current->next;
-		plt_release(current, current->reserved);
+		memory_release(current, current->reserved);
 	}
 	arena->current = current;
 	u64 const new_pos = clamped_pos - current->base_pos;

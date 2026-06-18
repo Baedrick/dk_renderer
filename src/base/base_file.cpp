@@ -65,8 +65,8 @@ auto dk::append_bytes_to_file_path(String8 path, Buffer bytes) noexcept -> b8 {
 	if (bytes.size != 0) {
 		File const file = file_open(path, FILE_ACCESS_FLAG_APPEND);
 		if (is_valid(file)) {
-			u64 const file_pos = file_attributes_from_file(file).size;
-			u64 const bytes_written = file_file_write(file, file_pos, file_pos + bytes.size, bytes.data);
+			u64 const file_pos = attributes_from_file(file).size;
+			u64 const bytes_written = file_write(file, file_pos, file_pos + bytes.size, bytes.data);
 			good = bytes_written == bytes.size;
 			file_close(file);
 		}
@@ -80,7 +80,7 @@ auto dk::read_string_from_file_path(Arena *arena, String8 path) noexcept -> Stri
 	String8 result = {};
 	result.size = attr.size;
 	result.data = arena_push_array<u8>(arena, result.size);
-	u64 const actual_read_size = file_read(file, 0, result.size, result.data);
+	u64 const actual_read_size = file_read(file, 0, result.size, const_cast<u8 *>(result.data));
 	if (actual_read_size < result.size) {
 		arena_pop(arena, result.size - actual_read_size);
 		result.size = actual_read_size;

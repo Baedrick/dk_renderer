@@ -20,7 +20,7 @@ auto dk::BufferArray::operator[](u64 index) const noexcept -> Buffer const & {
 	return data[index];
 }
 
-auto dk::buf8(void *data, u64 size) noexcept -> Buffer {
+auto dk::buf(void *data, u64 size) noexcept -> Buffer {
 	return { .data = static_cast<u8 *>(data), .size = size };
 }
 

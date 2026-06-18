@@ -73,6 +73,9 @@ auto dk::memory_release(void *ptr, u64 size) noexcept -> void {
 	VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
+
+//~ Dedrick: @base_shared_memory
+
 auto dk::shared_memory_create(u64 size, String8 name) noexcept -> SharedMemory {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);
@@ -122,6 +125,7 @@ auto dk::shared_memory_map(SharedMemory handle, u64 begin, u64 end) noexcept -> 
 }
 
 auto dk::shared_memory_unmap(SharedMemory handle, void *ptr, u64 begin, u64 end) noexcept -> void {
+	(void)handle;
 	(void)begin;
 	(void)end;
 	UnmapViewOfFile(ptr);
@@ -283,7 +287,7 @@ auto dk::attributes_from_file(File file) noexcept -> FileAttributes {
 		u64 const size_lo = info.nFileSizeLow;
 		u64 const size_hi = info.nFileSizeHigh;
 		attr.size = size_lo | (size_hi << 32);
-		attr.flags = plt_w32_file_flags_from_dw_file_attributes(info.dwFileAttributes);
+		attr.flags = w32_file_flags_from_dw_file_attributes(info.dwFileAttributes);
 	}
 	return attr;
 }
@@ -349,7 +353,7 @@ auto dk::dir_iter_begin(String8 dir, DirIterFlags flags) noexcept -> DirIter {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String8 const dir_with_wildcard = str8_cat(scratch.arena, dir, "\\*"_str8);
 	String16 const dir16 = str16_from_8(scratch.arena, dir_with_wildcard);
-	PLT_W32_Entity *const entity = plt_w32_entity_alloc(W32_ENTITY_DIR_ITER);
+	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_DIR_ITER);
 	entity->dir_iter.flags = flags;
 	entity->dir_iter.handle = FindFirstFileExW(
 		reinterpret_cast<WCHAR const *>(dir16.data),
@@ -369,7 +373,7 @@ auto dk::dir_iter_next(Arena *arena, DirIter dir_iter, DirIterResult *out_result
 	DK_ASSERT(entity->kind == W32_ENTITY_DIR_ITER);
 	W32_DirIter *const w32_iter = &entity->dir_iter;
 	DirIterFlags const flags = w32_iter->flags;
-	if ((flags & PLT_DIR_ITER_FLAG_DONE) != 0 || w32_iter->handle == INVALID_HANDLE_VALUE) {
+	if ((flags & DIR_ITER_FLAG_DONE) != 0 || w32_iter->handle == INVALID_HANDLE_VALUE) {
 		return false;
 	}
 	b8 found = false;
@@ -382,10 +386,10 @@ auto dk::dir_iter_next(Arena *arena, DirIter dir_iter, DirIterResult *out_result
 			usable = false;
 		}
 		if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
-			usable = usable && (flags & PLT_DIR_ITER_FLAG_SKIP_FOLDERS) == 0;
+			usable = usable && (flags & DIR_ITER_FLAG_SKIP_FOLDERS) == 0;
 		}
 		else {
-			usable = usable && (flags & PLT_DIR_ITER_FLAG_SKIP_FILES) == 0;
+			usable = usable && (flags & DIR_ITER_FLAG_SKIP_FILES) == 0;
 		}
 		if (usable) {
 			out_result->name = str8_from_16(arena, name16);
@@ -395,13 +399,13 @@ auto dk::dir_iter_next(Arena *arena, DirIter dir_iter, DirIterResult *out_result
 			out_result->attributes.flags = w32_file_flags_from_dw_file_attributes(attributes);
 			found = true;
 			if (!FindNextFileW(w32_iter->handle, &w32_iter->find_data)) {
-				w32_iter->flags |= PLT_DIR_ITER_FLAG_DONE;
+				w32_iter->flags |= DIR_ITER_FLAG_DONE;
 			}
 			break;
 		}
 	} while (FindNextFileW(w32_iter->handle, &w32_iter->find_data));
 	if (!found) {
-		w32_iter->flags |= PLT_DIR_ITER_FLAG_DONE;
+		w32_iter->flags |= DIR_ITER_FLAG_DONE;
 	}
 	return found;
 }
@@ -477,7 +481,7 @@ auto dk::thread_detach(Thread thread) noexcept -> void {
 auto dk::mutex_alloc() noexcept -> Mutex {
 	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_MUTEX);
 	InitializeCriticalSection(&entity->mutex.handle);
-	Handle const result = { reinterpret_cast<uintptr_t>(entity) };
+	Mutex const result = { reinterpret_cast<uintptr_t>(entity) };
 	return result;
 }
 
@@ -629,7 +633,7 @@ auto dk::semaphore_release(Semaphore semaphore) noexcept -> void {
 	CloseHandle(handle);
 }
 
-auto dk::semaphore_open(Semaphore name) noexcept -> Semaphore {
+auto dk::semaphore_open(String8 name) noexcept -> Semaphore {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);
 	HANDLE const handle = OpenSemaphoreW(SEMAPHORE_ALL_ACCESS, FALSE, reinterpret_cast<WCHAR const *>(name16.data));
@@ -755,7 +759,7 @@ auto dk::process_join(Process process, u64 end_time_us, u64 *out_exit_code) noex
 	return process_joined;
 }
 
-auto dk::plt_process_kill(Process process) noexcept -> b8 {
+auto dk::process_kill(Process process) noexcept -> b8 {
 	HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
 	b8 const terminated = TerminateProcess(handle, 999);
 	return terminated;
@@ -763,6 +767,15 @@ auto dk::plt_process_kill(Process process) noexcept -> b8 {
 
 
 //~ Dedrick: @entry_point
+
+auto dk::w32_thread_entry_caller(void *params) noexcept -> DWORD {
+	W32_Entity *const entity = static_cast<W32_Entity *>(params);
+	DK_ASSERT(entity->kind == W32_ENTITY_THREAD);
+	ThreadFunction *const func = entity->thread.func;
+	void *const func_params = entity->thread.params;
+	thread_entry_point(func, func_params);
+	return 0;
+}
 
 auto dk::w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> int {
 	if (AttachConsole(ATTACH_PARENT_PROCESS)) {
