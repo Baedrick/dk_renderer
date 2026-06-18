@@ -59,7 +59,7 @@ auto dk::dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> v
 }
 
 auto dk::dkr_asset_pak_path(Arena *arena) noexcept -> String8 {
-	return str8f(arena, "%.*s/dkrend.pak", DK_STR8_VARG(plt_get_process_info()->binary_dir));
+	return str8f(arena, "%.*s/dkrend.pak", DK_STR8_VARG(get_process_info()->binary_dir));
 }
 
 auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8 {
@@ -304,11 +304,11 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	log_select(dkr_context->log);
 	{
 		TempArena const scratch = scratch_begin(nullptr, 0);
-		String8 const user_program_data_dir = plt_get_process_info()->user_program_data_dir;
+		String8 const user_program_data_dir = get_process_info()->user_program_data_dir;
 		String8 const user_data_folder = str8f(scratch.arena, "%.*s/dkrend", DK_STR8_VARG(user_program_data_dir));
 		dkr_context->log_path = str8f(dkr_context->arena, "%.*s/dkrend.log", DK_STR8_VARG(user_data_folder));
-		plt_make_directory(user_data_folder);
-		plt_write_bytes_to_file_path(dkr_context->log_path, Buffer8{});
+		make_directory(user_data_folder);
+		write_bytes_to_file_path(dkr_context->log_path, Buffer{});
 		scratch_end(scratch);
 	}
 
@@ -326,33 +326,33 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		//~ Dedrick: Open file.
 		TempArena const scratch = scratch_begin(nullptr, 0);
 		String8 const pak_path = dkr_asset_pak_path(scratch.arena);
-		PLT_Handle const file = plt_file_open(pak_path, PLT_ACCESS_FLAG_READ);
-		PLT_Handle const file_map = plt_file_map_open(file, PLT_ACCESS_FLAG_READ);
-		PLT_FileAttributes const file_attribs = plt_attributes_from_file(file);
-		void *const file_base = plt_file_map_view_open(file_map, PLT_ACCESS_FLAG_READ, 0, file_attribs.size);
+		File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
+		FileMap const file_map = file_map_open(file, FILE_ACCESS_FLAG_READ);
+		FileAttributes const file_attribs = attributes_from_file(file);
+		void *const file_base = file_map_view_open(file_map, FILE_ACCESS_FLAG_READ, 0, file_attribs.size);
 
 		//~ Dedrick: Parse pak.
 		PAK_Parsed pak = {};
 		b8 good = pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak);
 		if (!good) {
-			plt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid pak file; rebuild with `build assets`."_str8, true);
-			plt_abort(0);
+			dt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid pak file; rebuild with `build assets`."_str8, true);
+			abort_self(0);
 		}
 		good = dkr_render_assets_load(&pak, &dkr_context->render_assets);
 		if (!good) {
-			plt_show_dialog(nullptr, "Fatal Error"_str8, "Error loading pak assets"_str8, true);
-			plt_abort(0);
+			dt_show_dialog(nullptr, "Fatal Error"_str8, "Error loading pak assets"_str8, true);
+			abort_self(0);
 		}
 
 		//~ Dedrick: Close file.
-		plt_file_map_view_close(file_map, file_base, 0, file_attribs.size);
-		plt_file_map_close(file_map);
-		plt_file_close(file);
+		file_map_view_close(file_map, file_base, 0, file_attribs.size);
+		file_map_close(file_map);
+		file_close(file);
 		scratch_end(scratch);
 	}
 
 	//~ Dedrick: Set up main window.
-	dkr_context->window = plt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
+	dkr_context->window = dt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	dkr_context->monitor = RGFW_window_getMonitor(dkr_context->window);
 	dkr_target_frame_time_update(dkr_context->monitor);
 	rhi_window_equip(dkr_context->window);
@@ -366,7 +366,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ImGui_ImplOpenGL3_Init();
 
 	//~ Dedrick: Begin measuring actual per-frame work.
-	dkr_context->last_frame_time_us = plt_now_microseconds();
+	dkr_context->last_frame_time_us = now_time_us();
 }
 
 auto dk::dkr_shutdown() noexcept -> void {
@@ -379,7 +379,7 @@ auto dk::dkr_shutdown() noexcept -> void {
 	ImGui::DestroyContext();
 	log_release(dkr_context->log);
 	rhi_window_unequip(dkr_context->window);
-	plt_window_close(dkr_context->window);
+	dt_window_close(dkr_context->window);
 }
 
 auto dk::dkr_frame() noexcept -> b8 {
@@ -389,7 +389,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 	//~ Dedrick: Determine frame time.
 	// https://medium.com/@tglaiel/how-to-make-your-game-run-at-60fps-24c61210fe75
 	{
-		u64 const current_time_us = plt_now_microseconds();
+		u64 const current_time_us = now_time_us();
 		s64 delta_time = static_cast<s64>(current_time_us - dkr_context->last_frame_time_us);
 		dkr_context->last_frame_time_us = current_time_us;
 		if (delta_time > dkr_context->target_frame_time_us * 8) {
@@ -473,10 +473,10 @@ auto dk::dkr_frame() noexcept -> b8 {
 				case DKR_EVENT_KIND_RELOAD_PAK: {
 					//~ Dedrick: Open file.
 					String8 const pak_path = dkr_asset_pak_path(scratch.arena);
-					PLT_Handle const file = plt_file_open(pak_path, PLT_ACCESS_FLAG_READ);
-					PLT_Handle const file_map = plt_file_map_open(file, PLT_ACCESS_FLAG_READ);
-					PLT_FileAttributes const file_attribs = plt_attributes_from_file(file);
-					void *const file_base = plt_file_map_view_open(file_map, PLT_ACCESS_FLAG_READ, 0, file_attribs.size);
+					File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
+					FileMap const file_map = file_map_open(file, FILE_ACCESS_FLAG_READ);
+					FileAttributes const file_attribs = attributes_from_file(file);
+					void *const file_base = file_map_view_open(file_map, FILE_ACCESS_FLAG_READ, 0, file_attribs.size);
 					if (file_base != nullptr) {
 						PAK_Parsed pak = {};
 						DKR_RenderAssets assets = {};
@@ -500,14 +500,14 @@ auto dk::dkr_frame() noexcept -> b8 {
 						else {
 							DK_LOG_ERRORF("ERROR: failed to parse or load render assets from pak\n");
 						}
-						plt_file_map_view_close(file_map, file_base, 0, file_attribs.size);
+						file_map_view_close(file_map, file_base, 0, file_attribs.size);
 					}
 					else {
 						DK_LOG_ERRORF("ERROR: failed to map pak file to memory. file missing or locked?\n");
 					}
 					//~ Dedrick: Close file.
-					plt_file_map_close(file_map);
-					plt_file_close(file);
+					file_map_close(file_map);
+					file_close(file);
 					break;
 				}
 				case DKR_EVENT_KIND_OPEN_CONSOLE : {
@@ -704,7 +704,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 		ZoneScopedN("collect logs");
 		LogFrameResult const log = log_frame_end(scratch.arena);
 		if (log.count > 0) {
-			plt_append_text_to_file_path(dkr_context->log_path, log.string);
+			append_string_to_file_path(dkr_context->log_path, log.string);
 
 			//~ Dedrick: Parse to console.
 			DKR_Console *const console = &dkr_context->console;
