@@ -1,4 +1,24 @@
+### 2026-06-18: Cyclic dependency of base and platform layers
+Initially, following how Allen Webster and Ryan Fleury structure their codebases
+gave me a working, maintainable architecture. However, active development on
+this project shows that their abstractions do not fit my requirements because my
+problem space is different. I'd liken this to the "handmade" mindset, you work
+directly on the problem and let the natural abstractions emerge.
+
+ight now, I need to fix how the base and platform layers interact. They are
+tightly coupled, creating an ugly cyclic dependency. I do not think I can
+completely eliminate this cycle, but I want to minimize it to isolate the code
+I need to rewrite when I do decide to port.
+
+As Casey Muratori noted in Handmade Hero Episode 11, platform code is inherently
+ugly. The value of separating platform and core code is that you isolate that
+ugliness behind a strict boundary, meaning you only have to write the platform
+implementation again when moving to a new system. I have no immediate plans to
+go cross-platform, but organizing the codebase this way now will make it much
+simpler to pull out and port the standalone renderer down the line.
+
 ### 2026-06-16: Renderer Console
+TODO
 
 ### 2026-06-13: Milestone 1 Completed
 I had to rework the schedule today while drafting the capstone proposal. The
