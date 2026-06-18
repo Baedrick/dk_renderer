@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 namespace dk {
-	struct Buffer8 {
+	struct Buffer {
 		u8 *data;
 		u64 size;
 
@@ -9,39 +9,39 @@ namespace dk {
 		auto operator[](u64 index) const noexcept -> u8 const &;
 	};
 
-	struct Buffer8Node {
-		Buffer8Node *next;
-		Buffer8 buffer;
+	struct BufferNode {
+		BufferNode *next;
+		Buffer buffer;
 	};
 
-	struct Buffer8List {
-		Buffer8Node *first;
-		Buffer8Node *last;
+	struct BufferList {
+		BufferNode *first;
+		BufferNode *last;
 		u64 node_count;
 		u64 total_size;
 	};
 
-	struct Buffer8Array {
-		Buffer8 *data;
+	struct BufferArray {
+		Buffer *data;
 		u64 count;
 
-		auto operator[](u64 index) noexcept -> Buffer8 &;
-		auto operator[](u64 index) const noexcept -> Buffer8 const &;
+		auto operator[](u64 index) noexcept -> Buffer &;
+		auto operator[](u64 index) const noexcept -> Buffer const &;
 	};
 
-	auto buf8(void *data, u64 size) noexcept -> Buffer8;
+	auto buf(void *data, u64 size) noexcept -> Buffer;
 
-	auto buf8_compare(Buffer8 b1, Buffer8 b2) noexcept -> s32;
-	auto buf8_copy(Arena *arena, Buffer8 buf) noexcept -> Buffer8;
+	auto buf_compare(Buffer b1, Buffer b2) noexcept -> s32;
+	auto buf_copy(Arena *arena, Buffer buf) noexcept -> Buffer;
 
-	auto buf8_list_push_node(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node *;
-	auto buf8_list_push_node_front(Buffer8List *list, Buffer8Node *node) noexcept -> Buffer8Node *;
-	auto buf8_list_push(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -> Buffer8Node *;
-	auto buf8_list_push_front(Arena *arena, Buffer8List *list, Buffer8 buf) noexcept -> Buffer8Node *;
-	auto buf8_list_push_align(Arena *arena, Buffer8List *list, u64 align) noexcept -> void;
-	auto buf8_list_copy(Arena *arena, Buffer8List const *list) noexcept -> Buffer8List;
+	auto buf_list_push_node(BufferList *list, BufferNode *node) noexcept -> BufferNode *;
+	auto buf_list_push_node_front(BufferList *list, BufferNode *node) noexcept -> BufferNode *;
+	auto buf_list_push(Arena *arena, BufferList *list, Buffer buf) noexcept -> BufferNode *;
+	auto buf_list_push_front(Arena *arena, BufferList *list, Buffer buf) noexcept -> BufferNode *;
+	auto buf_list_push_align(Arena *arena, BufferList *list, u64 align) noexcept -> void;
+	auto buf_list_copy(Arena *arena, BufferList const *list) noexcept -> BufferList;
 
-	auto buf8_list_join(Arena *arena, Buffer8List const *list) noexcept -> Buffer8;
+	auto buf_list_join(Arena *arena, BufferList const *list) noexcept -> Buffer;
 
-	auto buf8_array_from_list(Arena *arena, Buffer8List const *list) noexcept -> Buffer8Array;
+	auto buf_array_from_list(Arena *arena, BufferList const *list) noexcept -> BufferArray;
 }
