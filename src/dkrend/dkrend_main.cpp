@@ -1,16 +1,16 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-#define DK_BUILD_PLATFORM_GRAPHICAL
+#define DK_BUILD_GRAPHICAL
 
 #include "base/base.hpp"
-#include "platform/platform.hpp"
+#include "desktop/desktop.hpp"
 #include "rhi/rhi.hpp"
 #include "thirdparty/imgui/imgui_unity.hpp"
 #include "pak/pak.hpp"
 #include "dkrend/dkrend.hpp"
 
 #include "base/base.cpp"
-#include "platform/platform.cpp"
+#include "desktop/desktop.cpp"
 #include "rhi/rhi.cpp"
 #include "thirdparty/imgui/imgui_unity.cpp"
 #include "pak/pak.cpp"

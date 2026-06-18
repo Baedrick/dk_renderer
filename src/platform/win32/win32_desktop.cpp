@@ -1,33 +1,38 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-dk::PLT_W32_GfxContext *dk::plt_w32_gfx_context;
+dk::W32_DT_Context *dk::w32_dt_context;
 
-auto dk::plt_w32_window_alloc() noexcept -> RGFW_window * {
-	RGFW_window *result = plt_w32_gfx_context->free_window;
+//~ Dedrick: Win32 helpers.
+
+auto dk::w32_dt_window_alloc() noexcept -> RGFW_window * {
+	RGFW_window *result = w32_dt_context->free_window;
 	if (result != nullptr) {
-		forward_list_stack_pop(&plt_w32_gfx_context->free_window);
+		forward_list_stack_pop(&w32_dt_context->free_window);
 		std::memset(result, 0, sizeof(RGFW_window));
 	}
 	else {
-		result = arena_push<RGFW_window>(plt_w32_gfx_context->arena);
+		result = arena_push<RGFW_window>(w32_dt_context->arena);
 	}
 	list_push_back(
-		&plt_w32_gfx_context->first_window,
-		&plt_w32_gfx_context->last_window,
+		&w32_dt_context->first_window,
+		&w32_dt_context->last_window,
 		result
 	);
 	return result;
 }
 
-auto dk::plt_w32_window_release(RGFW_window *window) noexcept -> void {
-	list_remove(&plt_w32_gfx_context->first_window, &plt_w32_gfx_context->last_window, window);
-	forward_list_stack_push(&plt_w32_gfx_context->free_window, window);
+auto dk::w32_dt_window_release(RGFW_window *window) noexcept -> void {
+	list_remove(&w32_dt_context->first_window, &w32_dt_context->last_window, window);
+	forward_list_stack_push(&w32_dt_context->free_window, window);
 }
 
-auto dk::plt_gfx_init() noexcept -> void {
+
+//~ Dedrick: @desktop_core
+
+auto dk::dt_init() noexcept -> void {
 	Arena *arena = arena_alloc();
-	plt_w32_gfx_context = arena_push<PLT_W32_GfxContext>(arena);
-	plt_w32_gfx_context->arena = arena;
+	w32_dt_context = arena_push<W32_DT_Context>(arena);
+	w32_dt_context->arena = arena;
 
 	// NOTE(Dedrick): Set DPI awareness. Should be set in application manifest. Sob :(
 	using w32_SetProcessDpiAwarenessContext = BOOL (void *value);
@@ -46,25 +51,25 @@ auto dk::plt_gfx_init() noexcept -> void {
 	}
 }
 
-auto dk::plt_gfx_shutdown() noexcept -> void {
-	arena_release(plt_w32_gfx_context->arena);
+auto dk::dt_shutdown() noexcept -> void {
+	arena_release(w32_dt_context->arena);
 }
 
-auto dk::plt_window_open(String8 title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window * {
-	RGFW_window *window = plt_w32_window_alloc();
+auto dk::dt_window_open(String8 title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window * {
+	RGFW_window *window = w32_dt_window_alloc();
 	window = RGFW_createWindowPtr(reinterpret_cast<char const *>(title.data), x, y, w, h, flags, window);
 	return window;
 }
 
-auto dk::plt_window_close(RGFW_window *window) noexcept -> void {
+auto dk::dt_window_close(RGFW_window *window) noexcept -> void {
 	if (window == nullptr) {
 		return;
 	}
 	RGFW_window_closePtr(window);
-	plt_w32_window_release(window);
+	w32_dt_window_release(window);
 }
 
-auto dk::plt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void {
+auto dk::dt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const title16 = str16_from_8(scratch.arena, title);
 	String16 const message16 = str16_from_8(scratch.arena, message);
@@ -80,7 +85,7 @@ auto dk::plt_show_dialog(RGFW_window const *parent, String8 title, String8 messa
 	scratch_end(scratch);
 }
 
-auto dk::plt_show_in_file_browser(String8 path) noexcept -> void {
+auto dk::dt_show_in_file_browser(String8 path) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String8 const path_copy = str8_copy(scratch.arena, path);
 	for (u64 i = 0; i < path_copy.size; ++i) {
@@ -101,8 +106,8 @@ auto dk::plt_show_in_file_browser(String8 path) noexcept -> void {
 	scratch_end(scratch);
 }
 
-auto dk::plt_w32_create_filter_specs(
-	Arena *arena, PLT_FileDialogFilter const *filters, u64 filter_count, UINT *out_count
+auto dk::w32_dt_create_filter_specs(
+	Arena *arena, DT_FileDialogFilter const *filters, u64 filter_count, UINT *out_count
 ) -> COMDLG_FILTERSPEC * {
 	if (filter_count == 0) {
 		*out_count = 0;
@@ -139,8 +144,8 @@ auto dk::plt_w32_create_filter_specs(
 	return filter_spec;
 }
 
-auto dk::plt_file_dialog_pick_file(
-	Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count
+auto dk::dt_file_dialog_pick_file(
+	Arena *arena, RGFW_window const *parent, DT_FileDialogFilter const *filters, u64 filter_count
 ) noexcept -> String8 {
 	using Microsoft::WRL::ComPtr;
 
@@ -150,10 +155,10 @@ auto dk::plt_file_dialog_pick_file(
 	if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&dialog)))) {
 		FILEOPENDIALOGOPTIONS options = {};
 		dialog->GetOptions(&options);
-		dialog->SetOptions(options | PLT_W32_FILE_DIALOG_COMMON_FLAGS | FOS_FILEMUSTEXIST);
+		dialog->SetOptions(options | W32_DT_FILE_DIALOG_COMMON_FLAGS | FOS_FILEMUSTEXIST);
 
 		UINT filter_spec_count = 0;
-		COMDLG_FILTERSPEC const *const filter_spec = plt_w32_create_filter_specs(
+		COMDLG_FILTERSPEC const *const filter_spec = w32_dt_create_filter_specs(
 			scratch.arena, filters, filter_count, &filter_spec_count
 		);
 		if (filter_spec_count > 0) {
@@ -185,8 +190,8 @@ auto dk::plt_file_dialog_pick_file(
 	return result;
 }
 
-auto dk::plt_file_dialog_pick_multiple_files(
-	Arena *arena, RGFW_window const *parent, PLT_FileDialogFilter const *filters, u64 filter_count
+auto dk::dt_file_dialog_pick_multiple_files(
+	Arena *arena, RGFW_window const *parent, DT_FileDialogFilter const *filters, u64 filter_count
 ) noexcept -> String8List {
 	using Microsoft::WRL::ComPtr;
 
@@ -196,10 +201,10 @@ auto dk::plt_file_dialog_pick_multiple_files(
 	if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&dialog)))) {
 		FILEOPENDIALOGOPTIONS options = {};
 		dialog->GetOptions(&options);
-		dialog->SetOptions(options | PLT_W32_FILE_DIALOG_COMMON_FLAGS | FOS_ALLOWMULTISELECT | FOS_FILEMUSTEXIST);
+		dialog->SetOptions(options | W32_DT_FILE_DIALOG_COMMON_FLAGS | FOS_ALLOWMULTISELECT | FOS_FILEMUSTEXIST);
 
 		UINT filter_spec_count = 0;
-		COMDLG_FILTERSPEC const *const filter_spec = plt_w32_create_filter_specs(
+		COMDLG_FILTERSPEC const *const filter_spec = w32_dt_create_filter_specs(
 			scratch.arena, filters, filter_count, &filter_spec_count
 		);
 		if (filter_spec_count > 0) {
@@ -244,8 +249,8 @@ auto dk::plt_file_dialog_pick_multiple_files(
 	return result;
 }
 
-auto dk::plt_file_dialog_save(
-	Arena *arena, RGFW_window const *parent, String8 default_name, PLT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index
+auto dk::dt_file_dialog_save(
+	Arena *arena, RGFW_window const *parent, String8 default_name, DT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index
 ) noexcept -> String8 {
 	using Microsoft::WRL::ComPtr;
 
@@ -255,10 +260,10 @@ auto dk::plt_file_dialog_save(
 	if (SUCCEEDED(CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&dialog)))) {
 		FILEOPENDIALOGOPTIONS options = {};
 		dialog->GetOptions(&options);
-		dialog->SetOptions(options | PLT_W32_FILE_DIALOG_COMMON_FLAGS | FOS_OVERWRITEPROMPT);
+		dialog->SetOptions(options | W32_DT_FILE_DIALOG_COMMON_FLAGS | FOS_OVERWRITEPROMPT);
 
 		UINT filter_spec_count = 0;
-		COMDLG_FILTERSPEC const *const filter_spec = plt_w32_create_filter_specs(
+		COMDLG_FILTERSPEC const *const filter_spec = w32_dt_create_filter_specs(
 			scratch.arena, filters, filter_count, &filter_spec_count
 		);
 		if (filter_spec_count > 0) {
@@ -306,7 +311,7 @@ auto dk::plt_file_dialog_save(
 	return result;
 }
 
-auto dk::plt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) noexcept -> String8 {
+auto dk::dt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) noexcept -> String8 {
 	using Microsoft::WRL::ComPtr;
 
 	String8 result = {};
@@ -315,7 +320,7 @@ auto dk::plt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) no
 	if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&dialog)))) {
 		FILEOPENDIALOGOPTIONS options{};
 		dialog->GetOptions(&options);
-		dialog->SetOptions(options | PLT_W32_FILE_DIALOG_COMMON_FLAGS | FOS_PICKFOLDERS);
+		dialog->SetOptions(options | W32_DT_FILE_DIALOG_COMMON_FLAGS | FOS_PICKFOLDERS);
 
 		HWND const parent_hwnd = parent != nullptr
 			? static_cast<HWND>(RGFW_window_getHWND(const_cast<RGFW_window *>(parent)))

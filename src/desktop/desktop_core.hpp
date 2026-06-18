@@ -1,0 +1,30 @@
+// Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
+
+#pragma once
+
+#define RGFW_NATIVE
+#define RGFW_OPENGL
+#define RGFW_SNPRINTF stb_snprintf
+#include "thirdparty/rgfw/RGFW.h"
+
+namespace dk {
+	struct DT_FileDialogFilter {
+		String8 display_name; ///< e.g. "Text files"
+		String8 extensions; ///< e.g. "txt,text"
+	};
+
+	auto dt_init() noexcept -> void;
+	auto dt_shutdown() noexcept -> void;
+
+	auto dt_window_open(String8 title, s32 x, s32 y, s32 w, s32 h, RGFW_windowFlags flags) noexcept -> RGFW_window *;
+	auto dt_window_close(RGFW_window *window) noexcept -> void;
+
+	auto dt_show_dialog(RGFW_window const *parent, String8 title, String8 message, b8 error) noexcept -> void;
+
+	auto dt_show_in_file_browser(String8 path) noexcept -> void;
+
+	auto dt_file_dialog_pick_file(Arena *arena, RGFW_window const *parent, DT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8;
+	auto dt_file_dialog_pick_multiple_files(Arena *arena, RGFW_window const *parent, DT_FileDialogFilter const *filters, u64 filter_count) noexcept -> String8List;
+	auto dt_file_dialog_save(Arena *arena, RGFW_window const *parent, String8 default_name, DT_FileDialogFilter const *filters, u64 filter_count, u64 *out_filter_index) noexcept -> String8;
+	auto dt_file_dialog_pick_folder(Arena *arena, RGFW_window const *parent) noexcept -> String8;
+}

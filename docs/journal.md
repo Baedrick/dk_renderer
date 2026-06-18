@@ -5,7 +5,7 @@ this project shows that their abstractions do not fit my requirements because my
 problem space is different. I'd liken this to the "handmade" mindset, you work
 directly on the problem and let the natural abstractions emerge.
 
-ight now, I need to fix how the base and platform layers interact. They are
+Right now, I need to fix how the base and platform layers interact. They are
 tightly coupled, creating an ugly cyclic dependency. I do not think I can
 completely eliminate this cycle, but I want to minimize it to isolate the code
 I need to rewrite when I do decide to port.

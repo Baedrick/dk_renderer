@@ -2,7 +2,8 @@
 
 dk::W32_Context dk::w32_context;
 
-//~ Dedrick: Win32 helpers
+
+//~ Dedrick: Win32 helpers.
 
 auto dk::w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> FileFlags {
 	FileFlags flags = FILE_FLAG_NONE;
@@ -50,6 +51,80 @@ auto dk::w32_entity_release(W32_Entity *entity) noexcept -> void {
 	EnterCriticalSection(&w32_context.entity_mutex);
 	forward_list_stack_push(&w32_context.entity_free, entity);
 	LeaveCriticalSection(&w32_context.entity_mutex);
+}
+
+
+//~ Dedrick: @base_memory
+
+auto dk::memory_reserve(u64 size) noexcept -> void * {
+	return VirtualAlloc(nullptr, size, MEM_RESERVE, PAGE_READWRITE);
+}
+
+auto dk::memory_commit(void *ptr, u64 size) noexcept -> b8 {
+	return VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE) != nullptr;
+}
+
+auto dk::memory_decommit(void *ptr, u64 size) noexcept -> b8 {
+	return VirtualFree(ptr, size, MEM_DECOMMIT) != 0;
+}
+
+auto dk::memory_release(void *ptr, u64 size) noexcept -> void {
+	(void)size;
+	VirtualFree(ptr, 0, MEM_RELEASE);
+}
+
+auto dk::shared_memory_create(u64 size, String8 name) noexcept -> SharedMemory {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HANDLE const file = CreateFileMappingW(
+		INVALID_HANDLE_VALUE,
+		0,
+		PAGE_READWRITE,
+		static_cast<u32>((size & 0xFFFFFFFF00000000) >> 32),
+		static_cast<u32>(size & 0x00000000FFFFFFFF),
+		reinterpret_cast<WCHAR const *>(name16.data)
+	);
+	SharedMemory const result = { reinterpret_cast<uintptr_t>(file) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::shared_memory_open(String8 name) noexcept -> SharedMemory {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String16 const name16 = str16_from_8(scratch.arena, name);
+	HANDLE const file = OpenFileMappingW(
+		FILE_MAP_ALL_ACCESS,
+		0,
+		reinterpret_cast<WCHAR const *>(name16.data)
+	);
+	SharedMemory const result = { reinterpret_cast<uintptr_t>(file) };
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::shared_memory_close(SharedMemory handle) noexcept -> void {
+	HANDLE const file = reinterpret_cast<HANDLE>(handle.v);
+	CloseHandle(file);
+}
+
+auto dk::shared_memory_map(SharedMemory handle, u64 begin, u64 end) noexcept -> void * {
+	HANDLE const file = reinterpret_cast<HANDLE>(handle.v);
+	u64 const offset = begin;
+	u64 const size = end - begin;
+	void *ptr = MapViewOfFile(
+		file,
+		FILE_MAP_ALL_ACCESS,
+		static_cast<u32>((offset & 0xFFFFFFFF00000000) >> 32),
+		static_cast<u32>(offset & 0x00000000FFFFFFFF),
+		size
+	);
+	return ptr;
+}
+
+auto dk::shared_memory_unmap(SharedMemory handle, void *ptr, u64 begin, u64 end) noexcept -> void {
+	(void)begin;
+	(void)end;
+	UnmapViewOfFile(ptr);
 }
 
 
@@ -581,6 +656,112 @@ auto dk::semaphore_signal(Semaphore semaphore) noexcept -> void {
 }
 
 
+//~ Dedrick: @base_system
+
+auto dk::get_system_info() noexcept -> SystemInfo * {
+	return &w32_context.system_info;
+}
+
+auto dk::get_process_info() noexcept -> ProcessInfo * {
+	return &w32_context.process_info;
+}
+
+auto dk::get_entropy(void *data, u64 size) noexcept -> void {
+	DK_ASSERT_ALWAYS(size <= 256); // NOTE(Dedrick): Limit of 256 bytes to follow linux.
+	BCryptGenRandom(
+		nullptr,
+		static_cast<u8 *>(data),
+		static_cast<u32>(size),
+		BCRYPT_USE_SYSTEM_PREFERRED_RNG
+	);
+}
+
+auto dk::abort_self(s32 code) noexcept -> void {
+	ExitProcess(static_cast<u32>(code));
+}
+
+auto dk::now_time_us() noexcept -> u64 {
+	u64 result = 0;
+	LARGE_INTEGER ticks = {};
+	if (QueryPerformanceCounter(&ticks)) {
+		result = (ticks.QuadPart * 1'000'000) / w32_context.perf_frequency;
+	}
+	return result;
+}
+
+auto dk::sleep(u64 milliseconds) noexcept -> void {
+	Sleep(static_cast<DWORD>(milliseconds));
+}
+
+auto dk::process_launch(ProcessLaunchParams const *params) noexcept -> Process {
+	Process result = {};
+	TempArena const scratch = scratch_begin(nullptr, 0);
+
+	String8 cmd = {};
+	{
+		String8JoinParams join_params = {};
+		join_params.prefix = "\""_str8;
+		join_params.postfix = "\""_str8;
+		join_params.separator = "\" \""_str8;
+		cmd = str8_list_join(scratch.arena, &params->cmd_line, &join_params);
+	}
+
+	String16 const cmd16 = str16_from_8(scratch.arena, cmd);
+	String16 const dir16 = str16_from_8(scratch.arena, params->working_dir);
+
+	DWORD creation_flags = CREATE_UNICODE_ENVIRONMENT;
+	if ((params->flags & PROCESS_LAUNCH_FLAG_NO_WINDOW) != 0) {
+		creation_flags |= CREATE_NO_WINDOW;
+	}
+
+	STARTUPINFOW startup_info = {};
+	startup_info.cb = sizeof(STARTUPINFOW);
+	PROCESS_INFORMATION process_info = {};
+	if (CreateProcessW(
+			nullptr,
+			reinterpret_cast<WCHAR *>(const_cast<u16 *>(cmd16.data)),
+			nullptr,
+			nullptr,
+			FALSE,
+			creation_flags,
+			nullptr,
+			reinterpret_cast<WCHAR *>(const_cast<u16 *>(dir16.data)),
+			&startup_info,
+			&process_info
+		)
+	) {
+		result.v = reinterpret_cast<uintptr_t>(process_info.hProcess);
+		CloseHandle(process_info.hThread);
+	}
+
+	scratch_end(scratch);
+	return result;
+}
+
+auto dk::process_join(Process process, u64 end_time_us, u64 *out_exit_code) noexcept -> b8 {
+	HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
+	DWORD const sleep_ms = w32_sleep_ms_from_end_time_us(end_time_us);
+	DWORD const result = WaitForSingleObject(handle, sleep_ms);
+	b8 const process_joined = result == WAIT_OBJECT_0;
+	if (process_joined) {
+		if (out_exit_code != nullptr) {
+			DWORD exit_code = 0;
+			if (GetExitCodeProcess(handle, &exit_code)) {
+				*out_exit_code = exit_code;
+			}
+		}
+		CloseHandle(handle);
+	}
+	return process_joined;
+}
+
+auto dk::plt_process_kill(Process process) noexcept -> b8 {
+	HANDLE const handle = reinterpret_cast<HANDLE>(process.v);
+	b8 const terminated = TerminateProcess(handle, 999);
+	return terminated;
+}
+
+
 //~ Dedrick: @entry_point
 
 auto dk::w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> int {
@@ -667,7 +848,7 @@ auto dk::w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> int {
 	return result;
 }
 
-#ifdef DK_BUILD_PLATFORM_GRAPHICAL
+#ifdef DK_BUILD_GRAPHICAL
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE prev_instance, PWSTR lp_cmd_line, int n_show_cmd) {
 	(void)instance;
 	(void)prev_instance;

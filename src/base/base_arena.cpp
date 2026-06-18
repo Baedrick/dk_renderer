@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::arena_alloc(ArenaParams const *params) noexcept -> Arena * {
-	u64 const page_size = plt_get_system_info()->page_size;
+	u64 const page_size = get_system_info()->page_size;
 	u64 const reserve_size = align_pow2(params->reserve_size, page_size);
 	u64 const commit_size = align_pow2(params->commit_size, page_size);
 
-	void *memory = plt_reserve(reserve_size);
-	if (!plt_commit(memory, commit_size)) {
+	void *memory = memory_reserve(reserve_size);
+	if (!memory_commit(memory, commit_size)) {
 		memory = nullptr;
 	}
 
@@ -33,7 +33,7 @@ auto dk::arena_alloc(ArenaParams const *params) noexcept -> Arena * {
 auto dk::arena_release(Arena *arena) noexcept -> void {
 	for (Arena *curr = arena->current, *prev = nullptr; curr != nullptr; curr = prev) {
 		prev = curr->next;
-		plt_release(curr, curr->reserved);
+		memory_release(curr, curr->reserved);
 	}
 }
 
@@ -56,7 +56,7 @@ auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept ->
 
 		u64 const required_size = size + ARENA_HEADER_SIZE + align;
 		if (required_size > reserve_size) {
-			u64 const page_size = plt_get_system_info()->page_size;
+			u64 const page_size = get_system_info()->page_size;
 			reserve_size = align_pow2(required_size, page_size);
 			commit_size = align_pow2(required_size, page_size);
 		}
@@ -83,7 +83,7 @@ auto dk::arena_push_bytes_no_zero(Arena *arena, u64 size, u64 align) noexcept ->
 		u64 const commit_size = commit_pos_clamped - current->committed;
 		u8 *commit_ptr = reinterpret_cast<u8 *>(current) + current->committed;
 
-		if (!plt_commit(commit_ptr, commit_size)) {
+		if (!memory_commit(commit_ptr, commit_size)) {
 			plt_abort(1);
 		}
 		DK_ASAN_POISON_MEMORY_REGION(commit_ptr, commit_size);

@@ -14,8 +14,8 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 	}
 	CmdLine cmd_line = cmd_line_from_string_list(scratch.arena, cmd_line_strings);
 
-#if defined(DK_PLATFORM_GFX_INCLUDED) && !defined(DK_PLATFORM_GFX_INIT_MANUAL)
-	plt_gfx_init();
+#if defined(DK_DESKTOP_INCLUDED) && !defined(DK_DESKTOP_INIT_MANUAL)
+	dt_init();
 #endif
 #if defined(DK_RHI_INCLUDED) && !defined(DK_RHI_INIT_MANUAL)
 	rhi_init(&cmd_line);
@@ -26,8 +26,8 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 #if defined(DK_RHI_INCLUDED) && !defined(DK_RHI_INIT_MANUAL)
 	rhi_shutdown();
 #endif
-#if defined(DK_PLATFORM_GFX_INCLUDED) && !defined(DK_PLATFORM_GFX_INIT_MANUAL)
-	plt_gfx_shutdown();
+#if defined(DK_DESKTOP_INCLUDED) && !defined(DK_DESKTOP_INIT_MANUAL)
+	dt_shutdown();
 #endif
 
 	scratch_end(scratch);
