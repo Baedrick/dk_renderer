@@ -18,7 +18,7 @@
 #include "base_entry_point.cpp"
 
 #if defined(DK_PLATFORM_WIN32)
-#	include "platform/win32/win32_base.cpp"
+#	include "win32/win32_base.cpp"
 #else
 #	error "Base layer platform backend not implemented."
 #endif

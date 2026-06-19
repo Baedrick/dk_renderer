@@ -3,7 +3,7 @@
 #include "desktop_core.cpp"
 
 #if defined(DK_PLATFORM_WIN32)
-#	include "platform/win32/win32_desktop.cpp"
+#	include "win32/win32_desktop.cpp"
 #else
 #	error "Desktop layer platform backend not implemented."
 #endif
