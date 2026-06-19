@@ -25,6 +25,10 @@ namespace dk {
 		u64 v;
 	};
 
+	struct Barrier {
+		u64 v;
+	};
+
 	auto set_thread_name(String8 name) noexcept -> void;
 	auto set_thread_namef(char const *fmt, ...) noexcept -> void;
 	auto plt_set_thread_name(String8 name) noexcept -> void;
@@ -59,4 +63,8 @@ namespace dk {
 	auto semaphore_close(Semaphore semaphore) noexcept -> void;
 	auto semaphore_wait(Semaphore semaphore, u64 end_time_us) noexcept -> b8;
 	auto semaphore_signal(Semaphore semaphore) noexcept -> void;
+
+	auto barrier_alloc(u64 count) noexcept -> Barrier;
+	auto barrier_release(Barrier barrier) noexcept -> void;
+	auto barrier_wait(Barrier barrier) noexcept -> void;
 }

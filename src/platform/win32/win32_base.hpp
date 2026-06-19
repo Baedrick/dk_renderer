@@ -39,6 +39,10 @@ namespace dk {
 		CONDITION_VARIABLE handle;
 	};
 
+	struct W32_Barrier {
+		SYNCHRONIZATION_BARRIER handle;
+	};
+
 	struct W32_DirIter {
 		HANDLE handle;
 		WIN32_FIND_DATAW find_data;
@@ -51,6 +55,7 @@ namespace dk {
 		W32_ENTITY_MUTEX,
 		W32_ENTITY_RW_MUTEX,
 		W32_ENTITY_CONDITIONAL_VARIABLE,
+		W32_ENTITY_BARRIER,
 		W32_ENTITY_DIR_ITER
 	};
 
@@ -62,6 +67,7 @@ namespace dk {
 			W32_Mutex mutex;
 			W32_RWMutex rw_mutex;
 			W32_ConditionalVariable cond_var;
+			W32_Barrier barrier;
 			W32_DirIter dir_iter;
 		};
 	};

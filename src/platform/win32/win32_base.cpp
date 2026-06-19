@@ -659,6 +659,30 @@ auto dk::semaphore_signal(Semaphore semaphore) noexcept -> void {
 	ReleaseSemaphore(handle, 1, nullptr);
 }
 
+auto dk::barrier_alloc(u64 count) noexcept -> Barrier {
+	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_BARRIER);
+	InitializeSynchronizationBarrier(&entity->barrier.handle, static_cast<LONG>(count), -1);
+	Barrier const result = { reinterpret_cast<uintptr_t>(entity) };
+	return result;
+}
+
+auto dk::barrier_release(Barrier barrier) noexcept -> void {
+	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(barrier.v);
+	if (entity != nullptr) {
+		DK_ASSERT(entity->kind == W32_ENTITY_BARRIER);
+		DeleteSynchronizationBarrier(&entity->barrier.handle);
+		w32_entity_release(entity);
+	}
+}
+
+auto dk::barrier_wait(Barrier barrier) noexcept -> void {
+	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(barrier.v);
+	if (entity != nullptr) {
+		DK_ASSERT(entity->kind == W32_ENTITY_BARRIER);
+		EnterSynchronizationBarrier(&entity->barrier.handle, 0);
+	}
+}
+
 
 //~ Dedrick: @base_system
 
