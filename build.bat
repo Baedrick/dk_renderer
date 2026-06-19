@@ -70,11 +70,9 @@ if not exist src\shaders\.spirv mkdir src\shaders\.spirv
 pushd bin
 if "%all%"=="1" (
     echo [building all targets]
-    set dkcook=1
     set dkrend=1
     set assets=1
 )
-if "%dkcook%"=="1" set didbuild=1 && %compile% ..\src\dkcook\dkcook_main.cpp %compile_link% %out%dkcook.exe || exit /b 1
 if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% %out%dkrend.exe || exit /b 1
 if "%assets%"=="1" (
     set didbuild=1
