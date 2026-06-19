@@ -1,9 +1,11 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 #define DK_BUILD_GRAPHICAL
+#define DK_DESKTOP_INIT_MANUAL
+#define DK_RHI_INIT_MANUAL
 
 #include "base/base.hpp"
-#include "compiler/compiler.hpp"
+#include "asset_compiler/asset_compiler.hpp"
 #include "desktop/desktop.hpp"
 #include "rhi/rhi.hpp"
 #include "pak/pak.hpp"
@@ -11,39 +13,48 @@
 #include "dkrend/dkrend.hpp"
 
 #include "base/base.cpp"
-#include "compiler/compiler.cpp"
+#include "asset_compiler/asset_compiler.cpp"
 #include "desktop/desktop.cpp"
 #include "rhi/rhi.cpp"
 #include "pak/pak.cpp"
 #include "ui/ui.cpp"
 #include "dkrend/dkrend.cpp"
 
-using namespace dk;
-
-enum ExecMode {
-	EXEC_MODE_NORMAL = 0,
-	EXEC_MODE_COMPILER
-};
-
 auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
+	using namespace dk;
+
+	enum ExecMode {
+		EXEC_MODE_NORMAL = 0,
+		EXEC_MODE_ASSET_COMPILER
+	};
 	ExecMode exec_mode = EXEC_MODE_NORMAL;
 	if (cmd_line_has_flag(cmd_line, "compiler"_str8)) {
-		exec_mode = EXEC_MODE_COMPILER;
+		exec_mode = EXEC_MODE_ASSET_COMPILER;
 	}
 
+	//~ Dedrick: Dispatch based on execution mode.
 	switch (exec_mode) {
 		default:
 		case EXEC_MODE_NORMAL: {
-			dk::dkr_init(cmd_line);
-			for (dk::b8 quit = false; !quit; ) {
-				quit = dk::dkr_frame();
+			//~ Dedrick: Manual layer initialization.
+			dt_init();
+			rhi_init(cmd_line);
+			dkr_init(cmd_line);
+
+			//~ Dedrick: Main application loop.
+			for (b8 quit = false; !quit; ) {
+				quit = dkr_frame();
 				FrameMark;
 			}
-			dk::dkr_shutdown();
+
+			//~ Dedrick: Manual layer shutdown.
+			dkr_shutdown();
+			rhi_shutdown();
+			dt_shutdown();
 			break;
 		}
-		case EXEC_MODE_COMPILER: {
-			cpl_entry_point(cmd_line);
+		case EXEC_MODE_ASSET_COMPILER: {
+			ac_entry_point(cmd_line);
 			break;
 		}
 	}
