@@ -6,6 +6,7 @@
 
 #include "base/base.hpp"
 #include "asset_compiler/asset_compiler.hpp"
+#include "asset_engine/asset_engine.hpp"
 #include "desktop/desktop.hpp"
 #include "rhi/rhi.hpp"
 #include "pak/pak.hpp"
@@ -14,6 +15,7 @@
 
 #include "base/base.cpp"
 #include "asset_compiler/asset_compiler.cpp"
+#include "asset_engine/asset_engine.cpp"
 #include "desktop/desktop.cpp"
 #include "rhi/rhi.cpp"
 #include "pak/pak.cpp"
@@ -54,7 +56,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			break;
 		}
 		case EXEC_MODE_ASSET_COMPILER: {
-			ac_entry_point(cmd_line);
+			asc_entry_point(cmd_line);
 			break;
 		}
 	}
