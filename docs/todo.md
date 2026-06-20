@@ -95,7 +95,6 @@
 - [ ][dkrend][Must Have] View imported model resources in the UI as a tree of resources
 - [ ][dkrend][Nice To Have] Hot-reloading of cooked model binaries
 - [ ][compiler][Must Have] Inter-Process Communication with dkrend
-- [ ][Must Have] Asset engine stubs
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
 - [ ][Must Have] Path helpers and normalization
@@ -108,6 +107,7 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Asset engine stub file
 - [x][Must Have] Move ImGui thirdparty include in dkrend to ui layer
 - [x][Must Have] Migrate dkcook to compiler layer and remove from build targets
 - [x][Must Have] Multi-core by default, SPMD lane abstraction
