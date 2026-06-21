@@ -1,10 +1,14 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 #include "base/base.hpp"
+#include "dds/dds.hpp"
+#include "dds/dds_parse.hpp"
 #include "pak/pak.hpp"
 #include "pak_make/pak_make.hpp"
 
 #include "base/base.cpp"
+#include "dds/dds.cpp"
+#include "dds/dds_parse.cpp"
 #include "pak/pak.cpp"
 #include "pak_make/pak_make.cpp"
 
@@ -113,89 +117,46 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	PAKM_TextureArray textures = {};
 	{
 		PAKM_TextureList textures_list = {};
-		struct DDS_PixelFormat {
-			u32 size;
-			u32 flags;
-			u32 four_cc;
-			u32 rgb_bit_count;
-			u32 r_bit_mask;
-			u32 g_bit_mask;
-			u32 b_bit_mask;
-			u32 a_bit_mask;
-		};
-		struct DDS_Header {
-			u32 size;
-			u32 flags;
-			u32 height;
-			u32 width;
-			u32 linear_size;
-			u32 depth;
-			u32 mip_map_count;
-			u32 reserved1[11];
-			DDS_PixelFormat pixel_format;
-			u32 caps;
-			u32 caps2;
-			u32 caps3;
-			u32 caps4;
-			u32 reserved2;
-		};
-		struct DDS_HeaderDx10 {
-			u32 dxgi_format;
-			u32 resource_dimension;
-			u32 misc_flag;
-			u32 array_size;
-			u32 misc_flags2;
-		};
-		u32 constexpr DDS_MAGIC = 0x20534444; // "DDS "
-		u32 constexpr DDS_DX10_EXT_MAGIC = 0x30315844; // "DX10"
-		u32 constexpr DDS_DDPF_FOURCC = 0x4;
 
 		//~ Dedrick: Parse textures.
 		std::printf("parsing textures...");
 		for (String8Node const *path = dds_file_paths.first; path != nullptr; path = path->next) {
 			String8 const file_path = path->string;
 			Buffer const file_data = read_bytes_from_file_path(pm_arena, file_path);
-			u8 *ptr = file_data.data;
-			u8 *const opl = file_data.data + file_data.size;
 
-			if (ptr + sizeof(u32) + sizeof(DDS_Header) <= opl) {
-				u32 *const magic = reinterpret_cast<u32 *>(file_data.data);
-				ptr += sizeof(u32);
-				DDS_Header *const header = reinterpret_cast<DDS_Header *>(ptr);
-				ptr += sizeof(DDS_Header);
+			//~ Dedrick: Parse DDS file.
+			DDS_Parsed const dds_parsed = dds_parsed_from_bytes(file_data);
+			if (dds_parsed.header != nullptr) {
+				DDS_Header const *header = dds_parsed.header;
+				PAK_TextureKind tex_kind = PAK_TEXTURE_KIND_2D;
+				if (header->depth > 1) {
+					tex_kind = PAK_TEXTURE_KIND_3D;
+				}
 
-				if (*magic == DDS_MAGIC && header->size == 124) {
-					PAK_TextureKind tex_kind = PAK_TEXTURE_KIND_2D;
-					if (header->depth > 1) {
-						tex_kind = PAK_TEXTURE_KIND_3D;
+				//~ Dedrick: DXGI format -> pak texture format.
+				PAK_TextureFormat tex_format = PAK_TEXTURE_FORMAT_NULL;
+				if (dds_parsed.dxt10_header != nullptr) {
+					DDS_DXT10Header const *dxt10_header = dds_parsed.dxt10_header;
+					switch (dxt10_header->dxgi_format) {
+						case DDS_DXGI_FORMAT_R9G9B9E5: { tex_format = PAK_TEXTURE_FORMAT_RGB9E5; } break;
+						default: break;
 					}
-					PAK_TextureFormat tex_format = PAK_TEXTURE_FORMAT_NULL;
-					b8 const has_dx10 = (header->pixel_format.flags & DDS_DDPF_FOURCC) != 0 && header->pixel_format.four_cc == DDS_DX10_EXT_MAGIC;
-					if (has_dx10 && ptr + sizeof(DDS_HeaderDx10) <= opl) {
-						DDS_HeaderDx10 *dx10_header = reinterpret_cast<DDS_HeaderDx10 *>(ptr);
-						ptr += sizeof(DDS_HeaderDx10);
-						// NOTE(Dedrick): Values taken from here:
-						// https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format
-						switch (dx10_header->dxgi_format) {
-							case 67: tex_format = PAK_TEXTURE_FORMAT_RGB9E5; break;
-							default: break;
-						}
-					}
-					if (tex_format != PAK_TEXTURE_FORMAT_NULL) {
-						u64 const pixels_size = static_cast<u64>(opl - ptr);
-						String8 const tex_name = path_skip_last_slash(file_path);
-						PAKM_TextureNode *const node = arena_push<PAKM_TextureNode>(pm_arena);
-						node->texture.kind = tex_kind;
-						node->texture.format = tex_format;
-						node->texture.width = header->width;
-						node->texture.height = header->height;
-						node->texture.depth = header->depth > 0 ? header->depth : 1;
-						node->texture.mip_count = header->mip_map_count > 0 ? header->mip_map_count : 1;
-						node->texture.name = tex_name;
-						node->texture.pixels = buf(ptr, pixels_size);
-						forward_list_queue_push(&textures_list.first, &textures_list.last, node);
-						textures_list.count += 1;
-					}
+				}
+
+				//~ Dedrick: Push to texture list.
+				if (tex_format != PAK_TEXTURE_FORMAT_NULL) {
+					String8 const tex_name = path_skip_last_slash(file_path);
+					PAKM_TextureNode *const node = arena_push<PAKM_TextureNode>(pm_arena);
+					node->texture.kind = tex_kind;
+					node->texture.format = tex_format;
+					node->texture.width = header->width;
+					node->texture.height = header->height;
+					node->texture.depth = header->depth > 0 ? header->depth : 1;
+					node->texture.mip_count = header->mip_map_count > 0 ? header->mip_map_count : 1;
+					node->texture.name = tex_name;
+					node->texture.pixels = dds_parsed.image_data;
+					forward_list_queue_push(&textures_list.first, &textures_list.last, node);
+					textures_list.count += 1;
 				}
 			}
 		}
