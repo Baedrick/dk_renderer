@@ -439,6 +439,15 @@ auto dk::str8_list_push_frontf(Arena *arena, String8List *list, char const *fmt,
 	return result;
 }
 
+auto dk::str8_list_copy(Arena *arena, String8List const *list) noexcept -> String8List {
+	String8List result = {};
+	for (String8Node const *node = list->first; node != nullptr; node = node->next) {
+		String8 const str_copy = str8_copy(arena, node->string);
+		str8_list_push(arena, &result, str_copy);
+	}
+	return result;
+}
+
 auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List {
 	String8List list = {};
 	b8 const keep_empties = (flags & STRING_SPLIT_FLAG_KEEP_EMPTIES) != 0;
