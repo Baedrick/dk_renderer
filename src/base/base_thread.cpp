@@ -2,7 +2,12 @@
 
 auto dk::set_thread_name(String8 name) noexcept -> void {
 #if defined(DK_PROFILE_ENABLE)
-	tracy::SetThreadName(reinterpret_cast<char const *>(name.data));
+	// NOTE(Dedrick): Tracy expects a null-terminated string. We copy to make
+	// sure that the string slice is terminated where we want it to be.
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	String8 const name_copy = str8_copy(scratch.arena, name);
+	tracy::SetThreadName(reinterpret_cast<char const *>(name_copy.data));
+	scratch_end(scratch);
 #endif
 	plt_set_thread_name(name);
 }
