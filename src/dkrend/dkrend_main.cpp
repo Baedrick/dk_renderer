@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 #define DK_BUILD_GRAPHICAL
+#define DK_ASSET_ENGINE_INIT_MANUAL
 #define DK_DESKTOP_INIT_MANUAL
 #define DK_RHI_INIT_MANUAL
 
@@ -39,6 +40,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		default:
 		case EXEC_MODE_NORMAL: {
 			//~ Dedrick: Manual layer initialization.
+			ase_init(cmd_line);
 			dt_init();
 			rhi_init(cmd_line);
 			dkr_init(cmd_line);
@@ -53,6 +55,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			dkr_shutdown();
 			rhi_shutdown();
 			dt_shutdown();
+			ase_shutdown();
 			break;
 		}
 		case EXEC_MODE_ASSET_COMPILER: {

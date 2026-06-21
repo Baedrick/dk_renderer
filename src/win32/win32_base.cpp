@@ -863,7 +863,7 @@ auto dk::w32_main_thread_entry_caller(int argc, WCHAR **wargv) noexcept -> int {
 			DWORD constexpr size = static_cast<DWORD>(kilo_bytes(32));
 			u16 *const buffer = arena_push_array<u16>(scratch.arena, size);
 			if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, reinterpret_cast<WCHAR *>(buffer)))) {
-				info->user_program_data_dir = str8_from_16(arena, str16_cstring(buffer));
+				info->user_program_config_dir = str8_from_16(arena, str16_cstring(buffer));
 			}
 			scratch_end(scratch);
 		}

@@ -11,7 +11,7 @@ namespace dk {
 	struct ProcessInfo {
 		u32 pid;
 		String8 binary_dir;
-		String8 user_program_data_dir;
+		String8 user_program_config_dir;
 	};
 
 	struct Process {

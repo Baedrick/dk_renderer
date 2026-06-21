@@ -304,10 +304,10 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	log_select(dkr_context->log);
 	{
 		TempArena const scratch = scratch_begin(nullptr, 0);
-		String8 const user_program_data_dir = get_process_info()->user_program_data_dir;
-		String8 const user_data_folder = str8f(scratch.arena, "%.*s/dkrend", DK_STR8_VARG(user_program_data_dir));
-		dkr_context->log_path = str8f(dkr_context->arena, "%.*s/dkrend.log", DK_STR8_VARG(user_data_folder));
-		make_directory(user_data_folder);
+		String8 const user_program_config_dir = get_process_info()->user_program_config_dir;
+		String8 const user_config_folder = str8f(scratch.arena, "%.*s/dkrend", DK_STR8_VARG(user_program_config_dir));
+		dkr_context->log_path = str8f(dkr_context->arena, "%.*s/dkrend.log", DK_STR8_VARG(user_config_folder));
+		make_directory(user_config_folder);
 		write_bytes_to_file_path(dkr_context->log_path, Buffer{});
 		scratch_end(scratch);
 	}

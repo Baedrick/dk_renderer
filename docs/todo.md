@@ -108,6 +108,7 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Defer macro to defer code to the end of the scope
 - [x][Must Have] Asset engine stub file
 - [x][Must Have] Move ImGui thirdparty include in dkrend to ui layer
 - [x][Must Have] Migrate dkcook to compiler layer and remove from build targets
