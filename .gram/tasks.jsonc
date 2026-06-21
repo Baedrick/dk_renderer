@@ -1,7 +1,7 @@
 // Project tasks configuration. See gram://docs/tasks for documentation.
 [
   {
-    "label": "Apply MSVC Dev Env",
+    "label": "x64 Native Tools Command Prompt",
     "command": "cmd.exe",
     "args": [
       "/k",
