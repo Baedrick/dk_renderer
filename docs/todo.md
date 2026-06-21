@@ -88,6 +88,7 @@
     optionally demonstration of the completed works
 
 ### Tasks
+- [ ][dkrend][Must Have] Replace dear imgui font with more readable font
 - [ ][dkrend][Must Have] Reading of cooker logs to display
 - [ ][dkrend][Must Have] Console in UI to show logs
 - [ ][dkrend][Must Have] Hello Model to validate graphics code
