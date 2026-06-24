@@ -109,6 +109,17 @@ auto dk::rhi_shutdown() noexcept -> void {
 
 }
 
+auto dk::rhi_queue_wait_idle(RHI_Fence fence) noexcept -> b8 {
+	b8 result = false;
+	GLsync const sync = reinterpret_cast<GLsync>(fence.v);
+	GLenum const wait = glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, U64_MAX);
+	if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
+		glDeleteSync(sync);
+		result = true;
+	}
+	return result;
+}
+
 auto dk::rhi_window_equip(RGFW_window *window) noexcept -> void {
 	ZoneScoped;
 	rhi_ogl_plt_window_equip(window, rhi_ogl_context->gl_context);
