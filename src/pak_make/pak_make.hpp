@@ -55,6 +55,25 @@ namespace dk {
 		auto operator[](u64 index) const noexcept -> PAKM_Texture const &;
 	};
 
+	struct PAKM_StringBakeResult {
+		PAK_SectionElementType_StringTable *string_tables;
+		u64 string_tables_count;
+		PAK_SectionElementType_StringData *string_data;
+		u64 string_data_size;
+	};
+
+	struct PAKM_ShaderBakeResult {
+		u64 *offsets;
+		PAK_SectionElementType_ShaderData *data;
+		u64 size;
+	};
+
+	struct PAKM_TextureBakeResult {
+		u64 *offsets;
+		PAK_SectionElementType_TextureData *data;
+		u64 size;
+	};
+
 	struct PAKM_BakeSection {
 		void *data;
 		u64 size;
@@ -63,8 +82,6 @@ namespace dk {
 	struct PAKM_BakeBundle {
 		PAKM_BakeSection sections[PAK_SECTION_KIND_COUNT];
 	};
-
-	auto pakm_pak_texture_format_kind_from_dx10_dxgi_format(s32 format) noexcept -> PAK_TextureFormat;
 
 	auto pakm_find_string_index(String8 str, String8Array arr) noexcept -> u32;
 	auto pakm_strings_sorted_from_unsorted_in_place(String8Array arr) noexcept -> String8Array;

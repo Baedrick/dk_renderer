@@ -20,15 +20,6 @@ auto dk::PAKM_TextureArray::operator[](u64 index) const noexcept -> PAKM_Texture
 	return data[index];
 }
 
-auto dk::pakm_pak_texture_format_kind_from_dx10_dxgi_format(s32 format) noexcept -> PAK_TextureFormat {
-	PAK_TextureFormat result = PAK_TEXTURE_FORMAT_NULL;
-	switch (format) {
-		case 67: { result = PAK_TEXTURE_FORMAT_RGB9E5; break; }
-		default: break;
-	}
-	return result;
-}
-
 auto dk::pakm_find_string_index(String8 str, String8Array arr) noexcept -> u32 {
 	// NOTE(Dedrick): Invariance: arr.count <= 32.
 	u32 result = 0;

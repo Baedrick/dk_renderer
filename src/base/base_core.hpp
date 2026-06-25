@@ -62,6 +62,24 @@
 #define DK_GLUE(a, b) DK_GLUE_(a, b)
 
 namespace dk {
+	template <typename Func>
+	struct defer_impl {
+		defer_impl(Func func) noexcept : func_{ func } { }
+		~defer_impl() { func_(); }
+		defer_impl(defer_impl const &) = delete;
+		auto operator=(defer_impl const &) -> defer_impl & = delete;
+		Func func_;
+	};
+
+	template <typename Func>
+	auto make_defer(Func func) noexcept -> defer_impl<Func> {
+		return defer_impl<Func>(func);
+	};
+}
+#define dk_defer_(x) DK_GLUE(x, __COUNTER__)
+#define dk_defer(...) auto dk_defer_(_dk_defer_) = dk::make_defer([&](){ __VA_ARGS__; })
+
+namespace dk {
 	using b8 = bool;
 	using s8 = std::int8_t;
 	using s16 = std::int16_t;
@@ -81,23 +99,6 @@ namespace dk {
 
 	u64 constexpr U64_MAX = 0xFFFFFFFFFFFFFFFF;
 	u64 constexpr U64_MIN = 0;
-
-	template <typename Func>
-	struct defer_impl {
-		defer_impl(Func func) noexcept : func_{ func } { }
-		~defer_impl() { func_(); }
-		defer_impl(defer_impl const &) = delete;
-		auto operator=(defer_impl const &) -> defer_impl & = delete;
-		Func func_;
-	};
-
-	template <typename Func>
-	auto make_defer(Func func) noexcept -> defer_impl<Func> {
-		return defer_impl<Func>(func);
-	};
-
-	#define DK_DEFER_(x) DK_GLUE(x, __COUNTER__)
-	#define DK_DEFER(...) auto DK_DEFER_(_dk_defer_) = make_defer([&](){ __VA_ARGS__; })
 
 	constexpr auto kilo_bytes(u64 x) noexcept -> u64 { return x << 10; }
 	constexpr auto mega_bytes(u64 x) noexcept -> u64 { return x << 20; }

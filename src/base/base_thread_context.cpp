@@ -65,7 +65,7 @@ auto dk::thread_context_lane_barrier_wait(void *ptr, u64 size, u64 src_lane_idx)
 	ZoneScoped;
 	ThreadContext *const thread_context = thread_context_selected();
 
-	//~ Dedrick: Want broadcast: Copy to broadcast memory memory on source lane.
+	//~ Dedrick: Want broadcast: Copy to broadcast memory on source lane.
 	u64 const broadcast_size_clamped = min(size, sizeof(*thread_context->lane_context.broadcast_memory));
 	if (ptr != nullptr && lane_idx() == src_lane_idx) {
 		std::memcpy(thread_context->lane_context.broadcast_memory, ptr, broadcast_size_clamped);

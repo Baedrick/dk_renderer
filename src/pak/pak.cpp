@@ -6,8 +6,8 @@ dk::u16 const dk::pak_section_element_size_table[] = {
 	sizeof(PAK_SectionElementType_StringTable),
 	sizeof(PAK_SectionElementType_Shader),
 	sizeof(PAK_SectionElementType_Texture),
-	sizeof(PAK_SectionElementType_GpuHeader),
-	sizeof(PAK_SectionElementType_GpuData)
+	sizeof(PAK_SectionElementType_ShaderData),
+	sizeof(PAK_SectionElementType_TextureData)
 };
 static_assert(dk::array_count(dk::pak_section_element_size_table) == dk::PAK_SECTION_KIND_COUNT);
 

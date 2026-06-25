@@ -9,5 +9,5 @@ namespace dk {
 		Buffer image_data;
 	};
 
-	auto dds_parsed_from_bytes(Buffer bytes) noexcept -> DDS_Parsed;
+	auto dds_parse(Buffer bytes, DDS_Parsed *out) noexcept -> b8;
 }

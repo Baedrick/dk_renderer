@@ -4,7 +4,7 @@
 
 namespace dk {
 	u64 constexpr PAK_MAGIC_CONSTANT = 0x006B61705F726B64; // "dkr_pak\0"
-	u32 constexpr PAK_VERSION = 1;
+	u32 constexpr PAK_VERSION = 2;
 
 	enum PAK_SectionKind : u32 {
 		PAK_SECTION_KIND_NULL = 0,
@@ -12,8 +12,8 @@ namespace dk {
 		PAK_SECTION_KIND_STRING_TABLE,
 		PAK_SECTION_KIND_SHADER,
 		PAK_SECTION_KIND_TEXTURE,
-		PAK_SECTION_KIND_GPU_HEADER,
-		PAK_SECTION_KIND_GPU_DATA,
+		PAK_SECTION_KIND_SHADER_DATA,
+		PAK_SECTION_KIND_TEXTURE_DATA,
 		PAK_SECTION_KIND_COUNT
 	};
 
@@ -22,6 +22,8 @@ namespace dk {
 		u32 version;
 		u32 section_offset;
 		u32 section_count;
+		u32 pad;
+		u64 metadata_size; ///< CPU data size.
 	};
 
 	struct PAK_Section {
@@ -37,8 +39,9 @@ namespace dk {
 	struct PAK_Shader {
 		u64 name_hash;
 		u32 name_string_idx;
-		u64 gpu_offset;
-		u64 gpu_size;
+		u32 pad;
+		u64 offset;
+		u64 size;
 	};
 
 	enum PAK_TextureKind : u16 {
@@ -61,28 +64,24 @@ namespace dk {
 		u32 height;
 		u32 depth;
 		u32 mip_count;
-		u64 gpu_offset;
-		u64 gpu_size;
-	};
-
-	struct PAK_GpuHeader {
-		u64 gpu_offset;
+		u64 offset;
+		u64 size;
 	};
 
 	using PAK_SectionElementType_StringData = u8;
 	using PAK_SectionElementType_StringTable = PAK_StringTable;
 	using PAK_SectionElementType_Shader = PAK_Shader;
 	using PAK_SectionElementType_Texture = PAK_Texture;
-	using PAK_SectionElementType_GpuHeader = PAK_GpuHeader;
-	using PAK_SectionElementType_GpuData = u8;
+	using PAK_SectionElementType_ShaderData = u8;
+	using PAK_SectionElementType_TextureData = u8;
 
 	template <PAK_SectionKind Kind> struct PAK_SectionTraits;
 	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_DATA>  { using Type = PAK_SectionElementType_StringData; };
 	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_TABLE> { using Type = PAK_SectionElementType_StringTable; };
 	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_SHADER>       { using Type = PAK_SectionElementType_Shader; };
 	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_TEXTURE>      { using Type = PAK_SectionElementType_Texture; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_HEADER>   { using Type = PAK_SectionElementType_GpuHeader; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_DATA>     { using Type = PAK_SectionElementType_GpuData; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_SHADER_DATA>  { using Type = PAK_SectionElementType_ShaderData; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_TEXTURE_DATA> { using Type = PAK_SectionElementType_TextureData; };
 
 	extern u16 const pak_section_element_size_table[];
 
