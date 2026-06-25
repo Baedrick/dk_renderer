@@ -1,5 +1,14 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+#ifdef _WIN32
+extern "C" {
+	// http://developer.download.nvidia.com/devzone/devcenter/gamegraphics/files/OptimusRenderingPolicies.pdf
+	__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+	// https://gpuopen.com/learn/amdpowerxpressrequesthighperformance/
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 auto dk::rhi_ogl_plt_window_equip(RGFW_window *window, RGFW_glContext *context) noexcept -> void {
 	window->src.ctx.native = context;
 	window->src.gfxType = RGFW_gfxNativeOpenGL;
