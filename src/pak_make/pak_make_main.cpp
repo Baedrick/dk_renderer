@@ -256,11 +256,20 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 	//~ Dedrick: Bake Textures.
 	PAKM_TextureBakeResult baked_textures = {};
 	{
+		// NOTE(Dedrick): GPUs require texture data to be aligned to specific byte
+		// boundaries for optimal performance. While APIs (Vulkan, DX12, Metal)
+		// vary, 256 bytes is the universal standard that satisfies almost all
+		// modern hardware. We strictly use Block Compression formats here because
+		// their fixed block sizes inherently satisfy this 256-byte alignment
+		// requirement.
+		u64 constexpr texture_align = 256;
+
 		//~ Dedrick: Set up.
 		baked_textures.metadata_size = textures.count * sizeof(PAK_SectionElementType_Texture);
 		baked_textures.metadata = arena_push_array<PAK_SectionElementType_Texture>(arena, textures.count);
 		u64 offset_cursor = 0;
 		for (u64 idx = 0; idx < textures.count; ++idx) {
+			offset_cursor = align_pow2(offset_cursor, texture_align);
 			PAKM_Texture const *src = &textures[idx];
 			PAK_SectionElementType_Texture *dst = baked_textures.metadata + idx;
 			dst->name_hash = u64_hash_from_str8(src->name);
@@ -275,6 +284,8 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 			dst->size = src->pixels.size;
 			offset_cursor += src->pixels.size;
 		}
+		// NOTE(Dedrick): Pad the last texture to the alignment boundary.
+		offset_cursor = align_pow2(offset_cursor, texture_align);
 
 		//~ Dedrick: Fill.
 		baked_textures.data_size = offset_cursor;
