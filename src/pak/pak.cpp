@@ -11,16 +11,27 @@ dk::u16 const dk::pak_section_element_size_table[] = {
 };
 static_assert(dk::array_count(dk::pak_section_element_size_table) == dk::PAK_SECTION_KIND_COUNT);
 
-auto dk::pak_parse(u8 *data, u64 size, PAK_Parsed *out) noexcept -> b8 {
+auto dk::pak_check_magic(Buffer bytes) noexcept -> b8 {
+	b8 is_pak = false;
+	if (bytes.size >= sizeof(PAK_Header)) {
+		PAK_Header *const header = reinterpret_cast<PAK_Header *>(bytes.data);
+		if (header->magic == PAK_MAGIC_CONSTANT) {
+			is_pak = true;
+		}
+	}
+	return is_pak;
+}
+
+auto dk::pak_parse(Buffer bytes, PAK_Parsed *out) noexcept -> b8 {
 	b8 good = false;
-	if (size >= sizeof(PAK_Header)) {
-		PAK_Header *const header = reinterpret_cast<PAK_Header *>(data);
-		if (header->magic == PAK_MAGIC_CONSTANT && header->version == PAK_VERSION) {
+	if (pak_check_magic(bytes)) {
+		PAK_Header *const header = reinterpret_cast<PAK_Header *>(bytes.data);
+		if (header->version == PAK_VERSION) {
 			u64 const opl = static_cast<u64>(header->section_offset) + static_cast<u64>(header->section_count) * sizeof(PAK_Section);
-			if (opl <= size) {
-				out->raw_data = data;
-				out->raw_data_size = size;
-				out->sections = reinterpret_cast<PAK_Section *>(data + header->section_offset);
+			if (opl <= bytes.size) {
+				out->raw_data = bytes.data;
+				out->raw_data_size = bytes.size;
+				out->sections = reinterpret_cast<PAK_Section *>(bytes.data + header->section_offset);
 				out->section_count = header->section_count;
 				good = true;
 			}

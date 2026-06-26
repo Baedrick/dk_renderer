@@ -51,6 +51,6 @@ namespace dk {
 		u32 misc_flags2;
 	};
 
-	auto dds_check_magic(Buffer buffer) noexcept -> b8;
+	auto dds_check_magic(Buffer bytes) noexcept -> b8;
 	auto dds_has_dxt10_header(DDS_Header const *header) noexcept -> b8;
 }
