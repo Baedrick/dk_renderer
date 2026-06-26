@@ -93,6 +93,7 @@ namespace dk {
 	};
 
 	auto pak_check_magic(Buffer bytes) noexcept -> b8;
+	auto pak_metadata_size_from_bytes(Buffer bytes) noexcept -> u64;
 
 	auto pak_parse(Buffer bytes, PAK_Parsed *out) noexcept -> b8;
 

@@ -22,6 +22,17 @@ auto dk::pak_check_magic(Buffer bytes) noexcept -> b8 {
 	return is_pak;
 }
 
+auto dk::pak_metadata_size_from_bytes(Buffer bytes) noexcept -> u64 {
+	u64 result = 0;
+	if (pak_check_magic(bytes)) {
+		PAK_Header *const header = reinterpret_cast<PAK_Header *>(bytes.data);
+		if (header->version == PAK_VERSION) {
+			result = header->metadata_size;
+		}
+	}
+	return result;
+}
+
 auto dk::pak_parse(Buffer bytes, PAK_Parsed *out) noexcept -> b8 {
 	b8 good = false;
 	if (pak_check_magic(bytes)) {
