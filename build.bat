@@ -73,7 +73,7 @@ if "%all%"=="1" (
     set dkrend=1
     set assets=1
 )
-if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% %out%dkrend.exe || exit /b 1
+if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% /NOIMPLIB %out%dkrend.exe || exit /b 1
 if "%assets%"=="1" (
     set didbuild=1
     echo [building shaders]

@@ -101,16 +101,84 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	String8 const texture_name_table[] = {
 		"tony_mc_mapface.dds"_str8
 	};
-	u64 const texture_staging_size = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size;
 	GLuint staging_buffer = 0;
 	glCreateBuffers(1, &staging_buffer);
-	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(texture_staging_size), nullptr, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-	u8 *const staging = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, texture_staging_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
-	u64 staging_cursor = 0;
+	GLbitfield const mapping_flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size), nullptr, mapping_flags);
+	u8 *const staging_base = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size, mapping_flags));
+	// FIXME(Dedrick):
+	u64 bytes_read = file_read(
+		file,
+		pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset,
+		pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset + pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size,
+		staging_base
+	);
+	DK_ASSERT(bytes_read > 0);
+	glUnmapNamedBuffer(staging_buffer);
+
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, staging_buffer);
+
+	for (u64 t = 0; t < DKR_TEXTURE_KIND_COUNT; ++t) {
+		//~ Dedrick: Unpack texture from pak.
+		String8 const tex_name = texture_name_table[t];
+		PAK_Texture const *pak_tex = pak_texture_from_name(pak, tex_name);
+		DK_ASSERT(pak_tex != nullptr);
+
+		//~ Dedrick: pak texture format -> ogl texture format
+		OGL_TextureFormat const *tex_fmt = &ogl_fmt_table[pak_tex->format];
+
+		//~ Dedrick: pak texture kind -> ogl texture kind
+		GLenum tex_kind = GL_TEXTURE_2D;
+		switch (pak_tex->kind) {
+			case PAK_TEXTURE_KIND_2D: { tex_kind = GL_TEXTURE_2D; } break;
+			case PAK_TEXTURE_KIND_3D: { tex_kind = GL_TEXTURE_3D; } break;
+		}
+
+		GLuint tex = 0;
+		glCreateTextures(tex_kind, 1, &tex);
+		glObjectLabel(GL_TEXTURE, tex, static_cast<GLsizei>(tex_name.size), reinterpret_cast<char const *>(tex_name.data));
+
+		if (tex_kind == GL_TEXTURE_2D) {
+			glTextureStorage2D(tex, pak_tex->mip_count, tex_fmt->fmt, pak_tex->width, pak_tex->height);
+
+			//~ Dedrick: Upload mip maps.
+			u64 offset = pak_tex->offset;
+			u32 mip_w = pak_tex->width;
+			u32 mip_h = pak_tex->height;
+			for (u32 mip = 0; mip < pak_tex->mip_count; ++mip) {
+				glTextureSubImage2D(tex, mip, 0, 0, mip_w, mip_h, tex_fmt->pixel_fmt, tex_fmt->type, reinterpret_cast<void const *>(offset));
+				offset += static_cast<u64>(mip_w) * mip_h * tex_fmt->bytes_per_pixel;
+				mip_w = mip_w > 1 ? (mip_w >> 1) : 1;
+				mip_h = mip_h > 1 ? (mip_h >> 1) : 1;
+			}
+		}
+		else if (tex_kind == GL_TEXTURE_3D) {
+			glTextureStorage3D(tex, pak_tex->mip_count, tex_fmt->fmt, pak_tex->width, pak_tex->height, pak_tex->depth);
+
+			//~ Dedrick: Upload mip maps.
+			u64 offset = pak_tex->offset;
+			u32 mip_w = pak_tex->width;
+			u32 mip_h = pak_tex->height;
+			u32 mip_d = pak_tex->depth;
+			for (u32 mip = 0; mip < pak_tex->mip_count; ++mip) {
+				glTextureSubImage3D(tex, mip, 0, 0, 0, mip_w, mip_h, mip_d, tex_fmt->pixel_fmt, tex_fmt->type, reinterpret_cast<void const *>(offset));
+				offset += static_cast<u64>(mip_w) * mip_h * mip_d * tex_fmt->bytes_per_pixel;
+				mip_w = mip_w > 1 ? (mip_w >> 1) : 1;
+				mip_h = mip_h > 1 ? (mip_h >> 1) : 1;
+				mip_d = mip_d > 1 ? (mip_d >> 1) : 1;
+			}
+		}
+
+		out_assets->textures[t] = tex;
+	}
+
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	glDeleteBuffers(1, &staging_buffer);
 
 	return success;
 }
 
+#if 0
 auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8 {
 	ZoneScoped;
 	TempArena const scratch = scratch_begin(nullptr, 0);
@@ -326,6 +394,7 @@ auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_ass
 	scratch_end(scratch);
 	return success;
 }
+#endif
 
 auto dk::dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void {
 	if (console->line_write_pos - console->line_read_pos >= console->max_lines) {
@@ -373,7 +442,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	//~ Dedrick: Load pak, initialize assets.
 	{
 		TempArena const scratch = scratch_begin(nullptr, 0);
-		String8 const pak_path = dkr_asset_pak_path(scratch.arena);
+		String8 const pak_path = dkr_pak_path(scratch.arena);
 		File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
 
 		PAK_Parsed pak = {};
@@ -392,6 +461,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		scratch_end(scratch);
 	}
 
+#if 0
 	//~ Dedrick: Load pak.
 	{
 		//~ Dedrick: Open file.
@@ -421,6 +491,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		file_close(file);
 		scratch_end(scratch);
 	}
+#endif
 
 	//~ Dedrick: Set up main window.
 	dkr_context->window = dt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
@@ -542,6 +613,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 					break;
 				}
 				case DKR_EVENT_KIND_RELOAD_PAK: {
+#if 0
 					//~ Dedrick: Open file.
 					String8 const pak_path = dkr_asset_pak_path(scratch.arena);
 					File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
@@ -579,6 +651,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 					//~ Dedrick: Close file.
 					file_map_close(file_map);
 					file_close(file);
+#endif
 					break;
 				}
 				case DKR_EVENT_KIND_OPEN_CONSOLE : {
