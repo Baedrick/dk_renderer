@@ -1,3 +1,50 @@
+### 2026-06-25: Pak Format Update and Staging Buffers
+Relying entirely on memory-mapped files for asset loading caused severe
+performance stalls when dealing with large textures. Because a texture spans
+multiple physical memory pages, the graphics driver triggers consecutive page
+faults as it reads the data, blocking the CPU while waiting for slow disk I/O.
+Standard file reads work better because the operating system can fetch the exact
+block sequentially without virtual memory guessing.
+
+I updated the archive layout to separate the data into CPU metadata and GPU
+binary blocks, adding explicit size markers. Now, the loader reads only the
+metadata header into system memory first to determine texture sizes. It then
+allocates pinned, host-visible memory directly from the graphics driver and
+reads the raw texture data straight from the disk into this staging memory.
+This path bypasses page faults and avoids intermediate user-space buffer copies.
+
+### 2026-06-21: DDS Parsing Layer
+The asset packaging layer was becoming cluttered because the specific code for
+parsing DirectDraw Surface (DDS) texture files was written inline alongside the
+general archive creation logic. Mixing image file format parsing with container
+formatting layout rules introduced noise and I think I can move the DDS logic
+into its own isolated layer.
+
+I moved the DDS parsing routines out of the packaging layer and into their own
+standalone source files. This change isolates texture format validation to its
+own layer, leaving the main asset packer to deal exclusively with general file
+layout, offsets, and binary alignment.
+
+### 2026-06-20: Asset Compiler
+Maintaining the asset cooker as a separate executable program added unnecessary
+build tracking and workflow steps. Whenever asset formats changed, both programs
+had to be updated and recompiled separately, increasing the chance of version
+mismatches. It also made shipping the project more complicated.
+
+I integrated the compiler code directly into the main renderer binary. The
+application checks for a specific flag at startup; if present, it runs the asset
+packer code and exits immediately without creating a window or initializing
+graphics. This step unifies the codebase so that data structures are naturally
+shared, and it simplifies the final submission for the grading professor to just
+a single executable and the asset archive.
+
+### 2026-06-19: Migrating the platform layer to the base layer
+The migration was simple because things were already structured in a sane way,
+the platform code was isolated to a single file which meant I just needed to
+migrate the interface over. Small problems like what primitives need to be
+declared before the use in platform functions did come up but it just required
+reordering of includes and declarations.
+
 ### 2026-06-18: Cyclic dependency of base and platform layers
 Initially, following how Allen Webster and Ryan Fleury structure their codebases
 gave me a working, maintainable architecture. However, active development on
@@ -18,7 +65,20 @@ go cross-platform, but organizing the codebase this way now will make it much
 simpler to pull out and port the standalone renderer down the line.
 
 ### 2026-06-16: Renderer Console
-TODO
+The logging architecture was originally designed to print strings sequentially
+to a text file, but displaying them in an interactive game window requires live
+filtering and coloring. If the user interface code has to search through a giant
+block of unformatted text every single frame to find line endings and check
+filters, it wastes CPU cycles inside the rendering path and causes frame rate
+dips.
+
+To keep frame times predictable, I modified the system to parse the text at the
+moment it is collected at the end of the frame, rather than during the drawing
+loop. By finding newline characters early, the engine copies the text into a
+circular buffer and stores the exact byte locations and lengths of each line in
+a fixed array. When the console opens, it executes a quick loop over these
+pre-calculated markers to show only the lines that match the active filter,
+keeping the runtime rendering loop fast and lightweight.
 
 ### 2026-06-13: Milestone 1 Completed
 I had to rework the schedule today while drafting the capstone proposal. The
