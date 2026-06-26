@@ -121,8 +121,10 @@ namespace dk {
 
 	auto dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void;
 
-	auto dkr_asset_pak_path(Arena *arena) noexcept -> String8;
-	auto dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
+	auto dkr_pak_path(Arena *arena) noexcept -> String8;
+	auto dkr_pak_read_metadata(Arena *arena, File file, PAK_Parsed *out_parsed) noexcept -> b8;
+
+	auto dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
 
 	auto dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void;
 

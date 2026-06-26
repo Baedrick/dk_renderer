@@ -58,8 +58,57 @@ auto dk::dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> v
 	dkr_context->time_averager_residual = 0;
 }
 
-auto dk::dkr_asset_pak_path(Arena *arena) noexcept -> String8 {
+auto dk::dkr_pak_path(Arena *arena) noexcept -> String8 {
 	return str8f(arena, "%.*s/dkrend.pak", DK_STR8_VARG(get_process_info()->binary_dir));
+}
+
+auto dk::dkr_pak_read_metadata(Arena *arena, File file, PAK_Parsed *out_parsed) noexcept -> b8 {
+	b8 good = false;
+	PAK_Header header_maybe = {};
+	file_read(file, 0, sizeof(PAK_Header), &header_maybe);
+	if (header_maybe.magic == PAK_MAGIC_CONSTANT && header_maybe.version == PAK_VERSION) {
+		u64 const size = attributes_from_file(file).size;
+		u64 const metadata_size = header_maybe.metadata_size;
+		if (size >= metadata_size) {
+			Buffer buffer = {};
+			buffer.size = metadata_size;
+			buffer.data = arena_push_array<u8>(arena, buffer.size);
+			file_read(file, 0, buffer.size, buffer.data);
+			good = pak_parse(buffer, out_parsed);
+			if (!good) {
+				arena_pop(arena, buffer.size);
+			}
+		}
+	}
+	return good;
+}
+
+auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8 {
+	ZoneScoped;
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	b8 success = true;
+
+	// TODO(Dedrick): Load shaders.
+
+	//~ Dedrick: Create textures.
+	// TODO(Dedrick): Move ogl helpers to rhi_opengl.
+	struct OGL_TextureFormat { GLenum fmt; GLenum pixel_fmt; GLenum type; u32 bytes_per_pixel; }
+	const ogl_fmt_table[] = {
+		{ GL_NONE, GL_NONE, GL_NONE, 0 },
+		{ GL_RGB9_E5, GL_RGB, GL_UNSIGNED_INT_5_9_9_9_REV, 4 }
+	};
+	static_assert(array_count(ogl_fmt_table) == PAK_TEXTURE_FORMAT_COUNT, "Mismatch texture format table");
+	String8 const texture_name_table[] = {
+		"tony_mc_mapface.dds"_str8
+	};
+	u64 const texture_staging_size = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size;
+	GLuint staging_buffer = 0;
+	glCreateBuffers(1, &staging_buffer);
+	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(texture_staging_size), nullptr, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+	u8 *const staging = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, texture_staging_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
+	u64 staging_cursor = 0;
+
+	return success;
 }
 
 auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8 {
@@ -319,6 +368,28 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		console->text_buffer = arena_push_array<u8>(dkr_context->arena, console->text_buffer_size);
 		console->max_lines = 4096;
 		console->lines = arena_push_array<DKR_ConsoleLine>(dkr_context->arena, console->max_lines);
+	}
+
+	//~ Dedrick: Load pak, initialize assets.
+	{
+		TempArena const scratch = scratch_begin(nullptr, 0);
+		String8 const pak_path = dkr_asset_pak_path(scratch.arena);
+		File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
+
+		PAK_Parsed pak = {};
+		b8 good = dkr_pak_read_metadata(scratch.arena, file, &pak);
+		if (!good) {
+			dt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid pak file; rebuild with `build assets`."_str8, true);
+			abort_self(0);
+		}
+		good = dkr_render_assets_load(file, &pak, &dkr_context->render_assets);
+		if (!good) {
+			dt_show_dialog(nullptr, "Fatal Error"_str8, "Error loading pak assets"_str8, true);
+			abort_self(0);
+		}
+
+		file_close(file);
+		scratch_end(scratch);
 	}
 
 	//~ Dedrick: Load pak.
