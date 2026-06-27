@@ -20,13 +20,13 @@ auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
 #if defined(DK_DESKTOP_INCLUDED) && !defined(DK_DESKTOP_INIT_MANUAL)
 	dt_init();
 #endif
-#if defined(DK_OGL_INCLUDED) && !defined(DK_OGL_INIT_MANUAL)
+#if defined(DK_OPENGL_INCLUDED) && !defined(DK_OPENGL_INIT_MANUAL)
 	ogl_init(&cmd_line);
 #endif
 
 	int const result = entry_point(&cmd_line);
 
-#if defined(DK_OGL_INCLUDED) && !defined(DK_OGL_INIT_MANUAL)
+#if defined(DK_OPENGL_INCLUDED) && !defined(DK_OPENGL_INIT_MANUAL)
 	ogl_shutdown();
 #endif
 #if defined(DK_DESKTOP_INCLUDED) && !defined(DK_DESKTOP_INIT_MANUAL)

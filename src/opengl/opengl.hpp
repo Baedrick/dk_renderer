@@ -2,8 +2,8 @@
 
 #pragma once
 
-#ifndef DK_OGL_INCLUDED
-#	define DK_OGL_INCLUDED
+#ifndef DK_OPENGL_INCLUDED
+#	define DK_OPENGL_INCLUDED
 #endif
 
 #include "opengl_core.hpp"

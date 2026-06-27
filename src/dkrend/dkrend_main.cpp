@@ -3,7 +3,7 @@
 #define DK_BUILD_GRAPHICAL
 #define DK_ASSET_ENGINE_INIT_MANUAL
 #define DK_DESKTOP_INIT_MANUAL
-#define DK_OGL_INIT_MANUAL
+#define DK_OPENGL_INIT_MANUAL
 
 #include "base/base.hpp"
 #include "asset_compiler/asset_compiler.hpp"
