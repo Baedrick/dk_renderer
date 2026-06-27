@@ -846,7 +846,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 	//~ Dedrick: Draw UI.
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-	rhi_surface_present(dkr_context->window);
+	RGFW_window_swapBuffers_OpenGL(dkr_context->window);
 
 	//~ Dedrick: Bump frame counters.
 	dkr_context->frame_index += 1;

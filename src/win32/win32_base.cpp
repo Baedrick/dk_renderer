@@ -439,7 +439,7 @@ auto dk::make_directory(String8 path) noexcept -> b8 {
 
 //~ Dedrick: @base_thread
 
-auto dk::plt_set_thread_name(String8 name) noexcept -> void {
+auto dk::platform_set_thread_name(String8 name) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String16 const name16 = str16_from_8(scratch.arena, name);
 	HRESULT const hr = SetThreadDescription(

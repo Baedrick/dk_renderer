@@ -3,13 +3,13 @@
 #define DK_BUILD_GRAPHICAL
 #define DK_ASSET_ENGINE_INIT_MANUAL
 #define DK_DESKTOP_INIT_MANUAL
-#define DK_RHI_INIT_MANUAL
+#define DK_OGL_INIT_MANUAL
 
 #include "base/base.hpp"
 #include "asset_compiler/asset_compiler.hpp"
 #include "asset_engine/asset_engine.hpp"
 #include "desktop/desktop.hpp"
-#include "rhi/rhi.hpp"
+#include "opengl/opengl.hpp"
 #include "pak/pak.hpp"
 #include "ui/ui.hpp"
 #include "dkrend/dkrend.hpp"
@@ -18,7 +18,7 @@
 #include "asset_compiler/asset_compiler.cpp"
 #include "asset_engine/asset_engine.cpp"
 #include "desktop/desktop.cpp"
-#include "rhi/rhi.cpp"
+#include "opengl/opengl.cpp"
 #include "pak/pak.cpp"
 #include "ui/ui.cpp"
 #include "dkrend/dkrend.cpp"
@@ -42,7 +42,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			//~ Dedrick: Manual layer initialization.
 			ase_init(cmd_line);
 			dt_init();
-			rhi_init(cmd_line);
+			ogl_init(cmd_line);
 			dkr_init(cmd_line);
 
 			//~ Dedrick: Main application loop.
@@ -53,7 +53,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 			//~ Dedrick: Manual layer shutdown.
 			dkr_shutdown();
-			rhi_shutdown();
+			ogl_shutdown();
 			dt_shutdown();
 			ase_shutdown();
 			break;

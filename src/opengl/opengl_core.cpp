@@ -4,15 +4,9 @@
 #include "thirdparty/glad/gl.h"
 #undef GLAD_GL_IMPLEMENTATION
 
-#if defined(DK_PLATFORM_WIN32)
-#	include "rhi_opengl_win32.cpp"
-#else
-#	error "Platform portion of OpenGL rendering backend not defined."
-#endif
+dk::OGL_Context *dk::ogl_context;
 
-dk::RHI_OGL_Context *dk::rhi_ogl_context;
-
-auto dk::rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void {
+auto dk::ogl_debug_msg_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void {
 	(void)user;
 
 	// NOTE(Dedrick): Ignore insignificant error/warning codes.
@@ -65,11 +59,11 @@ auto dk::rhi_ogl_debug_message_callback(GLenum source, GLenum type, GLuint id, G
 	scratch_end(scratch);
 }
 
-auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
+auto dk::ogl_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	Arena *arena = arena_alloc();
-	rhi_ogl_context = arena_push<RHI_OGL_Context>(arena);
-	rhi_ogl_context->arena = arena;
+	ogl_context = arena_push<OGL_Context>(arena);
+	ogl_context->arena = arena;
 
 	b8 debug_mode = cmd_line_has_flag(cmd_line, "opengl_debug"_str8);
 #if !defined(NDEBUG)
@@ -85,15 +79,15 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 	RGFW_setGlobalHints_OpenGL(hints);
 
 	RGFW_window *window = RGFW_createWindow("ogl_bootstrap_window", 0, 0, 1, 1, RGFW_windowHide);
-	rhi_ogl_context->gl_context = arena_push<RGFW_glContext>(arena);
-	RGFW_window_createContextPtr_OpenGL(window, rhi_ogl_context->gl_context, hints);
+	ogl_context->gl_context = arena_push<RGFW_glContext>(arena);
+	RGFW_window_createContextPtr_OpenGL(window, ogl_context->gl_context, hints);
 	gladLoadGL(reinterpret_cast<GLADloadfunc>(RGFW_getProcAddress_OpenGL));
 	RGFW_window_swapInterval_OpenGL(window, 1);
 
 	if (debug_mode) {
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-		glDebugMessageCallback(rhi_ogl_debug_message_callback, nullptr);
+		glDebugMessageCallback(ogl_debug_msg_callback, nullptr);
 	}
 
 	// NOTE(Dedrick): Intentional leak to keep OpenGL context alive.
@@ -101,42 +95,20 @@ auto dk::rhi_init(CmdLine *cmd_line) noexcept -> void {
 
 	{
 		ZoneScopedN("create vertex array");
-		glCreateVertexArrays(1, &rhi_ogl_context->all_purpose_vao);
+		glCreateVertexArrays(1, &ogl_context->all_purpose_vao);
 	}
 }
 
-auto dk::rhi_shutdown() noexcept -> void {
+auto dk::ogl_shutdown() noexcept -> void {
 
 }
 
-auto rhi_cmd_lists_submit() noexcept -> RHI_Fence {
-	RHI_Fence result = {};
-	return result;
-}
-
-auto dk::rhi_cmd_lists_wait_idle(RHI_Fence fence) noexcept -> b8 {
-	b8 result = false;
-	GLsync const sync = reinterpret_cast<GLsync>(fence.v);
-	if (sync != nullptr) {
-		GLenum const wait = glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, U64_MAX);
-		if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-			glDeleteSync(sync);
-			result = true;
-		}
-	}
-	return result;
-}
-
-auto dk::rhi_window_equip(RGFW_window *window) noexcept -> void {
+auto dk::ogl_window_equip(RGFW_window *window) noexcept -> void {
 	ZoneScoped;
-	rhi_ogl_plt_window_equip(window, rhi_ogl_context->gl_context);
+	ogl_plt_window_equip(window, ogl_context->gl_context);
 	RGFW_window_makeCurrentContext_OpenGL(window);
 }
 
-auto dk::rhi_window_unequip(RGFW_window *window) noexcept -> void {
+auto dk::ogl_window_unequip(RGFW_window *window) noexcept -> void {
 	(void)window;
-}
-
-auto dk::rhi_surface_present(RGFW_window *window) noexcept -> void {
-	RGFW_window_swapBuffers_OpenGL(window);
 }

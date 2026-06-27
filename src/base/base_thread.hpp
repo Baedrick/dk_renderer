@@ -31,7 +31,7 @@ namespace dk {
 
 	auto set_thread_name(String8 name) noexcept -> void;
 	auto set_thread_namef(char const *fmt, ...) noexcept -> void;
-	auto plt_set_thread_name(String8 name) noexcept -> void;
+	auto platform_set_thread_name(String8 name) noexcept -> void;
 
 	auto thread_launch(ThreadFunction *func, void *params) noexcept -> Thread;
 	auto thread_join(Thread thread) noexcept -> void;
