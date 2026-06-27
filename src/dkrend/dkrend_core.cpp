@@ -101,22 +101,30 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	String8 const texture_name_table[] = {
 		"tony_mc_mapface.dds"_str8
 	};
+
+	u64 const texture_data_offset = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset;
+	u64 const texture_data_size = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size;
+
 	GLuint staging_buffer = 0;
 	glCreateBuffers(1, &staging_buffer);
-	GLbitfield const mapping_flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size), nullptr, mapping_flags);
-	u8 *const staging_base = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size, mapping_flags));
-	// FIXME(Dedrick):
-	u64 bytes_read = file_read(
-		file,
-		pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset,
-		pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset + pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size,
-		staging_base
-	);
-	DK_ASSERT(bytes_read > 0);
-	glUnmapNamedBuffer(staging_buffer);
-
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, staging_buffer);
+	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(texture_data_size), nullptr, GL_MAP_WRITE_BIT);
+	u8 *const staging_base = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, texture_data_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
+
+	u64 const chunk_size = mega_bytes(4);
+	u8 *const buffer = arena_push_array<u8>(scratch.arena, chunk_size);
+	for (u64 cursor = 0; cursor < texture_data_size; ) {
+		u64 const read_size = min(chunk_size, texture_data_size - cursor);
+		file_read(
+			file,
+			texture_data_offset + cursor,
+			texture_data_offset + cursor + read_size,
+			buffer
+		);
+		std::memcpy(staging_base + cursor, buffer, read_size);
+		cursor += read_size;
+	}
+	glUnmapNamedBuffer(staging_buffer);
 
 	for (u64 t = 0; t < DKR_TEXTURE_KIND_COUNT; ++t) {
 		//~ Dedrick: Unpack texture from pak.
