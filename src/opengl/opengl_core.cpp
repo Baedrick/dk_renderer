@@ -112,3 +112,79 @@ auto dk::ogl_window_equip(RGFW_window *window) noexcept -> void {
 auto dk::ogl_window_unequip(RGFW_window *window) noexcept -> void {
 	(void)window;
 }
+
+auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noexcept -> GLuint {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+
+	//~ Dedrick: Compile shader stage.
+	GLuint shader = glCreateShader(type);
+	glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, source.data, static_cast<GLsizei>(source.size));
+	glSpecializeShader(shader, "main", 0, nullptr, nullptr);
+	if (name.size > 0) {
+		glObjectLabel(GL_SHADER, shader, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
+	}
+
+	//~ Dedrick: Query status and logs.
+	GLint status = 0;
+	GLint info_log_length = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_log_length);
+	if (info_log_length > 0) {
+		String8 log = {};
+		log.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);
+		log.size = info_log_length;
+		glGetShaderInfoLog(
+			shader,
+			static_cast<GLsizei>(log.size),
+			nullptr,
+			reinterpret_cast<char *>(const_cast<u8 *>(log.data))
+		);
+		DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(log));
+	}
+	if (status != GL_TRUE) {
+		glDeleteShader(shader);
+		shader = 0;
+	}
+
+	scratch_end(scratch);
+	return shader;
+}
+
+auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept -> GLuint {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+
+	//~ Dedrick: Link program.
+	GLuint program = glCreateProgram();
+	for (u64 idx = 0; idx < count; ++idx) {
+		glAttachShader(program, stages[idx]);
+	}
+	glLinkProgram(program);
+	if (name.size > 0) {
+		glObjectLabel(GL_PROGRAM, shader, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
+	}
+
+	//~ Dedrick: Query status and logs.
+	GLint status = 0;
+	GLint info_log_length = 0;
+	glGetProgramiv(shader, GL_LINK_STATUS, &status);
+	glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &info_log_length);
+	if (info_log_length > 0) {
+		String8 log = {};
+		log.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);
+		log.size = info_log_length;
+		glGetProgramInfoLog(
+			program,
+			static_cast<GLsizei>(log.size),
+			nullptr,
+			reinterpret_cast<char *>(const_cast<u8 *>(log.data))
+		);
+		DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(log));
+	}
+	if (status != GL_TRUE) {
+		glDeleteProgram(program);
+		program = 0;
+	}
+
+	scratch_end(scratch);
+	return program;
+}
