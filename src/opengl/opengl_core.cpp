@@ -105,7 +105,7 @@ auto dk::ogl_shutdown() noexcept -> void {
 
 auto dk::ogl_window_equip(RGFW_window *window) noexcept -> void {
 	ZoneScoped;
-	ogl_plt_window_equip(window, ogl_context->gl_context);
+	ogl_platform_window_equip(window, ogl_context->gl_context);
 	RGFW_window_makeCurrentContext_OpenGL(window);
 }
 
@@ -117,7 +117,7 @@ auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noe
 	TempArena const scratch = scratch_begin(nullptr, 0);
 
 	//~ Dedrick: Compile shader stage.
-	GLuint shader = glCreateShader(type);
+	GLuint shader = glCreateShader(stage);
 	glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, source.data, static_cast<GLsizei>(source.size));
 	glSpecializeShader(shader, "main", 0, nullptr, nullptr);
 	if (name.size > 0) {
@@ -160,14 +160,14 @@ auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept
 	}
 	glLinkProgram(program);
 	if (name.size > 0) {
-		glObjectLabel(GL_PROGRAM, shader, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
+		glObjectLabel(GL_PROGRAM, program, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
 	}
 
 	//~ Dedrick: Query status and logs.
 	GLint status = 0;
 	GLint info_log_length = 0;
-	glGetProgramiv(shader, GL_LINK_STATUS, &status);
-	glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &info_log_length);
+	glGetProgramiv(program, GL_LINK_STATUS, &status);
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_log_length);
 	if (info_log_length > 0) {
 		String8 log = {};
 		log.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);

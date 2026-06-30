@@ -9,7 +9,7 @@ auto dk::set_thread_name(String8 name) noexcept -> void {
 	tracy::SetThreadName(reinterpret_cast<char const *>(name_copy.data));
 	scratch_end(scratch);
 #endif
-	plt_set_thread_name(name);
+	platform_set_thread_name(name);
 }
 
 auto dk::set_thread_namef(char const *fmt, ...) noexcept -> void {

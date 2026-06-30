@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 auto dk::main_thread_entry_point(int argc, char **argv) noexcept -> int {
-	plt_set_thread_name("main_thread"_str8);
+	platform_set_thread_name("main_thread"_str8);
 	TempArena const scratch = scratch_begin(nullptr, 0);
 
 	String8List cmd_line_strings = {};

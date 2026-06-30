@@ -88,7 +88,75 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	b8 success = true;
 
-	// TODO(Dedrick): Load shaders.
+	u64 const chunk_size = mega_bytes(4);
+	u8 *const buffer = arena_push_array<u8>(scratch.arena, chunk_size);
+
+	//~ Dedrick: Shader tables.
+	enum ShaderModule : u32 {
+		SHADER_MODULE_HELLO_TRIANGLE_VERT,
+		SHADER_MODULE_HELLO_TRIANGLE_FRAG,
+		SHADER_MODULE_DUMMY_COMP,
+		SHADER_MODULE_COUNT
+	};
+	struct { GLenum stage; String8 name; } const shader_module_table[] = {
+		{ GL_VERTEX_SHADER,   "hello_triangle.vert"_str8 },
+		{ GL_FRAGMENT_SHADER, "hello_triangle.frag"_str8 },
+		{ GL_COMPUTE_SHADER,  "dummy.comp"_str8 },
+	};
+	static_assert(array_count(shader_module_table) == SHADER_MODULE_COUNT, "Mismatch shader modules count");
+	struct { String8 name; u32 count; ShaderModule modules[2]; } const shader_table[] = {
+		{ "hello_triangle"_str8, 2, { SHADER_MODULE_HELLO_TRIANGLE_VERT, SHADER_MODULE_HELLO_TRIANGLE_FRAG } },
+		{ "dummy"_str8,          1, { SHADER_MODULE_DUMMY_COMP } },
+	};
+	static_assert(array_count(shader_table) == DKR_SHADER_KIND_COUNT, "Mismatch shader count");
+
+	//~ Dedrick: Compile shader stages.
+	u64 const shader_data_offset = pak->sections[PAK_SECTION_KIND_SHADER_DATA].offset;
+	GLuint shader_modules[SHADER_MODULE_COUNT] = {};
+	for (u64 m = 0; m < SHADER_MODULE_COUNT; ++m) {
+		String8 const name = shader_module_table[m].name;
+		PAK_Shader const *pak_shader = pak_shader_from_name(pak, name);
+		DK_ASSERT(pak_shader != nullptr);
+		file_read(
+			file,
+			shader_data_offset + pak_shader->offset,
+			shader_data_offset + pak_shader->offset + pak_shader->size,
+			buffer
+		);
+		shader_modules[m] = ogl_shader_stage_compile(shader_module_table[m].stage, buf(buffer, pak_shader->size), name);
+
+		// NOTE(Dedrick): Do not stop compiling the rest of the shaders if this
+		// module fails to compile. Its more helpful to us if we can get as much
+		// logs on all of the errors as possible at once to display.
+		if (shader_modules[m] == 0) {
+			success = false;
+		}
+	}
+
+	//~ Dedrick: Link Shaders.
+	if (success) {
+		for (u64 s = 0; s < DKR_SHADER_KIND_COUNT; ++s) {
+			String8 const name = shader_table[s].name;
+			u32 const count = shader_table[s].count;
+			GLuint modules[array_count(shader_table[0].modules)] = {};
+			for (u32 idx = 0; idx < count; ++idx) {
+				modules[idx] = shader_modules[shader_table[s].modules[idx]];
+			}
+			out_assets->shaders[s] = ogl_shader_link(count, modules, name);
+
+			// NOTE(Dedrick): Do not stop linking the rest of the shaders if this
+			// shader fails to link. Its more helpful to us if we can get as much
+			// logs on all of the errors as possible at once to display.
+			if (out_assets->shaders[s] == 0) {
+				success = false;
+			}
+		}
+	}
+
+	//~ Dedrick: Clean up intermediate shader objects.
+	for (u64 m = 0; m < SHADER_MODULE_COUNT; ++m) {
+		glDeleteShader(shader_modules[m]);
+	}
 
 	//~ Dedrick: Create textures.
 	// TODO(Dedrick): Move ogl helpers to rhi_opengl.
@@ -101,18 +169,13 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	String8 const texture_name_table[] = {
 		"tony_mc_mapface.dds"_str8
 	};
-
 	u64 const texture_data_offset = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset;
 	u64 const texture_data_size = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size;
-
 	GLuint staging_buffer = 0;
 	glCreateBuffers(1, &staging_buffer);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, staging_buffer);
 	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(texture_data_size), nullptr, GL_MAP_WRITE_BIT);
 	u8 *const staging_base = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, texture_data_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
-
-	u64 const chunk_size = mega_bytes(4);
-	u8 *const buffer = arena_push_array<u8>(scratch.arena, chunk_size);
 	for (u64 cursor = 0; cursor < texture_data_size; ) {
 		u64 const read_size = min(chunk_size, texture_data_size - cursor);
 		file_read(
@@ -179,214 +242,8 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 
 		out_assets->textures[t] = tex;
 	}
-
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glDeleteBuffers(1, &staging_buffer);
-
-	return success;
-}
-
-#if 0
-auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8 {
-	ZoneScoped;
-	TempArena const scratch = scratch_begin(nullptr, 0);
-	b8 success = true;
-
-	// TODO(Dedrick): Name each object using glObjectLabel.
-
-	//~ Dedrick: Obtain start of gpu binary data of pak.
-	PAK_GpuHeader const *gpu_header = pak_element_from_kind_idx<PAK_SECTION_KIND_GPU_HEADER>(pak, 0);
-	u8 const *const gpu_base = pak->raw_data + gpu_header->gpu_offset;
-
-	//~ Dedrick: Unpack shader modules and compile them.
-	enum ShaderModule : u32 {
-		SHADER_MODULE_HELLO_TRIANGLE_VERT,
-		SHADER_MODULE_HELLO_TRIANGLE_FRAG,
-		SHADER_MODULE_DUMMY_COMP,
-		SHADER_MODULE_COUNT
-	};
-	struct { ShaderModule id; GLenum type; String8 name; GLuint out; }
-	shader_module_table[] = {
-		{ SHADER_MODULE_HELLO_TRIANGLE_VERT, GL_VERTEX_SHADER,   "hello_triangle.vert"_str8, 0 },
-		{ SHADER_MODULE_HELLO_TRIANGLE_FRAG, GL_FRAGMENT_SHADER, "hello_triangle.frag"_str8, 0 },
-		{ SHADER_MODULE_DUMMY_COMP,          GL_COMPUTE_SHADER,  "dummy.comp"_str8,          0 },
-	};
-	static_assert(array_count(shader_module_table) == SHADER_MODULE_COUNT, "Mismatch shader modules count");
-	for (u64 m = 0; m < array_count(shader_module_table); ++m) {
-		DK_ASSERT(shader_module_table[m].id == m);
-
-		//~ Dedrick: Unpack shader module from pak.
-		String8 const shader_name = shader_module_table[m].name;
-		PAK_Shader const *pak_shader = pak_shader_from_name(pak, shader_name);
-		DK_ASSERT(pak_shader != nullptr);
-		u8 const *shader_data = gpu_base + pak_shader->gpu_offset;
-		u64 const shader_size = pak_shader->gpu_size;
-
-		//~ Dedrick: Compile shader module.
-		shader_module_table[m].out = glCreateShader(shader_module_table[m].type);
-		glShaderBinary(1, &shader_module_table[m].out, GL_SHADER_BINARY_FORMAT_SPIR_V, shader_data, static_cast<GLsizei>(shader_size));
-		glSpecializeShader(shader_module_table[m].out, "main", 0, nullptr, nullptr);
-
-		//~ Dedrick: Query status and logs.
-		//
-		// NOTE(Dedrick): Do not stop compiling the rest of the shaders if this
-		// module fails to compile. Its more helpful to us if we can get as much
-		// logs on all of the errors as possible at once to display.
-		//
-		GLint compile_status = 0;
-		GLint info_log_length = 0;
-		glGetShaderiv(shader_module_table[m].out, GL_COMPILE_STATUS, &compile_status);
-		glGetShaderiv(shader_module_table[m].out, GL_INFO_LOG_LENGTH, &info_log_length);
-		if (compile_status != GL_TRUE) {
-			success = false;
-		}
-		if (info_log_length > 0) {
-			String8 err = {};
-			err.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);
-			err.size = info_log_length;
-			glGetShaderInfoLog(
-				shader_module_table[m].out,
-				info_log_length,
-				nullptr,
-				reinterpret_cast<char *>(const_cast<u8 *>(err.data))
-			);
-			DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(err));
-		}
-	}
-
-	//~ Dedrick: Link shader programs.
-	enum ShaderKind { SHADER_KIND_SURFACE, SHADER_KIND_COMPUTE };
-	struct ShaderDesc {
-		ShaderKind kind;
-		union {
-			struct { u32 vs; u32 fs; } surface;
-			struct { u32 cs; } compute;
-		};
-	} const shader_table[] = {
-		{ SHADER_KIND_SURFACE, { .surface = { SHADER_MODULE_HELLO_TRIANGLE_VERT, SHADER_MODULE_HELLO_TRIANGLE_FRAG } } },
-		{ SHADER_KIND_COMPUTE, { .compute = { SHADER_MODULE_DUMMY_COMP } } }
-	};
-	String8 const shader_name_table[] = {
-		"hello_triangle"_str8,
-		"dummy"_str8
-	};
-	static_assert(array_count(shader_table) == DKR_SHADER_KIND_COUNT, "Mismatch shader table count");
-	static_assert(array_count(shader_name_table) == DKR_SHADER_KIND_COUNT, "Mismatch shader name table count");
-	if (success) {
-		for (u64 s = 0; s < DKR_SHADER_KIND_COUNT; ++s) {
-			GLuint const shader = glCreateProgram();
-			ShaderDesc const *desc = &shader_table[s];
-			switch (desc->kind) {
-				case SHADER_KIND_SURFACE: {
-					glAttachShader(shader, shader_module_table[desc->surface.vs].out);
-					glAttachShader(shader, shader_module_table[desc->surface.fs].out);
-					break;
-				}
-				case SHADER_KIND_COMPUTE: {
-					glAttachShader(shader, shader_module_table[desc->compute.cs].out);
-					break;
-				}
-			}
-			glLinkProgram(shader);
-
-			//~ Dedrick: Query status and logs.
-			//
-			// NOTE(Dedrick): Do not stop linking the rest of the shaders if this
-			// shader fails to link. Its more helpful to us if we can get as much
-			// logs on all of the errors as possible at once to display.
-			//
-			GLint link_status = 0;
-			GLint info_log_length = 0;
-			glGetProgramiv(shader, GL_LINK_STATUS, &link_status);
-			glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &info_log_length);
-			if (link_status != GL_TRUE) {
-				success = false;
-			}
-			if (info_log_length > 0) {
-				String8 err = {};
-				err.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);
-				err.size = info_log_length;
-				glGetProgramInfoLog(
-					shader,
-					info_log_length,
-					nullptr,
-					reinterpret_cast<char *>(const_cast<u8 *>(err.data))
-				);
-				DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(err));
-			}
-			out_assets->shaders[s] = shader;
-		}
-	}
-
-	//~ Dedrick: Initialize textures.
-	struct OGL_TextureFormat { GLenum fmt; GLenum pixel_fmt; GLenum type; u32 bytes_per_pixel; }
-	const ogl_fmt_table[] = {
-		{ GL_NONE, GL_NONE, GL_NONE, 0 },
-		{ GL_RGB9_E5, GL_RGB, GL_UNSIGNED_INT_5_9_9_9_REV, 4 }
-	};
-	static_assert(array_count(ogl_fmt_table) == PAK_TEXTURE_FORMAT_COUNT, "Mismatch texture format table");
-	String8 const texture_name_table[] = {
-		"tony_mc_mapface.dds"_str8
-	};
-	for (u64 t = 0; t < DKR_TEXTURE_KIND_COUNT; ++t) {
-		//~ Dedrick: Unpack texture from pak.
-		String8 const tex_name = texture_name_table[t];
-		PAK_Texture const *pak_tex = pak_texture_from_name(pak, tex_name);
-		DK_ASSERT(pak_tex != nullptr);
-		u8 const *tex_base = gpu_base + pak_tex->gpu_offset;
-
-		//~ Dedrick: pak texture format -> ogl texture format
-		OGL_TextureFormat const *tex_fmt = &ogl_fmt_table[pak_tex->format];
-
-		//~ Dedrick: pak texture kind -> ogl texture kind
-		GLenum tex_kind = GL_TEXTURE_2D;
-		switch (pak_tex->kind) {
-			case PAK_TEXTURE_KIND_2D: { tex_kind = GL_TEXTURE_2D; } break;
-			case PAK_TEXTURE_KIND_3D: { tex_kind = GL_TEXTURE_3D; } break;
-		}
-
-		GLuint tex = 0;
-		glCreateTextures(tex_kind, 1, &tex);
-		glObjectLabel(GL_TEXTURE, tex, static_cast<GLsizei>(tex_name.size), reinterpret_cast<char const *>(tex_name.data));
-
-		if (tex_kind == GL_TEXTURE_2D) {
-			glTextureStorage2D(tex, pak_tex->mip_count, tex_fmt->fmt, pak_tex->width, pak_tex->height);
-
-			//~ Dedrick: Upload mip maps.
-			u64 offset = 0;
-			u32 mip_w = pak_tex->width;
-			u32 mip_h = pak_tex->height;
-			for (u32 mip = 0; mip < pak_tex->mip_count; ++mip) {
-				glTextureSubImage2D(tex, mip, 0, 0, mip_w, mip_h, tex_fmt->pixel_fmt, tex_fmt->type, tex_base + offset);
-				offset += static_cast<u64>(mip_w) * mip_h * tex_fmt->bytes_per_pixel;
-				mip_w = mip_w > 1 ? (mip_w >> 1) : 1;
-				mip_h = mip_h > 1 ? (mip_h >> 1) : 1;
-			}
-		}
-		else if (tex_kind == GL_TEXTURE_3D) {
-			glTextureStorage3D(tex, pak_tex->mip_count, tex_fmt->fmt, pak_tex->width, pak_tex->height, pak_tex->depth);
-
-			//~ Dedrick: Upload mip maps.
-			u64 offset = 0;
-			u32 mip_w = pak_tex->width;
-			u32 mip_h = pak_tex->height;
-			u32 mip_d = pak_tex->depth;
-			for (u32 mip = 0; mip < pak_tex->mip_count; ++mip) {
-				glTextureSubImage3D(tex, mip, 0, 0, 0, mip_w, mip_h, mip_d, tex_fmt->pixel_fmt, tex_fmt->type, tex_base + offset);
-				offset += static_cast<u64>(mip_w) * mip_h * mip_d * tex_fmt->bytes_per_pixel;
-				mip_w = mip_w > 1 ? (mip_w >> 1) : 1;
-				mip_h = mip_h > 1 ? (mip_h >> 1) : 1;
-				mip_d = mip_d > 1 ? (mip_d >> 1) : 1;
-			}
-		}
-
-		out_assets->textures[t] = tex;
-	}
-
-	//~ Dedrick: Clean up intermediate objects.
-	for (u64 m = 0; m < array_count(shader_module_table); ++m) {
-		glDeleteShader(shader_module_table[m].out);
-	}
 
 	//~ Dedrick: Clean up on failure.
 	if (!success) {
@@ -399,10 +256,9 @@ auto dk::dkr_render_assets_load(PAK_Parsed const *pak, DKR_RenderAssets *out_ass
 			out_assets->textures[t] = 0;
 		}
 	}
-	scratch_end(scratch);
+
 	return success;
 }
-#endif
 
 auto dk::dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void {
 	if (console->line_write_pos - console->line_read_pos >= console->max_lines) {
@@ -469,43 +325,11 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 		scratch_end(scratch);
 	}
 
-#if 0
-	//~ Dedrick: Load pak.
-	{
-		//~ Dedrick: Open file.
-		TempArena const scratch = scratch_begin(nullptr, 0);
-		String8 const pak_path = dkr_asset_pak_path(scratch.arena);
-		File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
-		FileMap const file_map = file_map_open(file, FILE_ACCESS_FLAG_READ);
-		FileAttributes const file_attribs = attributes_from_file(file);
-		void *const file_base = file_map_view_open(file_map, FILE_ACCESS_FLAG_READ, 0, file_attribs.size);
-
-		//~ Dedrick: Parse pak.
-		PAK_Parsed pak = {};
-		b8 good = pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak);
-		if (!good) {
-			dt_show_dialog(nullptr, "Fatal Error"_str8, "Invalid pak file; rebuild with `build assets`."_str8, true);
-			abort_self(0);
-		}
-		good = dkr_render_assets_load(&pak, &dkr_context->render_assets);
-		if (!good) {
-			dt_show_dialog(nullptr, "Fatal Error"_str8, "Error loading pak assets"_str8, true);
-			abort_self(0);
-		}
-
-		//~ Dedrick: Close file.
-		file_map_view_close(file_map, file_base, 0, file_attribs.size);
-		file_map_close(file_map);
-		file_close(file);
-		scratch_end(scratch);
-	}
-#endif
-
 	//~ Dedrick: Set up main window.
 	dkr_context->window = dt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	dkr_context->monitor = RGFW_window_getMonitor(dkr_context->window);
 	dkr_target_frame_time_update(dkr_context->monitor);
-	rhi_window_equip(dkr_context->window);
+	ogl_window_equip(dkr_context->window);
 
 	//~ Dedrick: Initialize ImGui.
 	IMGUI_CHECKVERSION();
@@ -528,7 +352,7 @@ auto dk::dkr_shutdown() noexcept -> void {
 	ImGui_ImplRgfw_Shutdown();
 	ImGui::DestroyContext();
 	log_release(dkr_context->log);
-	rhi_window_unequip(dkr_context->window);
+	ogl_window_unequip(dkr_context->window);
 	dt_window_close(dkr_context->window);
 }
 
@@ -621,20 +445,15 @@ auto dk::dkr_frame() noexcept -> b8 {
 					break;
 				}
 				case DKR_EVENT_KIND_RELOAD_PAK: {
-#if 0
-					//~ Dedrick: Open file.
-					String8 const pak_path = dkr_asset_pak_path(scratch.arena);
+					String8 const pak_path = dkr_pak_path(scratch.arena);
 					File const file = file_open(pak_path, FILE_ACCESS_FLAG_READ);
-					FileMap const file_map = file_map_open(file, FILE_ACCESS_FLAG_READ);
-					FileAttributes const file_attribs = attributes_from_file(file);
-					void *const file_base = file_map_view_open(file_map, FILE_ACCESS_FLAG_READ, 0, file_attribs.size);
-					if (file_base != nullptr) {
+					if (is_valid(file)) {
 						PAK_Parsed pak = {};
 						DKR_RenderAssets assets = {};
-						b8 const loaded =
-							pak_parse(static_cast<u8 *>(file_base), file_attribs.size, &pak) &&
-							dkr_render_assets_load(&pak, &assets);
-						if (loaded) {
+						b8 const good =
+							dkr_pak_read_metadata(scratch.arena, file, &pak) &&
+							dkr_render_assets_load(file, &pak, &assets);
+						if (good) {
 							//~ Dedrick: Clean up existing render assets.
 							DKR_RenderAssets *const stale_assets = &dkr_context->render_assets;
 							for (u64 k = 0; k < DKR_SHADER_KIND_COUNT; ++k) {
@@ -651,15 +470,11 @@ auto dk::dkr_frame() noexcept -> b8 {
 						else {
 							DK_LOG_ERRORF("ERROR: failed to parse or load render assets from pak\n");
 						}
-						file_map_view_close(file_map, file_base, 0, file_attribs.size);
+						file_close(file);
 					}
 					else {
 						DK_LOG_ERRORF("ERROR: failed to map pak file to memory. file missing or locked?\n");
 					}
-					//~ Dedrick: Close file.
-					file_map_close(file_map);
-					file_close(file);
-#endif
 					break;
 				}
 				case DKR_EVENT_KIND_OPEN_CONSOLE : {
@@ -839,7 +654,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 	}
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glBindVertexArray(rhi_ogl_context->all_purpose_vao);
+	glBindVertexArray(ogl_context->all_purpose_vao);
 	glUseProgram(dkr_context->render_assets.shaders[DKR_SHADER_KIND_HELLO_TRIANGLE]);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
