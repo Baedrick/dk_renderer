@@ -117,6 +117,7 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 		String8 const name = shader_module_table[m].name;
 		PAK_Shader const *pak_shader = pak_shader_from_name(pak, name);
 		DK_ASSERT(pak_shader != nullptr);
+		DK_ASSERT(pak_shader->size <= chunk_size);
 		file_read(
 			file,
 			shader_data_offset + pak_shader->offset,
