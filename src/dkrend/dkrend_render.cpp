@@ -51,9 +51,9 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 		{ "dummy"_str8,          1, { SHADER_MODULE_DUMMY_COMP } },
 	};
 	static_assert(array_count(shader_table) == DKR_SHADER_KIND_COUNT, "Mismatch shader count");
+	u64 const shader_data_offset = pak->sections[PAK_SECTION_KIND_SHADER_DATA].offset;
 
 	//~ Dedrick: Compile shader stages.
-	u64 const shader_data_offset = pak->sections[PAK_SECTION_KIND_SHADER_DATA].offset;
 	GLuint shader_modules[SHADER_MODULE_COUNT] = {};
 	for (u64 m = 0; m < SHADER_MODULE_COUNT; ++m) {
 		String8 const name = shader_module_table[m].name;
@@ -114,11 +114,21 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	};
 	u64 const texture_data_offset = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset;
 	u64 const texture_data_size = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size;
-	GLuint staging_buffer = 0;
-	glCreateBuffers(1, &staging_buffer);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, staging_buffer);
-	glNamedBufferStorage(staging_buffer, static_cast<GLsizeiptr>(texture_data_size), nullptr, GL_MAP_WRITE_BIT);
-	u8 *const staging_base = static_cast<u8 *>(glMapNamedBufferRange(staging_buffer, 0, texture_data_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
+
+	u8 *stage_base = nullptr;
+	GPU_AllocResult alloc_result;
+	do {
+		alloc_result = gpu_arena_try_push(dkr_context->render.stage_arena, texture_data_size, 16, reinterpret_cast<void **>(&stage_base));
+		if (alloc_result == GPU_AllocResult::ERROR_OUT_OF_MEMORY) {
+			if (dkr_context->render.stage_sync) {
+				glClientWaitSync(dkr_context->render.stage_sync, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+				glDeleteSync(dkr_context->render.stage_sync);
+				dkr_context->render.stage_sync = nullptr;
+			}
+			gpu_arena_clear(dkr_context->render.stage_arena);
+		}
+	} while (alloc_result != GPU_AllocResult::OK);
+
 	for (u64 cursor = 0; cursor < texture_data_size; ) {
 		u64 const read_size = min(chunk_size, texture_data_size - cursor);
 		file_read(
@@ -127,21 +137,17 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 			texture_data_offset + cursor + read_size,
 			buffer
 		);
-		std::memcpy(staging_base + cursor, buffer, read_size);
+		std::memcpy(stage_base + cursor, buffer, read_size);
 		cursor += read_size;
 	}
-	glUnmapNamedBuffer(staging_buffer);
 
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, dkr_context->render.stage_buffer);
 	for (u64 t = 0; t < DKR_TEXTURE_KIND_COUNT; ++t) {
 		//~ Dedrick: Unpack texture from pak.
 		String8 const tex_name = texture_name_table[t];
 		PAK_Texture const *pak_tex = pak_texture_from_name(pak, tex_name);
 		DK_ASSERT(pak_tex != nullptr);
-
-		//~ Dedrick: pak texture format -> ogl texture format
 		OGL_TextureFormat const *tex_fmt = &ogl_fmt_table[pak_tex->format];
-
-		//~ Dedrick: pak texture kind -> ogl texture kind
 		GLenum tex_kind = GL_TEXTURE_2D;
 		switch (pak_tex->kind) {
 			case PAK_TEXTURE_KIND_2D: { tex_kind = GL_TEXTURE_2D; } break;
@@ -186,7 +192,12 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 		out_assets->textures[t] = tex;
 	}
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-	glDeleteBuffers(1, &staging_buffer);
+
+	//~ Dedrick: Update staging fence.
+	if (dkr_context->render.stage_sync) {
+		glDeleteSync(dkr_context->render.stage_sync);
+	}
+	dkr_context->render.stage_sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
 	//~ Dedrick: Clean up on failure.
 	if (!success) {

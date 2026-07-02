@@ -341,7 +341,12 @@ auto dk::dkr_frame() noexcept -> b8 {
 			// Developer options
 
 			if (ImGui::Button("Console")) {
-				dkr_push_event_kind(DKR_EVENT_KIND_OPEN_CONSOLE);
+				if (dkr_context->console_is_open) {
+					ImGui::SetWindowFocus("Console");
+				}
+				else {
+					dkr_push_event_kind(DKR_EVENT_KIND_OPEN_CONSOLE);
+				}
 			}
 
 			if (ImGui::Button("Reload Pak")) {
