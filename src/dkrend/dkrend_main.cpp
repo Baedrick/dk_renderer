@@ -1,13 +1,14 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
 #define DK_BUILD_GRAPHICAL
-#define DK_ASSET_ENGINE_INIT_MANUAL
+#define DK_ASSET_SERVER_INIT_MANUAL
 #define DK_DESKTOP_INIT_MANUAL
 #define DK_OPENGL_INIT_MANUAL
 
 #include "base/base.hpp"
+#include "gpu_allocator/gpu_allocator.hpp"
 #include "asset_compiler/asset_compiler.hpp"
-#include "asset_engine/asset_engine.hpp"
+#include "asset_server/asset_server.hpp"
 #include "desktop/desktop.hpp"
 #include "opengl/opengl.hpp"
 #include "pak/pak.hpp"
@@ -15,8 +16,9 @@
 #include "dkrend/dkrend.hpp"
 
 #include "base/base.cpp"
+#include "gpu_allocator/gpu_allocator.cpp"
 #include "asset_compiler/asset_compiler.cpp"
-#include "asset_engine/asset_engine.cpp"
+#include "asset_server/asset_server.cpp"
 #include "desktop/desktop.cpp"
 #include "opengl/opengl.cpp"
 #include "pak/pak.cpp"
@@ -40,7 +42,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 		default:
 		case EXEC_MODE_NORMAL: {
 			//~ Dedrick: Manual layer initialization.
-			ase_init(cmd_line);
+			assv_init(cmd_line);
 			dt_init();
 			ogl_init(cmd_line);
 			dkr_init(cmd_line);
@@ -55,7 +57,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			dkr_shutdown();
 			ogl_shutdown();
 			dt_shutdown();
-			ase_shutdown();
+			assv_shutdown();
 			break;
 		}
 		case EXEC_MODE_ASSET_COMPILER: {

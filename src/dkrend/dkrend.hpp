@@ -2,4 +2,5 @@
 
 #pragma once
 
-#include "dkrend_core.hpp"
+#include "dkrend_render.hpp"
+#include "dkrend_app.hpp"

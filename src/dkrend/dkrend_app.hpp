@@ -34,26 +34,6 @@ namespace dk {
 		u64 count;
 	};
 
-	enum DKR_ShaderKind : u32 {
-		DKR_SHADER_KIND_HELLO_TRIANGLE,
-		DKR_SHADER_KIND_DUMMY,
-		DKR_SHADER_KIND_COUNT
-	};
-
-	enum DKR_TextureKind : u32 {
-		DKR_TEXTURE_KIND_TONY_MC_MAPFACE,
-		DKR_TEXTURE_KIND_COUNT,
-	};
-
-	struct DKR_RenderAssets {
-		GLuint shaders[DKR_SHADER_KIND_COUNT];
-		GLuint textures[DKR_TEXTURE_KIND_COUNT];
-	};
-
-	struct DKR_RenderContext {
-
-	};
-
 	struct DKR_ConsoleLine {
 		u64 offset;
 		u32 size;
@@ -119,14 +99,9 @@ namespace dk {
 	auto dkr_push_event_kind(DKR_EventKind kind) noexcept -> void;
 	auto dkr_next_event(DKR_Event **event) noexcept -> b8;
 
-	auto dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void;
-
-	auto dkr_pak_path(Arena *arena) noexcept -> String8;
-	auto dkr_pak_read_metadata(Arena *arena, File file, PAK_Parsed *out_parsed) noexcept -> b8;
-
-	auto dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
-
 	auto dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void;
+
+	auto dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void;
 
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
 	auto dkr_shutdown() noexcept -> void;
