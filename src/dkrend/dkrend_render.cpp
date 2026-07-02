@@ -66,7 +66,8 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 			shader_data_offset + pak_shader->offset + pak_shader->size,
 			buffer
 		);
-		shader_modules[m] = ogl_shader_stage_compile(shader_module_table[m].stage, buf(buffer, pak_shader->size), name);
+		Buffer8 const binary = buf(buffer, pak_shader->size);
+		shader_modules[m] = ogl_shader_stage_compile(shader_module_table[m].stage, binary, name);
 
 		// NOTE(Dedrick): Do not stop compiling the rest of the shaders if this
 		// module fails to compile. Its more helpful to us if we can get as much

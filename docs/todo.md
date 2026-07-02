@@ -108,6 +108,11 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][dkrend][Must Have] Refactor render assets reload with new pak format
+- [x][dkrend][Must Have] Initialize persistent staging buffer at init
+- [x][Must Have] Arena allocator for GPU staging buffer
+- [x][Must Have] Update pak make utility to support new format
+- [x][Must Have] Update PAK format to separate shader and texture data
 - [x][Must Have] Defer macro to defer code to the end of the scope
 - [x][Must Have] Asset engine stub file
 - [x][Must Have] Move ImGui thirdparty include in dkrend to ui layer
