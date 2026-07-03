@@ -44,3 +44,11 @@ auto dk::gpu_arena_pop(GPU_Arena *arena, u64 amount) noexcept -> void {
 auto dk::gpu_arena_pop_to(GPU_Arena *arena, u64 pos) noexcept -> void {
 	arena->pos = min(arena->size, pos);
 }
+
+auto dk::gpu_heap_alloc() noexcept -> GPU_Heap * {
+	return nullptr;
+}
+
+auto dk::gpu_heap_release() noexcept -> void {
+
+}

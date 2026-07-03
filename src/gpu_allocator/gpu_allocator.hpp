@@ -22,4 +22,12 @@ namespace dk {
 	auto gpu_arena_pos(GPU_Arena *arena) noexcept -> u64;
 	auto gpu_arena_pop(GPU_Arena *arena, u64 amount) noexcept -> void;
 	auto gpu_arena_pop_to(GPU_Arena *arena, u64 pos) noexcept -> void;
+
+	// TODO(Dedrick): General purpose gpu buffer allocator.
+	struct GPU_Heap {
+
+	};
+
+	auto gpu_heap_alloc() noexcept -> GPU_Heap *;
+	auto gpu_heap_release() noexcept -> void;
 }

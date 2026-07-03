@@ -56,14 +56,36 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	{
 		ZoneScopedN("analyze and load command line input files");
 		if (lane_idx() == 0) {
-			String8List const asset_input_file_paths = cmd_line_values(cmd_line, "asset_input"_str8);
-			String8List asset_input_file_path_tasks = str8_list_copy(arena, &asset_input_file_paths);
-			for (String8Node const *node = asset_input_file_path_tasks.first; node != nullptr; node = node->next) {
-				// TODO(Dedrick): Figure out file format, bucket by type.
-				// Requires parsing glTF files to find buffer and texture files.
-				// Need to handle case where .exr file is asked to be compiled instead of .gltf/.glb
-				// What I think would work is just trusting .gltf is actually what it is
-				// Later on we fail loudly if the user provides a bad .gltf file.
+			String8List input_file_path_tasks = str8_list_copy(arena, &cmd_line->inputs);
+			for (String8Node const *node = input_file_path_tasks.first; node != nullptr; node = node->next) {
+				ZoneScopedN("analysis of file");
+
+				ASC_FileFormat file_format = ASC_FILE_FORMAT_NULL;
+				ASC_FileFormatFlags file_format_flags = ASC_FILE_FORMAT_FLAG_NONE;
+				File const file = file_open(node->string, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
+				FileAttributes const file_attr = attributes_from_file(file);
+				(void)file_format;
+				(void)file_format_flags;
+				(void)file;
+				(void)file_attr;
+
+				//~ Dedrick: GLB magic -> GLB input.
+
+				//~ Dedrick: EXR magic -> HDRI input.
+
+				//~ Dedrick: PNG/JPEG magic -> Texture input.
+
+				//~ Dedrick: GLTF ext -> GLTF input.
+
+				//~ Dedrick: Load recognized file?
+
+				//~ Dedrick: Mesh buffer?
+
+				//~ Dedrick: GLB format -> generate new tasks for textures, meshes.
+
+				//~ Dedrick: GLTF format -> generate new tasks for textures, meshes.
+
+				//~ Dedrick: Bucket input file by format.
 			}
 		}
 		lane_sync();
