@@ -7,6 +7,7 @@
 #include "base_profile.hpp"
 #include "base_memory.hpp"
 #include "base_arena.hpp"
+#include "base_math.hpp"
 #include "base_string.hpp"
 #include "base_buffer.hpp"
 #include "base_ring_buffer.hpp"

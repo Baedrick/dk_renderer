@@ -5,6 +5,7 @@
 #include "base_profile.cpp"
 #include "base_memory.cpp"
 #include "base_arena.cpp"
+#include "base_math.cpp"
 #include "base_string.cpp"
 #include "base_buffer.cpp"
 #include "base_ring_buffer.cpp"
