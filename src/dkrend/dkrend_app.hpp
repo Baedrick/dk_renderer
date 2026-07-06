@@ -21,6 +21,7 @@ namespace dk {
 
 	struct DKR_RenderContext {
 		//~ Dedrick: Staging.
+		// TODO: Arena isn't right, should be changed to chunked pools.
 		GLsync stage_sync;
 		GLuint stage_buffer;
 		GPU_Arena *stage_arena;

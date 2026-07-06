@@ -223,6 +223,8 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 			}
 		}
 
+		DK_LOG_INFOF("[OpenGL] texture %.*s loaded\n", DK_STR8_VARG(texture_name_table[t]));
+
 		out_assets->textures[t] = tex;
 	}
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -387,7 +389,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 		dkr_context->time_in_seconds += frame_dt;
 	}
 
-	//~ Dedrick: Do per-frame resets.
+	//~ Dedrick: Do per-frame cpu resets.
 	arena_clear(dkr_frame_arena());
 	dkr_context->events[1] = dkr_context->events[0];
 	dkr_context->events[0] = {};
@@ -395,7 +397,14 @@ auto dk::dkr_frame() noexcept -> b8 {
 	//~ Dedrick: Begin log frame scope.
 	log_frame_begin();
 
-	// TODO(Dedrick): Wait for gpu fences
+	//~ Dedrick: Wait for gpu fences
+	if (dkr_context->render.stage_sync) {
+		glClientWaitSync(dkr_context->render.stage_sync, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+		glDeleteSync(dkr_context->render.stage_sync);
+		dkr_context->render.stage_sync = nullptr;
+	}
+	gpu_arena_clear(dkr_context->render.stage_arena);
+
 	// TODO(Dedrick): Process asset unload events (defragment here?)
 	// TODO(Dedrick): Process asset load events
 
