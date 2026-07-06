@@ -84,7 +84,7 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 		{ "dummy"_str8,          1, { SHADER_MODULE_DUMMY_COMP } },
 	};
 	static_assert(array_count(shader_table) == DKR_SHADER_KIND_COUNT, "Mismatch shader count");
-	u64 const shader_data_offset = pak->sections[PAK_SECTION_KIND_SHADER_DATA].offset;
+	u64 const shader_data_offset = pak->sections[PAK_SECTION_KIND_GPU_SHADER_DATA].offset;
 
 	//~ Dedrick: Compile shader stages.
 	GLuint shader_modules[SHADER_MODULE_COUNT] = {};
@@ -146,8 +146,8 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	String8 const texture_name_table[] = {
 		"tony_mc_mapface.dds"_str8
 	};
-	u64 const texture_data_offset = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].offset;
-	u64 const texture_data_size = pak->sections[PAK_SECTION_KIND_TEXTURE_DATA].size;
+	u64 const texture_data_offset = pak->sections[PAK_SECTION_KIND_GPU_TEXTURE_DATA].offset;
+	u64 const texture_data_size = pak->sections[PAK_SECTION_KIND_GPU_TEXTURE_DATA].size;
 
 	u8 *stage_base = nullptr;
 	GPU_AllocResult alloc_result;

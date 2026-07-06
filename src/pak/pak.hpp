@@ -10,10 +10,10 @@ namespace dk {
 		PAK_SECTION_KIND_NULL = 0,
 		PAK_SECTION_KIND_STRING_DATA,
 		PAK_SECTION_KIND_STRING_TABLE,
-		PAK_SECTION_KIND_SHADER,
-		PAK_SECTION_KIND_TEXTURE,
-		PAK_SECTION_KIND_SHADER_DATA,
-		PAK_SECTION_KIND_TEXTURE_DATA,
+		PAK_SECTION_KIND_SHADERS,
+		PAK_SECTION_KIND_TEXTURES,
+		PAK_SECTION_KIND_GPU_SHADER_DATA,
+		PAK_SECTION_KIND_GPU_TEXTURE_DATA,
 		PAK_SECTION_KIND_COUNT
 	};
 
@@ -68,20 +68,20 @@ namespace dk {
 		u64 size;
 	};
 
-	using PAK_SectionElementType_StringData = u8;
-	using PAK_SectionElementType_StringTable = PAK_StringTable;
-	using PAK_SectionElementType_Shader = PAK_Shader;
-	using PAK_SectionElementType_Texture = PAK_Texture;
-	using PAK_SectionElementType_ShaderData = u8;
-	using PAK_SectionElementType_TextureData = u8;
+	using PAK_SectionElementType_StringData      = u8;
+	using PAK_SectionElementType_StringTable     = PAK_StringTable;
+	using PAK_SectionElementType_Shaders         = PAK_Shader;
+	using PAK_SectionElementType_Textures        = PAK_Texture;
+	using PAK_SectionElementType_GPU_ShaderData  = u8;
+	using PAK_SectionElementType_GPU_TextureData = u8;
 
 	template <PAK_SectionKind Kind> struct PAK_SectionTraits;
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_DATA>  { using Type = PAK_SectionElementType_StringData; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_TABLE> { using Type = PAK_SectionElementType_StringTable; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_SHADER>       { using Type = PAK_SectionElementType_Shader; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_TEXTURE>      { using Type = PAK_SectionElementType_Texture; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_SHADER_DATA>  { using Type = PAK_SectionElementType_ShaderData; };
-	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_TEXTURE_DATA> { using Type = PAK_SectionElementType_TextureData; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_DATA>      { using Type = PAK_SectionElementType_StringData; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_STRING_TABLE>     { using Type = PAK_SectionElementType_StringTable; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_SHADERS>          { using Type = PAK_SectionElementType_Shaders; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_TEXTURES>         { using Type = PAK_SectionElementType_Textures; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_SHADER_DATA>  { using Type = PAK_SectionElementType_GPU_ShaderData; };
+	template <> struct PAK_SectionTraits<PAK_SECTION_KIND_GPU_TEXTURE_DATA> { using Type = PAK_SectionElementType_GPU_TextureData; };
 
 	extern u16 const pak_section_element_size_table[];
 

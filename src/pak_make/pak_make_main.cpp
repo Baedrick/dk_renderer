@@ -229,12 +229,12 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 	PAKM_ShaderBakeResult baked_shaders = {};
 	{
 		//~ Dedrick: Set up.
-		baked_shaders.metadata_size = shaders.count * sizeof(PAK_SectionElementType_Shader);
-		baked_shaders.metadata = arena_push_array<PAK_SectionElementType_Shader>(arena, shaders.count);
+		baked_shaders.metadata_size = shaders.count * sizeof(PAK_SectionElementType_Shaders);
+		baked_shaders.metadata = arena_push_array<PAK_SectionElementType_Shaders>(arena, shaders.count);
 		u64 offset_cursor = 0;
 		for (u64 idx = 0; idx < shaders.count; ++idx) {
 			PAKM_Shader const *src = &shaders[idx];
-			PAK_SectionElementType_Shader *dst = baked_shaders.metadata + idx;
+			PAK_SectionElementType_Shaders *dst = baked_shaders.metadata + idx;
 			dst->name_hash = u64_hash_from_str8(src->name);
 			dst->name_string_idx = pakm_find_string_index(src->name, strings);
 			dst->pad = 0;
@@ -245,7 +245,7 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 
 		//~ Dedrick: Fill.
 		baked_shaders.data_size = offset_cursor;
-		baked_shaders.data = arena_push_array<PAK_SectionElementType_ShaderData>(arena, baked_shaders.data_size);
+		baked_shaders.data = arena_push_array<PAK_SectionElementType_GPU_ShaderData>(arena, baked_shaders.data_size);
 		for (u64 idx = 0; idx < shaders.count; ++idx) {
 			PAKM_Shader const *src = &shaders[idx];
 			u64 const dst_offset = baked_shaders.metadata[idx].offset;
@@ -265,13 +265,13 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 		u64 constexpr texture_align = 256;
 
 		//~ Dedrick: Set up.
-		baked_textures.metadata_size = textures.count * sizeof(PAK_SectionElementType_Texture);
-		baked_textures.metadata = arena_push_array<PAK_SectionElementType_Texture>(arena, textures.count);
+		baked_textures.metadata_size = textures.count * sizeof(PAK_SectionElementType_Textures);
+		baked_textures.metadata = arena_push_array<PAK_SectionElementType_Textures>(arena, textures.count);
 		u64 offset_cursor = 0;
 		for (u64 idx = 0; idx < textures.count; ++idx) {
 			offset_cursor = align_pow2(offset_cursor, texture_align);
 			PAKM_Texture const *src = &textures[idx];
-			PAK_SectionElementType_Texture *dst = baked_textures.metadata + idx;
+			PAK_SectionElementType_Textures *dst = baked_textures.metadata + idx;
 			dst->name_hash = u64_hash_from_str8(src->name);
 			dst->name_string_idx = pakm_find_string_index(src->name, strings);
 			dst->kind = src->kind;
@@ -289,7 +289,7 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 
 		//~ Dedrick: Fill.
 		baked_textures.data_size = offset_cursor;
-		baked_textures.data = arena_push_array<PAK_SectionElementType_TextureData>(arena, baked_textures.data_size);
+		baked_textures.data = arena_push_array<PAK_SectionElementType_GPU_TextureData>(arena, baked_textures.data_size);
 		for (u64 idx = 0; idx < textures.count; ++idx) {
 			PAKM_Texture const *src = &textures[idx];
 			u64 const dst_offset = baked_textures.metadata[idx].offset;
@@ -300,13 +300,13 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 	//~ Dedrick: Package results.
 	PAKM_BakeBundle bundle = {};
 	{
-		bundle.sections[PAK_SECTION_KIND_NULL]         = { nullptr, 0 };
-		bundle.sections[PAK_SECTION_KIND_STRING_TABLE] = { baked_strings.string_tables, baked_strings.string_tables_count * sizeof(PAK_SectionElementType_StringTable) };
-		bundle.sections[PAK_SECTION_KIND_STRING_DATA]  = { baked_strings.string_data, baked_strings.string_data_size };
-		bundle.sections[PAK_SECTION_KIND_SHADER]       = { baked_shaders.metadata, baked_shaders.metadata_size };
-		bundle.sections[PAK_SECTION_KIND_TEXTURE]      = { baked_textures.metadata, baked_textures.metadata_size };
-		bundle.sections[PAK_SECTION_KIND_SHADER_DATA]  = { baked_shaders.data, baked_shaders.data_size };
-		bundle.sections[PAK_SECTION_KIND_TEXTURE_DATA] = { baked_textures.data, baked_textures.data_size };
+		bundle.sections[PAK_SECTION_KIND_NULL]             = { nullptr, 0 };
+		bundle.sections[PAK_SECTION_KIND_STRING_TABLE]     = { baked_strings.string_tables, baked_strings.string_tables_count * sizeof(PAK_SectionElementType_StringTable) };
+		bundle.sections[PAK_SECTION_KIND_STRING_DATA]      = { baked_strings.string_data, baked_strings.string_data_size };
+		bundle.sections[PAK_SECTION_KIND_SHADERS]          = { baked_shaders.metadata, baked_shaders.metadata_size };
+		bundle.sections[PAK_SECTION_KIND_TEXTURES]         = { baked_textures.metadata, baked_textures.metadata_size };
+		bundle.sections[PAK_SECTION_KIND_GPU_SHADER_DATA]  = { baked_shaders.data, baked_shaders.data_size };
+		bundle.sections[PAK_SECTION_KIND_GPU_TEXTURE_DATA] = { baked_textures.data, baked_textures.data_size };
 	}
 
 	//~ Dedrick: Serialize bundles.
@@ -331,7 +331,7 @@ auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
 			}
 		}
 
-		header->metadata_size = pak_sections[PAK_SECTION_KIND_SHADER_DATA].offset;
+		header->metadata_size = pak_sections[PAK_SECTION_KIND_GPU_SHADER_DATA].offset;
 	}
 
 	//~ Dedrick: Write blobs.

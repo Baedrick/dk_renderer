@@ -63,16 +63,16 @@ namespace dk {
 	};
 
 	struct PAKM_ShaderBakeResult {
-		PAK_SectionElementType_Shader *metadata;
+		PAK_SectionElementType_Shaders *metadata;
 		u64 metadata_size;
-		PAK_SectionElementType_ShaderData *data;
+		PAK_SectionElementType_GPU_ShaderData *data;
 		u64 data_size;
 	};
 
 	struct PAKM_TextureBakeResult {
-		PAK_SectionElementType_Texture *metadata;
+		PAK_SectionElementType_Textures *metadata;
 		u64 metadata_size;
-		PAK_SectionElementType_TextureData *data;
+		PAK_SectionElementType_GPU_TextureData *data;
 		u64 data_size;
 	};
 

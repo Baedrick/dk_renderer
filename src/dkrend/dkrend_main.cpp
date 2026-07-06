@@ -7,6 +7,7 @@
 
 #include "base/base.hpp"
 #include "gpu_allocator/gpu_allocator.hpp"
+#include "dks/dks.hpp"
 #include "asset_compiler/asset_compiler.hpp"
 #include "asset_server/asset_server.hpp"
 #include "desktop/desktop.hpp"
@@ -17,6 +18,7 @@
 
 #include "base/base.cpp"
 #include "gpu_allocator/gpu_allocator.cpp"
+#include "dks/dks.cpp"
 #include "asset_compiler/asset_compiler.cpp"
 #include "asset_server/asset_server.cpp"
 #include "desktop/desktop.cpp"

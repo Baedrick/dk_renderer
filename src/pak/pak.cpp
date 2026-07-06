@@ -4,10 +4,10 @@ dk::u16 const dk::pak_section_element_size_table[] = {
 	sizeof(u8),
 	sizeof(PAK_SectionElementType_StringData),
 	sizeof(PAK_SectionElementType_StringTable),
-	sizeof(PAK_SectionElementType_Shader),
-	sizeof(PAK_SectionElementType_Texture),
-	sizeof(PAK_SectionElementType_ShaderData),
-	sizeof(PAK_SectionElementType_TextureData)
+	sizeof(PAK_SectionElementType_Shaders),
+	sizeof(PAK_SectionElementType_Textures),
+	sizeof(PAK_SectionElementType_GPU_ShaderData),
+	sizeof(PAK_SectionElementType_GPU_TextureData)
 };
 static_assert(dk::array_count(dk::pak_section_element_size_table) == dk::PAK_SECTION_KIND_COUNT);
 
@@ -85,7 +85,7 @@ auto dk::pak_shader_from_name(PAK_Parsed const *pak, String8 name) noexcept -> P
 	if (name.size > 0) {
 		u64 const name_hash = u64_hash_from_str8(name);
 		u64 shader_count = 0;
-		PAK_Shader *const shaders = pak_table_from_kind<PAK_SECTION_KIND_SHADER>(pak, &shader_count);
+		PAK_Shader *const shaders = pak_table_from_kind<PAK_SECTION_KIND_SHADERS>(pak, &shader_count);
 		for (u64 shader_idx = 0; shader_idx < shader_count; ++shader_idx) {
 			PAK_Shader *const shader = shaders + shader_idx;
 			if (shader->name_hash == name_hash) {
@@ -105,7 +105,7 @@ auto dk::pak_texture_from_name(PAK_Parsed const *pak, String8 name) noexcept -> 
 	if (name.size > 0) {
 		u64 const name_hash = u64_hash_from_str8(name);
 		u64 texture_count = 0;
-		PAK_Texture *const textures = pak_table_from_kind<PAK_SECTION_KIND_TEXTURE>(pak, &texture_count);
+		PAK_Texture *const textures = pak_table_from_kind<PAK_SECTION_KIND_TEXTURES>(pak, &texture_count);
 		for (u64 texture_idx = 0; texture_idx < texture_count; ++texture_idx) {
 			PAK_Texture *const texture = textures + texture_idx;
 			if (texture->name_hash == name_hash) {
