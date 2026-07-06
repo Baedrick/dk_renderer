@@ -36,6 +36,14 @@ auto dk::operator*(f32 s, vec3 v) noexcept -> vec3 {
 	return { v.x * s, v.y * s, v.z * s };
 }
 
+auto dk::min(vec3 a, vec3 b) noexcept -> vec3 {
+	return { min(a.x, b.x), min(a.y, b.y), min(a.z, b.z) };
+}
+
+auto dk::max(vec3 a, vec3 b) noexcept -> vec3 {
+	return { max(a.x, b.x), max(a.y, b.y), max(a.z, b.z) };
+}
+
 auto dk::dot(vec3 a, vec3 b) noexcept -> f32 {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }

@@ -34,6 +34,8 @@ namespace dk {
 	auto operator/(vec3 a, vec3 b) noexcept -> vec3;
 	auto operator*(vec3 v, f32 s) noexcept -> vec3;
 	auto operator*(f32 s, vec3 v) noexcept -> vec3;
+	auto min(vec3 a, vec3 b) noexcept -> vec3;
+	auto max(vec3 a, vec3 b) noexcept -> vec3;
 	auto dot(vec3 a, vec3 b) noexcept -> f32;
 	auto length2(vec3 v) noexcept -> f32;
 	auto length(vec3 v) noexcept -> f32;
