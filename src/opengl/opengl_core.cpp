@@ -120,9 +120,6 @@ auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noe
 	GLuint shader = glCreateShader(stage);
 	glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, source.data, static_cast<GLsizei>(source.size));
 	glSpecializeShader(shader, "main", 0, nullptr, nullptr);
-	if (name.size > 0) {
-		glObjectLabel(GL_SHADER, shader, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
-	}
 
 	//~ Dedrick: Query status and logs.
 	GLint status = 0;
@@ -131,17 +128,18 @@ auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noe
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &info_log_length);
 	if (info_log_length > 0) {
 		String8 log = {};
-		log.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);
-		log.size = info_log_length;
-		glGetShaderInfoLog(
-			shader,
-			static_cast<GLsizei>(log.size),
-			nullptr,
-			reinterpret_cast<char *>(const_cast<u8 *>(log.data))
-		);
+		log.data = arena_push_array<u8>(scratch.arena, info_log_length);
+		log.size = info_log_length - 1;
+		glGetShaderInfoLog(shader, info_log_length, nullptr, reinterpret_cast<char *>(const_cast<u8 *>(log.data)));
 		DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(log));
 	}
-	if (status != GL_TRUE) {
+	if (status == GL_TRUE) {
+		if (name.size > 0) {
+			glObjectLabel(GL_SHADER, shader, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
+		}
+		DK_LOG_INFOF("[OpenGL] shader stage %.*s compiled\n", DK_STR8_VARG(name));
+	}
+	else {
 		glDeleteShader(shader);
 		shader = 0;
 	}
@@ -159,9 +157,6 @@ auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept
 		glAttachShader(program, stages[idx]);
 	}
 	glLinkProgram(program);
-	if (name.size > 0) {
-		glObjectLabel(GL_PROGRAM, program, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
-	}
 
 	//~ Dedrick: Query status and logs.
 	GLint status = 0;
@@ -170,17 +165,18 @@ auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept
 	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_log_length);
 	if (info_log_length > 0) {
 		String8 log = {};
-		log.data = arena_push_array<u8>(scratch.arena, info_log_length + 1);
-		log.size = info_log_length;
-		glGetProgramInfoLog(
-			program,
-			static_cast<GLsizei>(log.size),
-			nullptr,
-			reinterpret_cast<char *>(const_cast<u8 *>(log.data))
-		);
+		log.data = arena_push_array<u8>(scratch.arena, info_log_length);
+		log.size = info_log_length - 1;
+		glGetProgramInfoLog(program, info_log_length, nullptr, reinterpret_cast<char *>(const_cast<u8 *>(log.data)));
 		DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(log));
 	}
-	if (status != GL_TRUE) {
+	if (status == GL_TRUE) {
+		if (name.size > 0) {
+			glObjectLabel(GL_PROGRAM, program, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
+		}
+		DK_LOG_INFOF("[OpenGL] shader %.*s linked\n", DK_STR8_VARG(name));
+	}
+	else {
 		glDeleteProgram(program);
 		program = 0;
 	}
