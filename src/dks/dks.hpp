@@ -12,7 +12,7 @@ namespace dk {
 		DKS_SECTION_KIND_STRING_DATA,
 		DKS_SECTION_KIND_STRING_TABLE,
 		DKS_SECTION_KIND_OBJECTS,
-		DKS_SECTION_KIND_GPU_OBJECT_INSTANCES,
+		DKS_SECTION_KIND_GPU_MESHES,
 		DKS_SECTION_KIND_GPU_VERTICES,
 		DKS_SECTION_KIND_GPU_MESHLETS,
 		DKS_SECTION_KIND_GPU_MESHLET_VERTICES,
@@ -49,7 +49,7 @@ namespace dk {
 		u32 name_string_idx;
 	};
 
-	struct DKS_ObjectInstance {
+	struct DKS_Mesh {
 		f32 center[3];
 		f32 extents[3];
 		u32 meshlet_offset;
@@ -72,7 +72,7 @@ namespace dk {
 	using DKS_SectionElementType_StringData           = u8;
 	using DKS_SectionElementType_StringTable          = DKS_StringTable;
 	using DKS_SectionElementType_Objects              = DKS_Object;
-	using DKS_SectionElementType_GPU_ObjectInstances  = DKS_ObjectInstance;
+	using DKS_SectionElementType_GPU_Meshes           = DKS_Mesh;
 	using DKS_SectionElementType_GPU_Meshlets         = DKS_Meshlet;
 	using DKS_SectionElementType_GPU_Vertices         = DKS_Vertex;
 	using DKS_SectionElementType_GPU_MeshletVertices  = u32;
@@ -83,7 +83,7 @@ namespace dk {
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_STRING_DATA>           { using Type = DKS_SectionElementType_StringData; };
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_STRING_TABLE>          { using Type = DKS_SectionElementType_StringTable; };
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_OBJECTS>               { using Type = DKS_SectionElementType_Objects; };
-	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_GPU_OBJECT_INSTANCES>  { using Type = DKS_SectionElementType_GPU_ObjectInstances; };
+	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_GPU_MESHES>            { using Type = DKS_SectionElementType_GPU_Meshes; };
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_GPU_VERTICES>          { using Type = DKS_SectionElementType_GPU_Vertices; };
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_GPU_MESHLETS>          { using Type = DKS_SectionElementType_GPU_Meshlets; };
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_GPU_MESHLET_VERTICES>  { using Type = DKS_SectionElementType_GPU_MeshletVertices; };
