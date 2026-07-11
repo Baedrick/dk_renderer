@@ -50,9 +50,8 @@ namespace dk {
 	};
 
 	struct DKS_GPU_Instance {
-		f32 world_from_object[12]; // mat4x3
+		f32 world_from_object[12]; // mat4x3, implicit vec4(0,0,0,1)
 		u32 mesh_idx;
-		u32 pad[3];
 	};
 
 	struct DKS_GPU_Mesh {

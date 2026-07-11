@@ -49,7 +49,9 @@ namespace dk {
 	};
 
 	struct DKSM_BakeResults {
-
+		DKSM_TopLevelInfoBakeResult top_level_info;
+		DKSM_ObjectBakeResult objects;
+		DKSM_MeshBakeResult meshes;
 	};
 
 	struct DKSM_SerializedSection {
@@ -61,7 +63,6 @@ namespace dk {
 		DKSM_SerializedSection sections[DKS_SECTION_KIND_COUNT];
 	};
 
-
-	auto dksm_serialized_section_bundle_from_bake_results() noexcept -> DKSM_SerializedSectionBundle;
-	auto dksm_buffer_blobs_from_section_bundle() noexcept -> BufferList;
+	auto dksm_serialized_section_bundle_from_bake_results(DKSM_BakeResults const *bake_results) noexcept -> DKSM_SerializedSectionBundle;
+	auto dksm_buffer_blobs_from_section_bundle(Arena *arena, DKSM_SerializedSectionBundle const *bundle) noexcept -> BufferList;
 }
