@@ -1,9 +1,5 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-#define CGLTF_IMPLEMENTATION
-#include "thirdparty/cgltf/cgltf.h"
-#undef CGLTF_IMPLEMENTATION
-
 dk::ASC_Shared *dk::asc_shared;
 
 auto dk::asc_entry_point(CmdLine *cmd_line) noexcept -> void {
