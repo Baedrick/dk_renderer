@@ -7,6 +7,7 @@
 
 #include "base/base.hpp"
 #include "gpu_allocator/gpu_allocator.hpp"
+#include "exr/exr.hpp"
 #include "gltf/gltf.hpp"
 #include "dks/dks.hpp"
 #include "dks_make/dks_make.hpp"
@@ -20,6 +21,7 @@
 
 #include "base/base.cpp"
 #include "gpu_allocator/gpu_allocator.cpp"
+#include "exr/exr.cpp"
 #include "gltf/gltf.cpp"
 #include "dks/dks.cpp"
 #include "dks_make/dks_make.cpp"

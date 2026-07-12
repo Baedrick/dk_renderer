@@ -5,17 +5,15 @@
 namespace dk {
 	enum ASC_FileFormat : u32 {
 		ASC_FILE_FORMAT_NULL = 0,
+		ASC_FILE_FORMAT_GLB,
+		ASC_FILE_FORMAT_GLTF,
+		ASC_FILE_FORMAT_GLTF_BIN,
+		ASC_FILE_FORMAT_EXR,
 		ASC_FILE_FORMAT_COUNT
-	};
-
-	enum ASC_FileFormatFlags : u32 {
-		ASC_FILE_FORMAT_FLAG_NONE     = 0,
-		ASC_FILE_FORMAT_FLAG_EMBEDDED = 1u << 0
 	};
 
 	struct ASC_File {
 		ASC_FileFormat format;
-		ASC_FileFormatFlags format_flags;
 		String8 path;
 		Buffer data;
 	};
