@@ -71,6 +71,7 @@ namespace dk {
 	auto char_to_upper(u8 c) noexcept -> u8;
 	auto char_to_lower(u8 c) noexcept -> u8;
 	auto char_to_forward_slash(u8 c) noexcept -> u8;
+	auto base64_from_char(u8 c) noexcept -> u8;
 
 	auto char16_is_lower(u16 c) noexcept -> b8;
 	auto char16_to_lower(u16 c) noexcept -> u16;
@@ -149,6 +150,8 @@ namespace dk {
 
 	auto str8_from_16(Arena *arena, String16 str) noexcept -> String8;
 	auto str16_from_8(Arena *arena, String8 str) noexcept -> String16;
+
+	auto str8_decode_base64(Arena *arena, String8 str) noexcept -> String8;
 
 	auto u64_hash_from_seed_str8(u64 seed, String8 str) noexcept -> u64;
 	auto u64_hash_from_str8(String8 str) noexcept -> u64;

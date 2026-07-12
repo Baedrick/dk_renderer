@@ -52,6 +52,20 @@ auto dk::char_to_forward_slash(u8 c) noexcept -> u8 {
 	return c == '\\' ? '/' : c;
 }
 
+auto dk::base64_from_char(u8 c) noexcept -> u8 {
+	u8 constexpr table[256] = {
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 62,  0,  0,  0, 63,
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61,  0,  0,  0,  0,  0,  0,
+		 0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,  0,  0,  0,  0,  0,
+		 0, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
+	};
+	return table[c];
+}
+
 auto dk::char16_is_lower(u16 c) noexcept -> b8 {
 	return c >= u'A' && c <= u'Z';
 }
@@ -774,6 +788,52 @@ auto dk::str16_from_8(Arena *arena, String8 str) noexcept -> String16 {
 
 		u64 const actual_size = out - out_begin;
 		arena_pop(arena, (max_size - (actual_size + 1)) * sizeof(u16));
+		result.data = out_begin;
+		result.size = actual_size;
+	}
+	return result;
+}
+
+auto dk::str8_decode_base64(Arena *arena, String8 str) noexcept -> String8 {
+	String8 result = {};
+	if (str.size > 0) {
+		u64 const max_size = (str.size * 3) / 4 + 1;
+		u8 *const out_begin = arena_push_array<u8>(arena, max_size);
+		u8 *out = out_begin;
+
+		u8 const *in = str.data;
+		u8 const *const in_end = in + str.size;
+
+		while (in < in_end) {
+			u8 const c0 = in[0];
+			u8 const c1 = in[1];
+			u8 const c2 = in[2];
+			u8 const c3 = in[3];
+			in += 4;
+
+			u32 const n =
+				(base64_from_char(c0) << 18) |
+				(base64_from_char(c1) << 12) |
+				(base64_from_char(c2) << 6)  |
+				 base64_from_char(c3);
+
+			out[0] = static_cast<u8>((n >> 16) & 0xFF);
+			out[1] = static_cast<u8>((n >> 8) & 0xFF);
+			out[2] = static_cast<u8>(n & 0xFF);
+			out += 3;
+		}
+
+		u64 padding_idx = str.size;
+		while (padding_idx --> 0) {
+			if (str[padding_idx] != '=') {
+				break;
+			}
+			out -= 1;
+		}
+		*out = '\0';
+
+		u64 const actual_size = out - out_begin;
+		arena_pop(arena, max_size - (actual_size + 1));
 		result.data = out_begin;
 		result.size = actual_size;
 	}
