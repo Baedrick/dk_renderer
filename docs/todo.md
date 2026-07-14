@@ -108,7 +108,7 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
-- [-][Must Have] Path normalization
+- [x][Must Have] Path normalization
 - [x][Must Have] Path helpers
 - [x][Must Have] Figure out dks format for compiling gltf to
 - [x][dkrend][Must Have] Refactor render assets reload with new pak format

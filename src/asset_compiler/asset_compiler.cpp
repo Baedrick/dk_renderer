@@ -65,6 +65,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 			String8 const working_dir = get_current_dir(arena);
 			String8List input_file_path_tasks = str8_list_copy(arena, &cmd_line->inputs);
 			for (String8Node const *node = input_file_path_tasks.first; node != nullptr; node = node->next) {
+
 				//~ Dedrick: Possibly relative -> absolute path.
 				String8 input_file_path = node->string;
 				{

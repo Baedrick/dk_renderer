@@ -745,11 +745,22 @@ auto dk::path_absolute_from_relative_and_base(Arena *arena, String8 relative, St
 }
 
 auto dk::path_normalized_list_from_path(Arena *arena, String8 path, PathStyle *out_style) noexcept -> String8List {
-
+	PathStyle const path_style = path_style_from_str8(path);
+	String8List path_list = path_split(arena, path);
+	path_list_resolve_dots_in_place(&path_list, path_style);
+	if (out_style != nullptr) {
+		*out_style = path_style;
+	}
+	return path_list;
 }
 
 auto dk::path_normalized_from_path(Arena *arena, String8 path) noexcept -> String8 {
-
+	TempArena const scratch = scratch_begin(&arena, 1);
+	PathStyle style = PathStyle::Relative;
+	String8List path_parts = path_normalized_list_from_path(scratch.arena, path, &style);
+	String8 const result = path_list_join_by_style(arena, &path_parts, style);
+	scratch_end(scratch);
+	return result;
 }
 
 // NOTE(Dedrick): Based on the following decoder.
