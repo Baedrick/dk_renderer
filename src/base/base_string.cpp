@@ -641,18 +641,18 @@ auto dk::path_skip_last_period(String8 path) noexcept -> String8 {
 }
 
 auto dk::path_style_from_str8(String8 str) noexcept -> PathStyle {
-	PathStyle result = PathStyle::RELATIVE;
+	PathStyle result = PathStyle::Relative;
 	if (str.size >= 2 && char_is_alpha(str[0]) && str[1] == ':') {
 		// NOTE(Dedrick): C:folder is a VALID drive-relative path.
 		if (str.size == 2 || char_is_slash(str[2])) {
-			result == PathStyle::WINDOWS_ABSOLUTE;
+			result = PathStyle::WindowsAbsolute;
 		}
 	}
 	return result;
 }
 
 auto dk::path_split(Arena *arena, String8 path) noexcept -> String8List {
-	String8List const result = str8_list_split_by_char(arena, path, "/\\", STRING_SPLIT_FLAG_NONE);
+	String8List const result = str8_list_split_by_char(arena, path, "/\\"_str8, STRING_SPLIT_FLAG_NONE);
 	return result;
 }
 
@@ -670,7 +670,7 @@ auto dk::path_list_resolve_dots_in_place(String8List *path, PathStyle style) noe
 	for (String8Node *node = first, *next = nullptr; node != nullptr; node = next) {
 		next = node->next;
 
-		if (node == first && style == PathStyle::WINDOWS_ABSOLUTE) {
+		if (node == first && style == PathStyle::WindowsAbsolute) {
 			// Save without stack.
 			str8_list_push_node(path, node);
 		}
@@ -718,9 +718,9 @@ auto dk::path_list_resolve_dots_in_place(String8List *path, PathStyle style) noe
 auto dk::path_list_join_by_style(Arena *arena, String8List *path, PathStyle style) noexcept -> String8 {
 	String8JoinParams params = {};
 	switch (style) {
-		case PathStyle::NULL: break;
-		case PathStyle::RELATIVE: [[fallthrough]];
-		case PathStyle::WINDOWS_ABSOLUTE: {
+		case PathStyle::Null: break;
+		case PathStyle::Relative: [[fallthrough]];
+		case PathStyle::WindowsAbsolute: {
 			params.separator = "/"_str8;
 			break;
 		}
@@ -732,13 +732,13 @@ auto dk::path_list_join_by_style(Arena *arena, String8List *path, PathStyle styl
 auto dk::path_absolute_from_relative_and_base(Arena *arena, String8 relative, String8 base) noexcept -> String8 {
 	String8 result = relative;
 	PathStyle const relative_style = path_style_from_str8(relative);
-	if (relative.size > 0 && relative_style == PathStyle::RELATIVE) {
+	if (relative.size > 0 && relative_style == PathStyle::Relative) {
 		TempArena const scratch = scratch_begin(&arena, 1);
 		String8 const absolute_path = str8f(scratch.arena, "%.*s/%.*s", DK_STR8_VARG(base), DK_STR8_VARG(relative));
 		String8List absolute_path_parts = path_split(scratch.arena, absolute_path);
 		PathStyle const base_style = path_style_from_str8(base);
 		path_list_resolve_dots_in_place(&absolute_path_parts, base_style);
-		result = path_list_resolve_dots_in_place(arena, &absolute_path_parts, base_style);
+		result = path_list_join_by_style(arena, &absolute_path_parts, base_style);
 		scratch_end(scratch);
 	}
 	return result;

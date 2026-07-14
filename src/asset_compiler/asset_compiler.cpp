@@ -68,10 +68,10 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				//~ Dedrick: Possibly relative -> absolute path.
 				String8 input_file_path = node->string;
 				{
-					PathStyle path_style = path_style_from_string(input_file_path);
-					if (path_style == PathStyle::RELATIVE) {
+					PathStyle path_style = path_style_from_str8(input_file_path);
+					if (path_style == PathStyle::Relative) {
 						String8 const abs_path = str8f(arena, "%.*s/%.*s", DK_STR8_VARG(working_dir), DK_STR8_VARG(node->string));
-						input_file_path = path_normalized_from_str8(arena, abs_path);
+						input_file_path = path_normalized_from_path(arena, abs_path);
 					}
 				}
 

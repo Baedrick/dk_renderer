@@ -59,12 +59,12 @@ namespace dk {
 		STRING_SPLIT_FLAG_KEEP_EMPTIES
 	};
 
-	enum class PathStyle : u8 {
-		NULL,
-		RELATIVE,
-		WINDOWS_ABSOLUTE,
+	enum class PathStyle {
+		Null,
+		Relative,
+		WindowsAbsolute,
 #ifdef DK_PLATFORM_WIN32
-		PLATFORM_ABSOLUTE = WINDOWS_ABSOLUTE
+		PlatformAbsolute = WindowsAbsolute
 #else
 #	error "Absolute path style is undefined for this platform."
 #endif
