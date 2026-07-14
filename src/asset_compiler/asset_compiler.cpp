@@ -154,7 +154,13 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				}
 
 				//~ Dedrick: Bucket input file by format.
-
+				ASC_FileNode *const file_node = arena_push<ASC_FileNode>(arena);
+				file_node->file.format = file_format;
+				file_node->file.path = input_file_path;
+				file_node->file.data = file_data;
+				ASC_FileList *const file_list_from_format = &asc_shared->files_from_format[file_format];
+				forward_list_queue_push(&file_list_from_format->first, &file_list_from_format->last, file_node);
+				file_list_from_format->count += 1;
 			}
 		}
 		lane_sync();
