@@ -44,4 +44,7 @@ namespace dk {
 	auto buf_list_join(Arena *arena, BufferList const *list) noexcept -> Buffer;
 
 	auto buf_array_from_list(Arena *arena, BufferList const *list) noexcept -> BufferArray;
+
+	auto buf_from_str8(String8 str) noexcept -> Buffer;
+	auto str8_from_buf(Buffer buf) noexcept -> String8;
 }

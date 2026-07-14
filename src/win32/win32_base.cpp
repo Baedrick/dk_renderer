@@ -694,6 +694,16 @@ auto dk::get_process_info() noexcept -> ProcessInfo * {
 	return &w32_context.process_info;
 }
 
+auto dk::get_current_dir(Arena *arena) noexcept -> String8 {
+	TempArena const scratch = scratch_begin(&arena, 1);
+	DWORD length = GetCurrentDirectoryW(0, nullptr);
+	u16 *const buffer = arena_push_array<u16>(scratch.arena, length + 1);
+	length = GetCurrentDirectoryW(length + 1, reinterpret_cast<WCHAR *>(buffer));
+	String8 const name = str8_from_16(arena, str16(buffer, length));
+	scratch_end(scratch);
+	return name;
+}
+
 auto dk::get_entropy(void *data, u64 size) noexcept -> void {
 	DK_ASSERT_ALWAYS(size <= 256); // NOTE(Dedrick): Limit of 256 bytes to follow linux.
 	BCryptGenRandom(

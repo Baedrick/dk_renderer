@@ -1,5 +1,15 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+dk::String8 const dk::asc_file_format_display_name_table[] {
+	""_str8
+	"GLB"_str8,
+	"GLTF"_str8,
+	"GLTF (bin)"_str8,
+	"EXR"_str8,
+	""_str8
+};
+static_assert(dk::array_count(dk::asc_file_format_display_name_table) == dk::ASC_FILE_FORMAT_COUNT);
+
 dk::ASC_Shared *dk::asc_shared;
 
 auto dk::asc_entry_point(CmdLine *cmd_line) noexcept -> void {
@@ -52,36 +62,90 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	{
 		ZoneScopedN("analyze and load command line input files");
 		if (lane_idx() == 0) {
+			String8 const working_dir = get_current_dir(arena);
 			String8List input_file_path_tasks = str8_list_copy(arena, &cmd_line->inputs);
 			for (String8Node const *node = input_file_path_tasks.first; node != nullptr; node = node->next) {
-				ZoneScopedN("analysis of file");
+				//~ Dedrick: Possibly relative -> absolute path.
+				String8 input_file_path = node->string;
+				{
+					PathStyle path_style = path_style_from_string(input_file_path);
+					if (path_style == PathStyle::RELATIVE) {
+						String8 const abs_path = str8f(arena, "%.*s/%.*s", DK_STR8_VARG(working_dir), DK_STR8_VARG(node->string));
+						input_file_path = path_normalized_from_str8(arena, abs_path);
+					}
+				}
 
+				//~ Dedrick: Thin analysis of file.
 				ASC_FileFormat file_format = ASC_FILE_FORMAT_NULL;
-				ASC_FileFormatFlags file_format_flags = ASC_FILE_FORMAT_FLAG_NONE;
-				File const file = file_open(node->string, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
-				FileAttributes const file_attr = attributes_from_file(file);
-				(void)file_format;
-				(void)file_format_flags;
-				(void)file;
-				(void)file_attr;
+				{
+					ZoneScopedN("thin analysis of file");
+					File const file = file_open(node->string, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
 
-				//~ Dedrick: GLB magic -> GLB input.
+					//~ Dedrick: GLB magic -> GLB input.
+					if (file_format == ASC_FILE_FORMAT_NULL) {
+						u32 glb_magic_maybe = 0;
+						file_read(file, 0, sizeof(glb_magic_maybe), &glb_magic_maybe);
+						if (glb_magic_maybe == GLB_MAGIC_CONSTANT) {
+							file_format = ASC_FILE_FORMAT_GLB;
+						}
+					}
 
-				//~ Dedrick: EXR magic -> HDRI input.
+					//~ Dedrick: EXR magic -> EXR input.
+					if (file_format == ASC_FILE_FORMAT_NULL) {
+						u32 exr_magic_maybe = 0;
+						file_read(file, 0, sizeof(exr_magic_maybe), &exr_magic_maybe);
+						if (exr_magic_maybe == EXR_MAGIC_CONSTANT) {
+							file_format = ASC_FILE_FORMAT_EXR;
+						}
+					}
 
-				//~ Dedrick: PNG/JPEG magic -> Texture input.
+					//~ Dedrick: GLTF ext -> GLTF input.
+					if (file_format == ASC_FILE_FORMAT_NULL) {
+						String8 const ext = path_skip_last_period(node->string);
+						if (str8_equals(ext, "gltf"_str8, STRING_MATCH_FLAG_NONE)) {
+							file_format = ASC_FILE_FORMAT_GLTF;
+						}
+					}
 
-				//~ Dedrick: GLTF ext -> GLTF input.
+					//~ Dedrick: Bin ext -> GLTF_BIN input.
+					if (file_format == ASC_FILE_FORMAT_NULL) {
+						String8 const ext = path_skip_last_period(node->string);
+						if (str8_equals(ext, "bin"_str8, STRING_MATCH_FLAG_NONE)) {
+							file_format = ASC_FILE_FORMAT_GLTF_BIN;
+						}
+					}
 
-				//~ Dedrick: Load recognized file?
+					file_close(file);
+				}
 
-				//~ Dedrick: Mesh buffer?
+				//~ Dedrick: Log file recognition.
+				if (file_format != ASC_FILE_FORMAT_NULL) {
+					DK_LOG_INFOF("%.*s recognized as %.*s\n", DK_STR8_VARG(node->string), DK_STR8_VARG(asc_file_format_display_name_table[file_format]));
+				}
+				else {
+					DK_LOG_INFOF("%.*s was not recognized as a supported format.\n", DK_STR8_VARG(node->string));
+				}
 
-				//~ Dedrick: GLB format -> generate new tasks for textures, meshes.
+				//~ Dedrick: Load recognized file.
+				Buffer file_data = {};
+				if (file_format != ASC_FILE_FORMAT_NULL) {
+					file_data = read_bytes_from_file_path(arena, node->string);
+				}
 
-				//~ Dedrick: GLTF format -> generate new tasks for textures, meshes.
+				//~ Dedrick: GLTF format -> generate new tasks for binary files.
+				if (file_format == ASC_FILE_FORMAT_GLTF) {
+					ZoneScopedN("GLTF file -> generate tasks for GLTF bin buffers");
+					TempArena const scratch = scratch_begin(&arena, 1);
+					String8List const uris = gltf_buffer_uri_list_from_json(scratch.arena, str8_from_buf(file_data));
+					for (String8Node const *n = uris.first; n != nullptr; n = n->next) {
+						String8 const bin_path = "meow"_str8;
+						str8_list_push(arena, &input_file_path_tasks, bin_path);
+					}
+					scratch_end(scratch);
+				}
 
 				//~ Dedrick: Bucket input file by format.
+
 			}
 		}
 		lane_sync();

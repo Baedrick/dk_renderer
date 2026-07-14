@@ -59,6 +59,17 @@ namespace dk {
 		STRING_SPLIT_FLAG_KEEP_EMPTIES
 	};
 
+	enum class PathStyle : u8 {
+		NULL,
+		RELATIVE,
+		WINDOWS_ABSOLUTE,
+#ifdef DK_PLATFORM_WIN32
+		PLATFORM_ABSOLUTE = WINDOWS_ABSOLUTE
+#else
+#	error "Absolute path style is undefined for this platform."
+#endif
+	};
+
 	struct StringDecode {
 		u32 codepoint;
 		u32 advance;
@@ -66,8 +77,10 @@ namespace dk {
 
 	auto char_is_upper(u8 c) noexcept -> b8;
 	auto char_is_lower(u8 c) noexcept -> b8;
+	auto char_is_alpha(u8 c) noexcept -> b8;
 	auto char_is_whitespace(u8 c) noexcept -> b8;
 	auto char_is_digit(u8 c) noexcept -> b8;
+	auto char_is_slash(u8 c) noexcept -> b8;
 	auto char_to_upper(u8 c) noexcept -> u8;
 	auto char_to_lower(u8 c) noexcept -> u8;
 	auto char_to_forward_slash(u8 c) noexcept -> u8;
@@ -139,9 +152,18 @@ namespace dk {
 
 	auto path_chop_last_slash(String8 path) noexcept -> String8;
 	auto path_skip_last_slash(String8 path) noexcept -> String8;
-
 	auto path_chop_last_period(String8 path) noexcept -> String8;
 	auto path_skip_last_period(String8 path) noexcept -> String8;
+
+	auto path_style_from_str8(String8 str) noexcept -> PathStyle;
+	auto path_split(Arena *arena, String8 path) noexcept -> String8List;
+	auto path_list_resolve_dots_in_place(String8List *path, PathStyle style) noexcept -> void;
+	auto path_list_join_by_style(Arena *arena, String8List *path, PathStyle style) noexcept -> String8;
+
+	auto path_absolute_from_relative_and_base(Arena *arena, String8 relative, String8 base) noexcept -> String8;
+
+	auto path_normalized_list_from_path(Arena *arena, String8 path, PathStyle *out_style) noexcept -> String8List;
+	auto path_normalized_from_path(Arena *arena, String8 path) noexcept -> String8;
 
 	auto utf8_decode(u8 const *str, u64 max) noexcept -> StringDecode;
 	auto utf16_decode(u16 const *str, u64 max) noexcept -> StringDecode;

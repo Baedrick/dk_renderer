@@ -12,6 +12,8 @@ namespace dk {
 		ASC_FILE_FORMAT_COUNT
 	};
 
+	extern String8 const asc_file_format_display_name_table[];
+
 	struct ASC_File {
 		ASC_FileFormat format;
 		String8 path;

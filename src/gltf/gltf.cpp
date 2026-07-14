@@ -5,7 +5,9 @@
 #undef CGLTF_IMPLEMENTATION
 
 auto dk::gltf_buffer_uri_list_from_json(Arena *arena, String8 json) noexcept -> String8List {
+	ZoneScoped;
 	String8List result = {};
+
 	u64 offset = 0;
 	String8 const uri_needle = "\"uri\""_str8;
 	while (true) {
@@ -35,5 +37,6 @@ auto dk::gltf_buffer_uri_list_from_json(Arena *arena, String8 json) noexcept -> 
 			str8_list_push(arena, &result, uri);
 		}
 	}
+
 	return result;
 }

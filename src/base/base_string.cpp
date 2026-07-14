@@ -32,12 +32,20 @@ auto dk::char_is_lower(u8 c) noexcept -> b8 {
 	return c >= 'a' && c <= 'z';
 }
 
+auto dk::char_is_alpha(u8 c) noexcept -> b8 {
+	return char_is_upper(c) || char_is_lower(c);
+}
+
 auto dk::char_is_whitespace(u8 c) noexcept -> b8 {
 	return c == ' ' || c == '\r' || c == '\t' || c == '\f' || c == '\v' || c == '\n';
 }
 
 auto dk::char_is_digit(u8 c) noexcept -> b8 {
 	return c >= '0' && c <= '9';
+}
+
+auto dk::char_is_slash(u8 c) noexcept -> b8 {
+	return c == '\\' || c == '/';
 }
 
 auto dk::char_to_upper(u8 c) noexcept -> u8 {
@@ -630,6 +638,118 @@ auto dk::path_skip_last_period(String8 path) noexcept -> String8 {
 		path.size = 0;
 	}
 	return path;
+}
+
+auto dk::path_style_from_str8(String8 str) noexcept -> PathStyle {
+	PathStyle result = PathStyle::RELATIVE;
+	if (str.size >= 2 && char_is_alpha(str[0]) && str[1] == ':') {
+		// NOTE(Dedrick): C:folder is a VALID drive-relative path.
+		if (str.size == 2 || char_is_slash(str[2])) {
+			result == PathStyle::WINDOWS_ABSOLUTE;
+		}
+	}
+	return result;
+}
+
+auto dk::path_split(Arena *arena, String8 path) noexcept -> String8List {
+	String8List const result = str8_list_split_by_char(arena, path, "/\\", STRING_SPLIT_FLAG_NONE);
+	return result;
+}
+
+// https://github.com/EpicGames/raddebugger/blob/16c447bb79904c8b91342aad433c8f443bbb9b34/src/base/base_strings.c#L1604
+auto dk::path_list_resolve_dots_in_place(String8List *path, PathStyle style) noexcept -> void {
+	TempArena const scratch = scratch_begin(nullptr, 0);
+	struct String8MetaNode {
+		String8MetaNode *next;
+		String8Node *node;
+	};
+	String8MetaNode *stack = nullptr;
+	String8MetaNode *free_meta_node = nullptr;
+	String8Node *first = path->first;
+	std::memset(path, 0, sizeof(String8List));
+	for (String8Node *node = first, *next = nullptr; node != nullptr; node = next) {
+		next = node->next;
+
+		if (node == first && style == PathStyle::WINDOWS_ABSOLUTE) {
+			// Save without stack.
+			str8_list_push_node(path, node);
+		}
+		else if (node->string.size == 1 && node->string[0] == '.') {
+			// Do nothing.
+			continue;
+		}
+		else if(node->string.size == 2 && node->string[0] == '.' && node->string[1] == '.') {
+			if (stack != nullptr) {
+				// Eliminate stack top.
+				path->node_count -= 1;
+				path->total_size -= stack->node->string.size;
+				String8MetaNode *popped_meta = stack;
+				forward_list_stack_pop(&stack);
+				forward_list_stack_push(&free_meta_node, popped_meta);
+				if (stack == nullptr) {
+					path->last = path->first;
+				}
+				else {
+					path->last = stack->node;
+				}
+			}
+			else {
+				// Save without stack.
+				str8_list_push_node(path, node);
+			}
+		}
+		else {
+			// Save with stack.
+			str8_list_push_node(path, node);
+			String8MetaNode *stack_node = free_meta_node;
+			if(stack_node != nullptr) {
+				forward_list_stack_pop(&free_meta_node);
+			}
+			else {
+				stack_node = arena_push<String8MetaNode>(scratch.arena);
+			}
+			forward_list_stack_push(&stack, stack_node);
+			stack_node->node = node;
+		}
+	}
+	scratch_end(scratch);
+}
+
+auto dk::path_list_join_by_style(Arena *arena, String8List *path, PathStyle style) noexcept -> String8 {
+	String8JoinParams params = {};
+	switch (style) {
+		case PathStyle::NULL: break;
+		case PathStyle::RELATIVE: [[fallthrough]];
+		case PathStyle::WINDOWS_ABSOLUTE: {
+			params.separator = "/"_str8;
+			break;
+		}
+	}
+	String8 const result = str8_list_join(arena, path, &params);
+	return result;
+}
+
+auto dk::path_absolute_from_relative_and_base(Arena *arena, String8 relative, String8 base) noexcept -> String8 {
+	String8 result = relative;
+	PathStyle const relative_style = path_style_from_str8(relative);
+	if (relative.size > 0 && relative_style == PathStyle::RELATIVE) {
+		TempArena const scratch = scratch_begin(&arena, 1);
+		String8 const absolute_path = str8f(scratch.arena, "%.*s/%.*s", DK_STR8_VARG(base), DK_STR8_VARG(relative));
+		String8List absolute_path_parts = path_split(scratch.arena, absolute_path);
+		PathStyle const base_style = path_style_from_str8(base);
+		path_list_resolve_dots_in_place(&absolute_path_parts, base_style);
+		result = path_list_resolve_dots_in_place(arena, &absolute_path_parts, base_style);
+		scratch_end(scratch);
+	}
+	return result;
+}
+
+auto dk::path_normalized_list_from_path(Arena *arena, String8 path, PathStyle *out_style) noexcept -> String8List {
+
+}
+
+auto dk::path_normalized_from_path(Arena *arena, String8 path) noexcept -> String8 {
+
 }
 
 // NOTE(Dedrick): Based on the following decoder.

@@ -36,6 +36,7 @@ namespace dk {
 
 	auto get_system_info() noexcept -> SystemInfo *;
 	auto get_process_info() noexcept -> ProcessInfo *;
+	auto get_current_dir(Arena *arena) noexcept -> String8;
 
 	auto get_entropy(void *data, u64 size) noexcept -> void;
 

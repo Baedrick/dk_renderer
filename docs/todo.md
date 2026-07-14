@@ -98,16 +98,19 @@
 - [ ][compiler][Must Have] Inter-Process Communication with dkrend
 - [ ][Must Have] Update readme with project description and goals
 - [ ][Must Have] General purpose allocator for persistent gpu buffer
-- [ ][Must Have] Path helpers and normalization
 - [ ][Must Have] Render Graph for automatic ordering of passes
 - [ ][Must Have] Real-time global illumination (Voxel Cone Tracing)
 - [ ][Should Have] Change writing buffer list to use ring buffer for small writes to disk
 - [ ][Should Have] Light clustering for shading
 - [ ][Should Have] Render Graph resource aliasing and allocation
+- [ ][Should Have] Move dependency building like ImGui to new build target to speed up builds 
 - [ ][Nice To Have] Command Palette for quick access to configurations and settings
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [-][Must Have] Path normalization
+- [x][Must Have] Path helpers
+- [x][Must Have] Figure out dks format for compiling gltf to
 - [x][dkrend][Must Have] Refactor render assets reload with new pak format
 - [x][dkrend][Must Have] Initialize persistent staging buffer at init
 - [x][Must Have] Arena allocator for GPU staging buffer

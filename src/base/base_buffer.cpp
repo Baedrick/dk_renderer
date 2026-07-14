@@ -99,3 +99,11 @@ auto dk::buf_array_from_list(Arena *arena, BufferList const *list) noexcept -> B
 	}
 	return array;
 }
+
+auto dk::buf_from_str8(String8 str) noexcept -> Buffer {
+	return { const_cast<u8 *>(str.data), str.size };
+}
+
+auto dk::str8_from_buf(Buffer buf) noexcept -> String8 {
+	return { buf.data, buf.size };
+}
