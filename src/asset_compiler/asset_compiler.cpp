@@ -53,7 +53,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	log_frame_begin();
 
 	//~ Dedrick: Set up shared state.
-	if (lane_idx == 0) {
+	if (lane_idx() == 0) {
 		asc_shared = arena_push<ASC_Shared>(arena);
 	}
 	lane_sync();
@@ -153,28 +153,46 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 					scratch_end(scratch);
 				}
 
-				//~ Dedrick: Bucket input file by format.
+				//~ Dedrick: Save to list.
+				ASC_File *const file = arena_push<ASC_File>(arena);
+				file->format = file_format;
+				file->path = input_file_path;
+				file->data = file_data;
 				ASC_FileNode *const file_node = arena_push<ASC_FileNode>(arena);
-				file_node->file.format = file_format;
-				file_node->file.path = input_file_path;
-				file_node->file.data = file_data;
-				ASC_FileList *const file_list_from_format = &asc_shared->files_from_format[file_format];
-				forward_list_queue_push(&file_list_from_format->first, &file_list_from_format->last, file_node);
-				file_list_from_format->count += 1;
+				file_node->file = file;
+				forward_list_queue_push(&asc_shared->input_files.first, &asc_shared->input_files.last, file_node);
+				asc_shared->input_files.count += 1;
 			}
 		}
 		lane_sync();
 	}
+	ASC_FileList input_files = asc_shared->input_files;
+
+	{
+		ZoneScopedN("bucket input files by format");
+		if (lane_idx() == 0) {
+			for (ASC_FileNode *node = input_files.first; node != nullptr; node = node->next) {
+				ASC_FileNode *file_node = arena_push<ASC_FileNode>(arena);
+				file_node->file = node->file;
+				ASC_FileList *const input_files_from_format = &asc_shared->input_files_from_format[node->file->format];
+				forward_list_queue_push(&input_files_from_format->first, &input_files_from_format->last, file_node);
+				input_files_from_format->count += 1;
+			}
+		}
+	}
+	ASC_FileList *const input_files_from_format = asc_shared->input_files_from_format;
 
 	//~ Dedrick: Unpack output and to where.
 	enum OutputKind {
 		OUTPUT_KIND_NULL,
 		OUTPUT_KIND_DKS,
+		OUTPUT_KIND_CUBE,
 		OUTPUT_KIND_COUNT
 	};
 	struct { String8 flag; String8 title; } const output_kind_info[] = {
 		{ ""_str8, ""_str8 },
 		{ "dks"_str8, "DK Scene (.dks) Conversion"_str8 },
+		{ "cube"_str8, "Equirectangular to Cubemap Conversion"_str8 }
 	};
 	OutputKind output_kind = OUTPUT_KIND_NULL;
 	String8 output_path = cmd_line_value(cmd_line, "out"_str8);
@@ -196,10 +214,44 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				output_kind = OUTPUT_KIND_DKS;
 				DK_LOG_INFOF("Output path has .dks extension; performing `%.*s`\n", DK_STR8_VARG(output_kind_info[output_kind].title));
 			}
+			else if (str8_equals(path_skip_last_period(output_path), "cube"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
+				output_kind = OUTPUT_KIND_CUBE;
+				DK_LOG_INFOF("Output path has .cube extension; performing `%.*s`\n", DK_STR8_VARG(output_kind_info[output_kind].title));
+			}
 		}
 	}
 
-	// TODO(Dedrick): Handle case when no output path is specified. Use input file and format.
+	//~ Dedrick: No output path specified, build from input files.
+	if (output_path.size == 0) {
+		String8 output_path_no_ext = {};
+		if (input_files_from_format[ASC_FILE_FORMAT_GLB].first != nullptr) {
+			output_path_no_ext = path_chop_last_period(input_files_from_format[ASC_FILE_FORMAT_GLB].first->file->path);
+		}
+		else if (input_files_from_format[ASC_FILE_FORMAT_GLTF].first != nullptr) {
+			output_path_no_ext = path_chop_last_period(input_files_from_format[ASC_FILE_FORMAT_GLTF].first->file->path);
+		}
+		if (output_path_no_ext.size > 0) {
+			output_path = str8f(arena, "%.*s.%.*s", DK_STR8_VARG(output_path_no_ext), DK_STR8_VARG(output_kind_info[output_kind].flag));
+		}
+	}
+
+	// TODO(Dedrick): Switch on output_kind.
+	BufferList output_blobs = {};
+	switch (output_kind) {
+		default: [[fallthrough]];
+		case OUTPUT_KIND_NULL: {
+			break;
+		}
+		case OUTPUT_KIND_DKS: {
+			break;
+		}
+	}
+
+	// TODO(Dedrick): Write output.
+	if (lane_idx() == 0) {
+
+	}
+	lane_sync();
 
 	//~ Dedrick: Collect logs
 	LogFrameResult const log_frame = log_frame_end(arena);

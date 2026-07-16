@@ -22,7 +22,7 @@ namespace dk {
 
 	struct ASC_FileNode {
 		ASC_FileNode *next;
-		ASC_File file;
+		ASC_File *file;
 	};
 
 	struct ASC_FileList {
@@ -37,7 +37,8 @@ namespace dk {
 	};
 
 	struct ASC_Shared {
-		ASC_FileList files_from_format[ASC_FILE_FORMAT_COUNT];
+		ASC_FileList input_files;
+		ASC_FileList input_files_from_format[ASC_FILE_FORMAT_COUNT];
 	};
 
 	extern ASC_Shared *asc_shared;
