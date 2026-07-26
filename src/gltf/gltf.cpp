@@ -34,7 +34,13 @@ auto dk::gltf_buffer_uri_list_from_json(Arena *arena, String8 json) noexcept -> 
 
 			//~ Dedrick: Extract string.
 			String8 const uri = str8_substr(json, begin, offset);
-			str8_list_push(arena, &result, uri);
+
+			if(!str8_starts_with(uri, "data:"_str8, STRING_MATCH_FLAG_NONE)) {
+				str8_list_push(arena, &result, uri);
+			} else {
+				DK_LOG_ERRORF("base64 embedded glTF buffers are not supported.\n");
+				break;
+			}
 		}
 	}
 
