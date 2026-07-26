@@ -12,9 +12,7 @@
 #include "pak/pak.cpp"
 #include "pak_make/pak_make.cpp"
 
-auto entry_point(dk::CmdLine */* cmd_line */) noexcept -> int {
-	using namespace dk;
-
+auto dk::entry_point(CmdLine */* cmd_line */) noexcept -> int {
 	ArenaParams constexpr arena_params = {
 		.reserve_size = giga_bytes(1),
 		.commit_size = mega_bytes(64),
