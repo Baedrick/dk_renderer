@@ -93,7 +93,7 @@ namespace dk {
 	using DKS_SectionElementType_GPU_Meshlets         = DKS_GPU_Meshlet;
 	using DKS_SectionElementType_GPU_MeshletBounds    = DKS_GPU_MeshletBounds;
 	using DKS_SectionElementType_GPU_MeshletVertices  = u32;
-	using DKS_SectionElementType_GPU_MeshletTriangles = u32; // packed: [i3:8][i2:8][i1:8][i0:8]
+	using DKS_SectionElementType_GPU_MeshletTriangles = u32; // packed: [unused:8][i2:8][i1:8][i0:8]
 
 	template <DKS_SectionKind Kind> struct DKS_SectionTraits;
 	template <> struct DKS_SectionTraits<DKS_SECTION_KIND_TOP_LEVEL_INFO>        { using Type = DKS_SectionElementType_TopLevelInfo; };
