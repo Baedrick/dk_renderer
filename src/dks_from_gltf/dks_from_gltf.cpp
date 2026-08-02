@@ -30,7 +30,7 @@ auto dk::g2d_cgltf_file_release(cgltf_memory_options const *mem_opts, cgltf_file
 }
 
 auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> DKSM_BakeParams {
-	ZoneScopedN;
+	ZoneScoped;
 
 	cgltf_data *gltf = nullptr;
 	{
@@ -41,7 +41,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 			options.file.release = g2d_cgltf_file_release;
 			options.file.user_data = arena;
 			cgltf_parse(&options, params->file_data.data, static_cast<cgltf_size>(params->file_data.size), &gltf);
-			cgltf_load_buffers(&options, data, reinterpret_cast<char const *>(params->file_path.data));
+			cgltf_load_buffers(&options, gltf, reinterpret_cast<char const *>(params->file_path.data));
 		}
 		lane_sync_broadcast(&gltf, 0);
 	}
