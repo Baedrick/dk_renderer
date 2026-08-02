@@ -4,7 +4,6 @@ dk::String8 const dk::asc_file_format_display_name_table[] {
 	""_str8
 	"GLB"_str8,
 	"GLTF"_str8,
-	"GLTF (bin)"_str8,
 	"EXR"_str8,
 	""_str8
 };
@@ -47,7 +46,11 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	LaneContext lane_context = params->lane_context;
 	set_thread_namef("compiler_thread_%llu", lane_context.lane_idx);
 	lane_context_select(lane_context);
-	Arena *arena = arena_alloc();
+	ArenaParams const arena_params = {
+		.reserve_size = giga_bytes(1),
+		.commit_size = mega_bytes(2),
+	};
+	Arena *arena = arena_alloc(&arena_params);
 	LogContext *log = log_alloc();
 	log_select(log);
 	log_frame_begin();
@@ -108,14 +111,6 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 						}
 					}
 
-					//~ Dedrick: Bin ext -> GLTF_BIN input.
-					if (file_format == ASC_FILE_FORMAT_NULL) {
-						String8 const ext = path_skip_last_period(node->string);
-						if (str8_equals(ext, "bin"_str8, STRING_MATCH_FLAG_NONE)) {
-							file_format = ASC_FILE_FORMAT_GLTF_BIN;
-						}
-					}
-
 					file_close(file);
 				}
 
@@ -131,26 +126,6 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				Buffer file_data = {};
 				if (file_format != ASC_FILE_FORMAT_NULL) {
 					file_data = read_bytes_from_file_path(arena, node->string);
-				}
-
-				//~ Dedrick: GLTF format -> generate new tasks for binary files.
-				if (file_format == ASC_FILE_FORMAT_GLTF) {
-					ZoneScopedN("GLTF file -> generate tasks for GLTF bin buffers");
-					TempArena const scratch = scratch_begin(&arena, 1);
-					String8List const uris = gltf_buffer_uri_list_from_json(scratch.arena, str8_from_buf(file_data));
-					for (String8Node const *n = uris.first; n != nullptr; n = n->next) {
-						if (n->string.size > 0) {
-							DK_LOG_INFOF(
-								"Found reference to binary file in %.*s (%.*s) at %.*s\n",
-								DK_STR8_VARG(input_file_path),
-								DK_STR8_VARG(asc_file_format_display_name_table[file_format]),
-								DK_STR8_VARG(n->string)
-							);
-							String8 const bin_path = path_absolute_from_relative_and_base(arena, n->string, path_chop_last_slash(node->string));
-							str8_list_push(arena, &input_file_path_tasks, bin_path);
-						}
-					}
-					scratch_end(scratch);
 				}
 
 				//~ Dedrick: Save to list.
