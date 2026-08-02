@@ -7,10 +7,11 @@
 
 #include "base/base.hpp"
 #include "gpu_allocator/gpu_allocator.hpp"
-#include "exr/exr.hpp"
-#include "gltf/gltf.hpp"
 #include "dks/dks.hpp"
 #include "dks_make/dks_make.hpp"
+#include "exr/exr.hpp"
+#include "gltf/gltf.hpp"
+#include "dks_from_gltf/dks_from_gltf.hpp"
 #include "asset_compiler/asset_compiler.hpp"
 #include "asset_server/asset_server.hpp"
 #include "desktop/desktop.hpp"
@@ -21,10 +22,11 @@
 
 #include "base/base.cpp"
 #include "gpu_allocator/gpu_allocator.cpp"
-#include "exr/exr.cpp"
-#include "gltf/gltf.cpp"
 #include "dks/dks.cpp"
 #include "dks_make/dks_make.cpp"
+#include "exr/exr.cpp"
+#include "gltf/gltf.cpp"
+#include "dks_from_gltf/dks_from_gltf.cpp"
 #include "asset_compiler/asset_compiler.cpp"
 #include "asset_server/asset_server.cpp"
 #include "desktop/desktop.cpp"
@@ -33,22 +35,25 @@
 #include "ui/ui.cpp"
 #include "dkrend/dkrend.cpp"
 
+namespace {
+	enum class ExecMode {
+		Normal = 0,
+		AssetCompiler
+	};
+}
+
 auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 	using namespace dk;
 
-	enum ExecMode {
-		EXEC_MODE_NORMAL = 0,
-		EXEC_MODE_ASSET_COMPILER
-	};
-	ExecMode exec_mode = EXEC_MODE_NORMAL;
+	ExecMode exec_mode = ExecMode::Normal;
 	if (cmd_line_has_flag(cmd_line, "compiler"_str8)) {
-		exec_mode = EXEC_MODE_ASSET_COMPILER;
+		exec_mode = ExecMode::AssetCompiler;
 	}
 
 	//~ Dedrick: Dispatch based on execution mode.
 	switch (exec_mode) {
 		default:
-		case EXEC_MODE_NORMAL: {
+		case ExecMode::Normal: {
 			//~ Dedrick: Manual layer initialization.
 			assv_init(cmd_line);
 			dt_init();
@@ -68,7 +73,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 			assv_shutdown();
 			break;
 		}
-		case EXEC_MODE_ASSET_COMPILER: {
+		case ExecMode::AssetCompiler: {
 			asc_entry_point(cmd_line);
 			break;
 		}
