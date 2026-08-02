@@ -109,6 +109,7 @@ namespace dk {
 
 	auto str8_substr(String8 str, u64 begin, u64 end) noexcept -> String8;
 	auto str8_substr_size(String8 str, u64 begin, u64 size) noexcept -> String8;
+	auto str8_prefix(String8 str, u64 size) noexcept -> String8;
 	auto str8_skip(String8 str, u64 amount) noexcept -> String8;
 	auto str8_trim_whitespace(String8 str) noexcept -> String8;
 
@@ -116,6 +117,7 @@ namespace dk {
 	auto str8_compare(String8 s1, String8 s2, StringMatchFlags flags) noexcept -> s32;
 	auto str8_find_needle(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64;
 	auto str8_find_needle_reverse(String8 str, u64 start_pos, String8 needle, StringMatchFlags flags) noexcept -> u64;
+	auto str8_starts_with(String8 str, String8 prefix, StringMatchFlags flags) noexcept -> b8;
 
 	auto str16_equals(String16 s1, String16 s2, StringMatchFlags flags) noexcept -> b8;
 

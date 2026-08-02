@@ -150,6 +150,11 @@ auto dk::str8_substr_size(String8 str, u64 begin, u64 size) noexcept -> String8 
 	return str;
 }
 
+auto dk::str8_prefix(String8 str, u64 size) noexcept -> String8 {
+	str.size = min(str.size, size);
+	return str;
+}
+
 auto dk::str8_skip(String8 str, u64 amount) noexcept -> String8 {
 	amount = min(amount, str.size);
 	str.data += amount;
@@ -247,6 +252,10 @@ auto dk::str8_find_needle_reverse(String8 str, u64 start_pos, String8 needle, St
 		}
 	}
 	return str.size;
+}
+
+auto dk::str8_starts_with(String8 str, String8 prefix, StringMatchFlags flags) noexcept -> b8 {
+	return str8_equals(str8_prefix(str, prefix.size), prefix, flags);
 }
 
 auto dk::str16_equals(String16 s1, String16 s2, StringMatchFlags flags) noexcept -> b8 {

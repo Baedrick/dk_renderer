@@ -36,15 +36,10 @@
 #include "dkrend/dkrend.cpp"
 
 namespace {
-	enum class ExecMode {
-		Normal = 0,
-		AssetCompiler
-	};
+	enum class ExecMode { Normal, AssetCompiler };
 }
 
-auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
-	using namespace dk;
-
+auto dk::entry_point(CmdLine *cmd_line) noexcept -> int {
 	ExecMode exec_mode = ExecMode::Normal;
 	if (cmd_line_has_flag(cmd_line, "compiler"_str8)) {
 		exec_mode = ExecMode::AssetCompiler;
@@ -52,7 +47,7 @@ auto entry_point(dk::CmdLine *cmd_line) noexcept -> int {
 
 	//~ Dedrick: Dispatch based on execution mode.
 	switch (exec_mode) {
-		default:
+		default: [[fallthrough]];
 		case ExecMode::Normal: {
 			//~ Dedrick: Manual layer initialization.
 			assv_init(cmd_line);
