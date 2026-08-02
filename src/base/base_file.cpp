@@ -13,7 +13,7 @@ auto dk::is_valid(File file) noexcept -> b8 {
 }
 
 auto dk::read_bytes_from_file_path(Arena *arena, String8 path) noexcept -> Buffer {
-	File const file = file_open(path, FILE_ACCESS_FLAG_READ);
+	File const file = file_open(path, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
 	FileAttributes const attr = attributes_from_file(file);
 	Buffer result = {};
 	result.size = attr.size;
@@ -23,6 +23,7 @@ auto dk::read_bytes_from_file_path(Arena *arena, String8 path) noexcept -> Buffe
 		arena_pop(arena, result.size - actual_read_size);
 		result.size = actual_read_size;
 	}
+	file_close(file);
 	return result;
 }
 
