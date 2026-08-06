@@ -2,7 +2,6 @@
 
 dk::String8 const dk::asc_file_format_display_name_table[] {
 	""_str8
-	"GLB"_str8,
 	"GLTF"_str8,
 	"EXR"_str8,
 	""_str8
@@ -85,12 +84,20 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 					ZoneScopedN("thin analysis of file");
 					File const file = file_open(node->string, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
 
-					//~ Dedrick: GLB magic -> GLB input.
+					//~ Dedrick: GLB magic -> GLTF input.
 					if (file_format == ASC_FILE_FORMAT_NULL) {
 						u32 glb_magic_maybe = 0;
 						file_read(file, 0, sizeof(glb_magic_maybe), &glb_magic_maybe);
 						if (glb_magic_maybe == GLB_MAGIC_CONSTANT) {
-							file_format = ASC_FILE_FORMAT_GLB;
+							file_format = ASC_FILE_FORMAT_GLTF;
+						}
+					}
+
+					//~ Dedrick: GLTF ext -> GLTF input.
+					if (file_format == ASC_FILE_FORMAT_NULL) {
+						String8 const ext = path_skip_last_period(node->string);
+						if (str8_equals(ext, "gltf"_str8, STRING_MATCH_FLAG_NONE)) {
+							file_format = ASC_FILE_FORMAT_GLTF;
 						}
 					}
 
@@ -100,14 +107,6 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 						file_read(file, 0, sizeof(exr_magic_maybe), &exr_magic_maybe);
 						if (exr_magic_maybe == EXR_MAGIC_CONSTANT) {
 							file_format = ASC_FILE_FORMAT_EXR;
-						}
-					}
-
-					//~ Dedrick: GLTF ext -> GLTF input.
-					if (file_format == ASC_FILE_FORMAT_NULL) {
-						String8 const ext = path_skip_last_period(node->string);
-						if (str8_equals(ext, "gltf"_str8, STRING_MATCH_FLAG_NONE)) {
-							file_format = ASC_FILE_FORMAT_GLTF;
 						}
 					}
 
@@ -199,14 +198,24 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	//~ Dedrick: No output path specified, build from input files.
 	if (output_path.size == 0) {
 		String8 output_path_no_ext = {};
-		if (input_files_from_format[ASC_FILE_FORMAT_GLB].first != nullptr) {
-			output_path_no_ext = path_chop_last_period(input_files_from_format[ASC_FILE_FORMAT_GLB].first->file->path);
-		}
-		else if (input_files_from_format[ASC_FILE_FORMAT_GLTF].first != nullptr) {
+		if (input_files_from_format[ASC_FILE_FORMAT_GLTF].first != nullptr) {
 			output_path_no_ext = path_chop_last_period(input_files_from_format[ASC_FILE_FORMAT_GLTF].first->file->path);
 		}
+		else if (input_files_from_format[ASC_FILE_FORMAT_EXR].first != nullptr) {
+			output_path_no_ext = path_chop_last_period(input_files_from_format[ASC_FILE_FORMAT_EXR].first->file->path);
+		}
 		if (output_path_no_ext.size > 0) {
-			output_path = str8f(arena, "%.*s.%.*s", DK_STR8_VARG(output_path_no_ext), DK_STR8_VARG(output_kind_info[output_kind].flag));
+			switch (output_kind) {
+				default: break;
+				case OUTPUT_KIND_DKS: {
+					output_path = str8f(arena, "%.*s.%.*s", DK_STR8_VARG(output_path_no_ext), "dks"_str8);
+					break;
+				}
+				case OUTPUT_KIND_CUBE: {
+					output_path = str8f(arena, "%.*s.%.*s", DK_STR8_VARG(output_path_no_ext), "dkcube"_str8);
+					break;
+				}
+			}
 		}
 	}
 
@@ -218,11 +227,48 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 			break;
 		}
 		case OUTPUT_KIND_DKS: {
+			b8 convert_done = false;
+			DKSM_BakeParams bake_params = {};
+
+			//~ Dedrick: GLTF/GLB inputs -> DKS conversion.
+			if (asc_shared->input_files_from_format[ASC_FILE_FORMAT_GLTF].count > 0) {
+				convert_done = true;
+
+				//~ Dedrick: Get GLTF/GLB file data.
+				ASC_File const *gltf_file = asc_shared->input_files_from_format[ASC_FILE_FORMAT_GLTF].first->file;
+				String8 const file_path = gltf_file->path;
+				Buffer const file_data = gltf_file->data;
+
+				//~ Dedrick: Convert.
+				G2D_ConvertParams convert_params = {};
+				convert_params.file_path = file_path;
+				convert_params.file_data = file_data;
+				bake_params = g2d_convert(arena, &convert_params);
+			}
+
+			//~ Dedrick: No viable inputs.
+			if (!convert_done) {
+				DK_LOG_ERRORF("Could not \n");
+			}
+
+			//~ Dedrick: Bake.
+			DKSM_BakeResults bake_results = {};
+			{
+				ZoneScopedN("bake");
+				bake_results = dksm_bake(arena, &bake_params);
+			}
+
+			//~ Dedrick: Serialize.
+			// ...
+
+			//~ Dedrick: Convert done, generate output blobs.
+			// ...
+
 			break;
 		}
 	}
 
-	// TODO(Dedrick): Write output.
+	//~ Dedrick: Write output.
 	if (lane_idx() == 0) {
 
 	}
