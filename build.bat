@@ -53,6 +53,9 @@ set cl_linker=
 set glslang= ..\tools\glslangValidator.exe
 set glslang_include= --preamble-text "#extension GL_GOOGLE_include_directive : require" -I..\src\shaders\
 
+:: --- Per-Build Settings ------------------------------------------------------
+if "%msvc%"=="1"    set only_compile_flag=/c
+
 :: --- Choose Compile Lines ----------------------------------------------------
 if "%msvc%"=="1"         set compile_debug=%cl_debug%
 if "%msvc%"=="1"         set compile_release=%cl_release%
@@ -66,14 +69,28 @@ if not exist bin mkdir bin
 if not exist .tmp mkdir .tmp
 if not exist src\shaders\.spirv mkdir src\shaders\.spirv
 
+:: --- Thirdparty Sources ------------------------------------------------------
+set imgui=..\src\thirdparty\imgui\imgui_unity.cpp
+set imgui_obj=..\.tmp\imgui_unity.obj
+
 :: --- Build (@build_targets) --------------------------------------------------
 pushd bin
 if "%all%"=="1" (
     echo [building all targets]
+    set deps=1
     set dkrend=1
     set assets=1
 )
-if "%dkrend%"=="1" set didbuild=1 && %compile% ..\src\dkrend\dkrend_main.cpp %compile_link% /NOIMPLIB %out%dkrend.exe || exit /b 1
+if "%deps%"=="1" (
+    set didbuild=1
+    echo [building dependencies]
+    %compile% %only_compile_flag% %imgui% || exit /b 1
+)
+if "%dkrend%"=="1" (
+    set didbuild=1
+    echo [building dkrend]
+    %compile% ..\src\dkrend\dkrend_main.cpp %imgui_obj% %compile_link% /NOIMPLIB %out%dkrend.exe || exit /b 1
+)
 if "%assets%"=="1" (
     set didbuild=1
     echo [building shaders]

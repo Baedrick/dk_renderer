@@ -90,7 +90,6 @@
 ### Tasks
 - [ ][dkrend][Must Have] Replace dear imgui font with more readable font
 - [ ][dkrend][Must Have] Reading of cooker logs to display
-- [ ][dkrend][Must Have] Console in UI to show logs
 - [ ][dkrend][Must Have] Hello Model to validate graphics code
 - [ ][dkrend][Must Have] Inter-Process Communication with Toy Cooker
 - [ ][dkrend][Must Have] View imported model resources in the UI as a tree of resources
@@ -108,6 +107,8 @@
 - [ ][Nice To Have] Broadly, WebGPU interface as graphics api abstraction for RHI layer
 - [ ][Nice To Have] Remove RGFW windowing and replace with codebase windowing
 - [ ][Nice To Have] Support large page allocations for arena performance
+- [x][Must Have] Add dependecy target and move ImGui to it to reduce build times
+- [x][dkrend][Must Have] Console in UI to show logs
 - [x][Must Have] Path normalization
 - [x][Must Have] Path helpers
 - [x][Must Have] Figure out dks format for compiling gltf to

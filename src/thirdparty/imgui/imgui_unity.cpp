@@ -1,5 +1,11 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+#define RGFWDEF
+#define RGFW_NATIVE
+#define RGFW_OPENGL
+#include "thirdparty/rgfw/RGFW.h"
+#include "thirdparty/glad/gl.h"
+
 #include "imgui.cpp"
 #include "imgui_demo.cpp"
 #include "imgui_draw.cpp"

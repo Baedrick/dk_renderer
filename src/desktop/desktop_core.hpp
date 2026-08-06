@@ -2,6 +2,7 @@
 
 #pragma once
 
+#define RGFWDEF
 #define RGFW_NATIVE
 #define RGFW_OPENGL
 #define RGFW_SNPRINTF stb_snprintf

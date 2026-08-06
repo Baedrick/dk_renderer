@@ -2,4 +2,7 @@
 
 #pragma once
 
-#include "thirdparty/imgui/imgui_unity.hpp"
+#include "thirdparty/imgui/imgui.h"
+#include "thirdparty/imgui/imgui_internal.h"
+#include "thirdparty/imgui/imgui_impl_opengl3.h"
+#include "thirdparty/imgui/imgui_impl_rgfw.h"
