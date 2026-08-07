@@ -47,6 +47,10 @@ namespace dk {
 
 	struct DKS_Instance {
 		u32 name_string_idx;
+		u32 parent;
+		u32 first_child;
+		u32 prev_sibling;
+		u32 next_sibling;
 	};
 
 	struct DKS_GPU_Instance {
