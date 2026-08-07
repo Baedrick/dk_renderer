@@ -5,9 +5,50 @@
 namespace dk {
 	struct DKSM_TopLevelInfo {
 		String8 model_name;
-		vec3 dequantization_factor;
-		vec3 dequantization_summand;
 	};
+
+	struct DKSM_BakeString {
+		String8 string;
+		u64 hash;
+		u32 idx;
+	};
+
+	struct DKSM_BakeStringChunkNode {
+		DKSM_BakeStringChunkNode *next;
+		DKSM_BakeString *data;
+		u64 count;
+		u64 capacity;
+		u64 base_idx;
+	};
+
+	struct DKSM_BakeStringChunkList {
+		DKSM_BakeStringChunkNode *first;
+		DKSM_BakeStringChunkNode *last;
+		u64 chunk_count;
+		u64 total_count;
+		u64 total_size;
+	};
+
+	struct DKSM_BakeStringMapTopology {
+		u64 slots_count;
+	};
+
+	struct DKSM_BakeStringMapBaseIndices {
+		u64 *slots_base_idxs;
+	};
+
+	struct DKSM_BakeStringMapLoose {
+		DKSM_BakeStringChunkList **slots;
+	};
+
+	struct DKSM_BakeStringMapTight {
+		DKSM_BakeStringChunkList *slots;
+		u64 *slots_base_idxs;
+		u64 slots_count;
+		u64 total_count;
+	};
+
+	//------------------------------- OLD ----------------------------------------
 
 	struct DKSM_Object {
 		String8 name;
