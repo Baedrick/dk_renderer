@@ -187,7 +187,6 @@ namespace dk {
 		DKSM_BakeStringChunkNode *last;
 		u64 chunk_count;
 		u64 total_count;
-		u64 total_size;
 	};
 
 	struct DKSM_BakeStringMapTopology {
@@ -291,7 +290,7 @@ namespace dk {
 
 	auto dksm_bake_string_chunk_list_push(Arena *arena, DKSM_BakeStringChunkList *list, u64 capacity) noexcept -> DKSM_BakeString *;
 	auto dksm_bake_string_chunk_list_concat_in_place(DKSM_BakeStringChunkList *dst, DKSM_BakeStringChunkList *to_push) noexcept -> void;
-	auto dksm_bake_string_chunk_list_sorted_from_unsorted(Arena *arena, DKSM_BakeStringChunkList *src) noexcept -> DKSM_BakeStringChunkList;
+	auto dksm_bake_string_chunk_list_sorted_from_unsorted(Arena *arena, DKSM_BakeStringChunkList const *list) noexcept -> DKSM_BakeStringChunkList;
 
 	auto dksm_bake_string_map_loose_make(Arena *arena, DKSM_BakeStringMapTopology *topology) noexcept -> DKSM_BakeStringMapLoose *;
 	auto dksm_bake_string_map_loose_insert(Arena *arena, DKSM_BakeStringMapTopology *map_topology, DKSM_BakeStringMapLoose *map, u64 chunk_cap, String8 str) noexcept -> DKSM_BakeString *;
