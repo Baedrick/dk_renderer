@@ -283,6 +283,7 @@ namespace dk {
 
 	auto dksm_gpu_meshlet_triangles_chunk_list_push(Arena *arena, DKSM_GPU_MeshletTrianglesChunkList *list, u64 capacity) noexcept -> u32 *;
 	auto dksm_gpu_meshlet_triangles_chunk_list_concat_in_place(DKSM_GPU_MeshletTrianglesChunkList *dst, DKSM_GPU_MeshletTrianglesChunkList *to_push) noexcept -> void;
+	auto dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32;
 
 	auto dksm_gpu_mesh_chunk_list_push(Arena *arena, DKSM_GPU_MeshChunkList *list, u64 capacity) noexcept -> DKSM_GPU_Mesh *;
 	auto dksm_gpu_mesh_chunk_list_concat_in_place(DKSM_GPU_MeshChunkList *dst, DKSM_GPU_MeshChunkList *to_push) noexcept -> void;
