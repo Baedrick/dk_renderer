@@ -255,12 +255,13 @@ auto dk::dksm_bake_string_map_loose_insert(Arena *arena, DKSM_BakeStringMapTopol
 
 auto dk::dksm_bake_string_map_base_indices_from_map_loose(Arena *arena, DKSM_BakeStringMapTopology const *map_topology, DKSM_BakeStringMapLoose const *map) noexcept -> DKSM_BakeStringMapBaseIndices {
 	DKSM_BakeStringMapBaseIndices indices = {};
-	indices.slots_base_idxs = arena_push_array<u64>(arena, map_topology->slots_count);
-	u64 current_idx = 1;
+	indices.slots_base_idxs = arena_push_array<u64>(arena, map_topology->slots_count + 1);
+	u64 current_idx = 0;
 	for (u64 slot_idx = 0; slot_idx < map_topology->slots_count; ++slot_idx) {
 		indices.slots_base_idxs[slot_idx] = current_idx;
 		current_idx += map->slots[slot_idx]->total_count;
 	}
+	indices.slots_base_idxs[map_topology->slots_count] = current_idx;
 	return indices;
 }
 
@@ -359,7 +360,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			DKSM_BakeStringMapLoose *const map = map_loose;
 			LaneRange const slot_range = lane_range(topology->slots_count);
 			for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
-				*map->slots[slot_idx] = dksm_bake_string_chunk_list_sorted_from_unsorted(scratch2.arena, map_lose->slots[slot_idx]);
+				*map->slots[slot_idx] = dksm_bake_string_chunk_list_sorted_from_unsorted(scratch2.arena, map_loose->slots[slot_idx]);
 			}
 			lane_sync();
 		}
@@ -374,14 +375,14 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 				bake_strings->slots_count = topology->slots_count;
 				bake_strings->slots = arena_push_array<DKSM_BakeStringChunkList>(scratch.arena, bake_strings->slots_count);
 				bake_strings->slots_base_idxs = bake_string_map_base_indices.slots_base_idxs;
-				bake_strings->total_count = bake_strings->slots_base_idxs[bake_strings->slots_count]; // FIXME(Dedrick): Out of bounds read.
+				bake_strings->total_count = bake_strings->slots_base_idxs[bake_strings->slots_count];
 			}
 			lane_sync();
 
 			{
 				ZoneScopedN("fill tight map");
 				LaneRange const slot_range = lane_range(bake_strings->slots_count);
-				for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_range) {
+				for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
 					bake_strings->slots[slot_idx] = *map->slots[slot_idx];
 				}
 				lane_sync();
@@ -427,7 +428,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 					for (u64 idx = 0; idx < node->count; ++idx) {
 						DKSM_BakeString const *src = &node->data[idx];
 						u64 const dst_idx = bake_strings->slots_base_idxs[slot_idx] + node->base_idx + idx + 1;
-						u64 const dst_offset = baked_strings->strings_table[dst_offset].offset;
+						u64 const dst_offset = baked_strings->strings_table[dst_idx].offset;
 						std::memcpy(baked_strings->string_data + dst_offset, src->string.data, src->string.size);
 					}
 				}
@@ -552,10 +553,10 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 					mesh_layout->lane_chunk_mo_offsets[slot_idx] = mo_layout_offset;
 					mesh_layout->lane_chunk_mv_offsets[slot_idx] = mv_layout_offset;
 					mesh_layout->lane_chunk_mt_offsets[slot_idx] = mt_layout_offset;
-					v_layout_offset += mesh_map_layout->lane_chunk_v_counts[slot_idx];
-					mo_layout_offset += mesh_map_layout->lane_chunk_mo_counts[slot_idx];
-					mv_layout_offset += mesh_map_layout->lane_chunk_mv_counts[slot_idx];
-					mt_layout_offset += mesh_map_layout->lane_chunk_mt_counts[slot_idx];
+					v_layout_offset += mesh_layout->lane_chunk_v_counts[slot_idx];
+					mo_layout_offset += mesh_layout->lane_chunk_mo_counts[slot_idx];
+					mv_layout_offset += mesh_layout->lane_chunk_mv_counts[slot_idx];
+					mt_layout_offset += mesh_layout->lane_chunk_mt_counts[slot_idx];
 				}
 				chunk_idx += 1;
 			}
@@ -721,13 +722,13 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	}
 
 	//~ Dedrick: @dksm_bake_stage Package results.
-	DKSM_BakeResults results = {};
+	DKSM_BakeResults result = {};
 	{
-		results.top_level_info = *baked_top_level_info;
-		results.strings = *baked_strings_result;
-		results.instances = *baked_instances;
-		results.gpu_instances = *baked_gpu_instances;
-		results.gpu_meshes = *baked_gpu_meshes;
+		result.top_level_info = *baked_top_level_info;
+		result.strings = *baked_strings;
+		result.instances = *baked_instances;
+		result.gpu_instances = *baked_gpu_instances;
+		result.gpu_meshes = *baked_gpu_meshes;
 	}
 	lane_sync();
 
