@@ -217,6 +217,8 @@ auto dk::dksm_bake_string_chunk_list_sorted_from_unsorted(Arena *arena, DKSM_Bak
 }
 
 auto dk::dksm_bake_string_map_loose_make(Arena *arena, DKSM_BakeStringMapTopology *topology) noexcept -> DKSM_BakeStringMapLoose * {
+	ZoneScoped;
+
 	DKSM_BakeStringMapLoose *map = arena_push<DKSM_BakeStringMapLoose>(arena);
 	map->slots = arena_push_array<DKSM_BakeStringChunkList *>(arena, topology->slots_count);
 	for (u64 idx = 0; idx < topology->slots_count; ++idx) {
@@ -284,7 +286,453 @@ auto dk::dksm_bake_idx_from_string(DKSM_BakeStringMapTight const *map, String8 s
 }
 
 auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM_BakeResults {
+	TempArena const scratch = scratch_begin(&arena, 1);
 
+	//~ Dedrick: @dksm_bake_stage Build string map.
+	DKSM_BakeStringMapTight *bake_strings = nullptr;
+	{
+		ZoneScopedN("build string map");
+		TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
+
+		//~ Dedrick: Set up per-line outputs.
+		DKSM_BakeStringMapTopology *topology = nullptr;
+		DKSM_BakeStringMapLoose **lane_maps_loose = nullptr;
+		DKSM_BakeStringMapLoose *map_loose = nullptr;
+		if (lane_idx() == 0) {
+			ZoneScopedN("set up per line outputs");
+			bake_strings = arena_push<DKSM_BakeStringMapTight>(scratch.arena);
+			topology = arena_push<DKSM_BakeStringMapTopology>(scratch2.arena);
+			topology->slots_count = 64 + params->instances.total_count;
+			lane_maps_loose = arena_push_array<DKSM_BakeStringMapLoose *>(scratch2.arena, lane_count());
+			map_loose = dksm_bake_string_map_loose_make(scratch2.arena, topology);
+		}
+		lane_sync_broadcast(&bake_strings, 0);
+		lane_sync_broadcast(&topology, 0);
+		lane_sync_broadcast(&lane_maps_loose, 0);
+		lane_sync_broadcast(&map_loose, 0);
+
+		//~ Dedrick: Set up this lane's map.
+		lane_maps_loose[lane_idx()] = dksm_bake_string_map_loose_make(scratch2.arena, topology);
+		DKSM_BakeStringMapLoose *const lane_map = lane_maps_loose[lane_idx()];
+
+		//~ Dedrick: Push all strings into this lane's map.
+		{
+			ZoneScopedN("push all strings into this lane's map");
+
+			//~ Dedrick: Push small top-level strings.
+			if (lane_idx() == 0) {
+				ZoneScopedN("push small top-level strings");
+				dksm_bake_string_map_loose_insert(scratch.arena, topology, lane_map, 1, params->top_level_info.model_name);
+			}
+
+			//~ Dedrick: Push strings from instances.
+			{
+				ZoneScopedN("instances");
+				for (DKSM_InstanceChunkNode const *node = params->instances.first; node != nullptr; node = node->next) {
+					LaneRange const range = lane_range(node->count);
+					for (u64 idx = range.begin; idx < range.end; ++idx) {
+						dksm_bake_string_map_loose_insert(scratch2.arena, topology, lane_map, 4, node->data[idx].name);
+					}
+				}
+			}
+
+			lane_sync();
+		}
+
+		//~ Dedrick: Join.
+		{
+			ZoneScopedN("join");
+			LaneRange const slot_range = lane_range(topology->slots_count);
+			for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
+				for (u64 src_lane_idx = 0; src_lane_idx < lane_count(); ++src_lane_idx) {
+					DKSM_BakeStringMapLoose *src_map = lane_maps_loose[src_lane_idx];
+					DKSM_BakeStringMapLoose *dst_map = map_loose;
+					dksm_bake_string_chunk_list_concat_in_place(dst_map->slots[slot_idx], src_map->slots[slot_idx]);
+				}
+			}
+			lane_sync();
+		}
+
+		//~ Dedrick: Sort.
+		{
+			ZoneScopedN("sort");
+			DKSM_BakeStringMapLoose *const map = map_loose;
+			LaneRange const slot_range = lane_range(topology->slots_count);
+			for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
+				*map->slots[slot_idx] = dksm_bake_string_chunk_list_sorted_from_unsorted(scratch2.arena, map_lose->slots[slot_idx]);
+			}
+			lane_sync();
+		}
+
+		//~ Dedrick: Tighten string table.
+		{
+			ZoneScopedN("tighten string table");
+			DKSM_BakeStringMapLoose *const map = map_loose;
+			if (lane_idx() == 0) {
+				ZoneScopedN("calculate base indices; set up tight map");
+				DKSM_BakeStringMapBaseIndices const bake_string_map_base_indices = dksm_bake_string_map_base_indices_from_map_loose(scratch.arena, topology, map);
+				bake_strings->slots_count = topology->slots_count;
+				bake_strings->slots = arena_push_array<DKSM_BakeStringChunkList>(scratch.arena, bake_strings->slots_count);
+				bake_strings->slots_base_idxs = bake_string_map_base_indices.slots_base_idxs;
+				bake_strings->total_count = bake_strings->slots_base_idxs[bake_strings->slots_count]; // FIXME(Dedrick): Out of bounds read.
+			}
+			lane_sync();
+
+			{
+				ZoneScopedN("fill tight map");
+				LaneRange const slot_range = lane_range(bake_strings->slots_count);
+				for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_range) {
+					bake_strings->slots[slot_idx] = *map->slots[slot_idx];
+				}
+				lane_sync();
+			}
+		}
+
+		scratch_end(scratch2);
+	}
+
+	//~ Dedrick: @dksm_bake_stage Bake strings.
+	DKSM_StringBakeResult *baked_strings = nullptr;
+	{
+		ZoneScopedN("bake strings");
+		if (lane_idx() == 0) {
+			ZoneScopedN("set up");
+			baked_strings = arena_push<DKSM_StringBakeResult>(scratch.arena);
+			baked_strings->strings_table_count = bake_strings->total_count + 1;
+			baked_strings->strings_table = arena_push_array<DKS_StringTable>(arena, baked_strings->strings_table_count);
+			u64 offset_cursor = 0;
+			for (u64 slot_idx = 0; slot_idx < bake_strings->slots_count; ++slot_idx) {
+				DKSM_BakeStringChunkList const *const slot = &bake_strings->slots[slot_idx];
+				for (DKSM_BakeStringChunkNode const *node = slot->first; node != nullptr; node = node->next) {
+					for (u64 idx = 0; idx < node->count; ++idx) {
+						DKSM_BakeString const *src = &node->data[idx];
+						u64 const dst_idx = bake_strings->slots_base_idxs[slot_idx] + node->base_idx + idx + 1;
+						baked_strings->strings_table[dst_idx].offset = offset_cursor;
+						baked_strings->strings_table[dst_idx].size = src->string.size;
+						offset_cursor += src->string.size;
+					}
+				}
+			}
+			baked_strings->string_data_size = offset_cursor;
+			baked_strings->string_data = arena_push_array<u8>(arena, baked_strings->string_data_size);
+		}
+		lane_sync_broadcast(&baked_strings, 0);
+
+		{
+			ZoneScopedN("wide fill");
+			LaneRange const slot_range = lane_range(bake_strings->slots_count);
+			for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
+				DKSM_BakeStringChunkNode const *const slot = &bake_strings->slots[slot_idx];
+				for (DKSM_BakeStringChunkNode const *node = slot->first; node != nullptr; node = node->next) {
+					for (u64 idx = 0; idx < node->count; ++idx) {
+						DKSM_BakeString const *src = &node->data[idx];
+						u64 const dst_idx = bake_strings->slots_base_idxs[slot_idx] + node->base_idx + idx + 1;
+						u64 const dst_offset = baked_strings->strings_table[dst_offset].offset;
+						std::memcpy(baked_strings->string_data + dst_offset, src->string.data, src->string.size);
+					}
+				}
+			}
+			lane_sync();
+		}
+	}
+
+	//~ Dedrick: @dksm_bake_stage bake instances.
+	DKSM_InstanceBakeResult *baked_instances = nullptr;
+	{
+		ZoneScopedN("bake instances");
+		if (lane_idx() == 0) {
+			ZoneScopedN("set up");
+			baked_instances = arena_push<DKSM_InstanceBakeResult>(scratch.arena);
+			baked_instances->instances_count = params->instances.total_count + 1;
+			baked_instances->instances = arena_push_array<DKS_Instance>(arena, baked_instances->instances_count);
+		}
+		lane_sync_broadcast(&baked_instances, 0);
+
+		{
+			ZoneScopedN("wide fill");
+			for (DKSM_InstanceChunkNode const *node = params->instances.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					u64 const dst_idx = node->base_idx + idx + 1;
+					DKSM_Instance const *src = node->data[idx];
+					DKS_Instance *dst = &baked_instances->instances[dst_idx];
+					dst->name_string_idx = dksm_bake_idx_from_string(bake_strings, src->name);
+					dst->parent = dksm_idx_from_instance(src->parent);
+					dst->first_child = dksm_idx_from_instance(src->first_child);
+					dst->prev_sibling = dksm_idx_from_instance(src->prev_sibling);
+					dst->next_sibling = dksm_idx_from_instance(src->next_sibling);
+				}
+			}
+			lane_sync();
+		}
+	}
+
+	//~ Dedrick: @dksm_bake_stage Bake gpu instances.
+	DKSM_GPU_InstanceBakeResult *baked_gpu_instances = nullptr;
+	{
+		ZoneScopedN("bake gpu instances");
+		if (lane_idx() == 0) {
+			baked_gpu_instances->gpu_instances_count = params->gpu_instances.total_count + 1;
+			baked_gpu_instances->gpu_instances = arena_push_array<DKS_GPU_Instance>(arena, baked_gpu_instances->gpu_instances_count);
+		}
+		lane_sync_broadcast(&baked_gpu_instances, 0);
+
+		{
+			ZoneScopedN("wide fill");
+			for (DKSM_GPU_InstanceChunkNode const *node = params->gpu_instances.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					u64 const dst_idx = node->base_idx + idx + 1;
+					DKSM_GPU_Instance const *src = &node->data[idx];
+					DKS_GPU_Instance *dst = &baked_gpu_instances->gpu_instances[dst_idx];
+					std::memcpy(dst->world_from_object, src->world_from_object, sizeof(dst->world_from_object));
+					dst->mesh_idx = dksm_idx_from_gpu_mesh(src->mesh);
+				}
+			}
+			lane_sync();
+		}
+	}
+
+	//~ Dedrick: @dksm_bake_stage Compute gpu mesh layout.
+	struct MeshLayout {
+		u64 *lane_chunk_v_counts; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_mo_counts; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_mv_counts; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_mt_counts; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_v_offsets; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_mo_offsets; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_mv_offsets; // [lane_count * gpu_mesh_chunk_count]
+		u64 *lane_chunk_mt_offsets; // [lane_count * gpu_mesh_chunk_count]
+	};
+	MeshLayout *mesh_layout = nullptr;
+	{
+		ZoneScopedN("compute gpu mesh layout");
+		if (lane_idx() == 0) {
+			mesh_layout = arena_push<MeshLayout>(scratch.arena);
+			u64 const slots_count = lane_count() * params->gpu_meshes.chunk_count;
+			mesh_layout->lane_chunk_v_counts = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_mo_counts = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_mv_counts = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_mt_counts = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_v_offsets = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_mo_offsets = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_mv_offsets = arena_push_array<u64>(scratch.arena, slots_count);
+			mesh_layout->lane_chunk_mt_offsets = arena_push_array<u64>(scratch.arena, slots_count);
+		}
+		lane_sync_broadcast(&mesh_layout, 0);
+
+		{
+			ZoneScopedN("wide count");
+			u64 chunk_idx = 0;
+			for (DKSM_GPU_MeshChunkNode const *node = params->gpu_meshes.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				u64 const slot_idx = lane_idx() * params->gpu_meshes.chunk_count + chunk_idx;
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					DKSM_GPU_Mesh const *mesh = &node->data[idx];
+					mesh_layout->lane_chunk_v_counts[slot_idx] += mesh->vertex_count;
+					mesh_layout->lane_chunk_mo_counts[slot_idx] += mesh->meshlet_count;
+					mesh_layout->lane_chunk_mv_counts[slot_idx] += mesh->total_meshlet_vertex_count;
+					mesh_layout->lane_chunk_mt_counts[slot_idx] += mesh->total_meshlet_triangle_count;
+				}
+				chunk_idx += 1;
+			}
+			lane_sync();
+		}
+
+		if (lane_idx() == 0) {
+			u64 chunk_idx = 0;
+			u64 v_layout_offset = 1;
+			u64 mo_layout_offset = 1;
+			u64 mv_layout_offset = 1;
+			u64 mt_layout_offset = 1;
+			for (DKSM_GPU_MeshChunkNode const *node = params->gpu_meshes.first; node != nullptr; node = node->next) {
+				for (u64 lane = 0; lane < lane_count(); ++lane) {
+					u64 const slot_idx = lane * params->gpu_meshes.chunk_count + chunk_idx;
+					mesh_layout->lane_chunk_v_offsets[slot_idx] = v_layout_offset;
+					mesh_layout->lane_chunk_mo_offsets[slot_idx] = mo_layout_offset;
+					mesh_layout->lane_chunk_mv_offsets[slot_idx] = mv_layout_offset;
+					mesh_layout->lane_chunk_mt_offsets[slot_idx] = mt_layout_offset;
+					v_layout_offset += mesh_map_layout->lane_chunk_v_counts[slot_idx];
+					mo_layout_offset += mesh_map_layout->lane_chunk_mo_counts[slot_idx];
+					mv_layout_offset += mesh_map_layout->lane_chunk_mv_counts[slot_idx];
+					mt_layout_offset += mesh_map_layout->lane_chunk_mt_counts[slot_idx];
+				}
+				chunk_idx += 1;
+			}
+		}
+		lane_sync();
+	}
+
+	//~ Dedrick: @dksm_bake_stage Bake gpu meshes.
+	DKSM_GPU_MeshBakeResult *baked_gpu_meshes = nullptr;
+	{
+		ZoneScopedN("bake gpu meshes");
+		if (lane_idx() == 0) {
+			baked_gpu_meshes->gpu_meshes_count = params->gpu_meshes.total_count + 1;
+			baked_gpu_meshes->gpu_meshes = arena_push_array<DKS_GPU_Mesh>(arena, baked_gpu_meshes->gpu_meshes_count);
+		}
+		lane_sync_broadcast(&baked_gpu_meshes, 0);
+
+		u64 chunk_idx = 0;
+		for (DKSM_GPU_MeshChunkNode const *node = params->gpu_meshes.first; node != nullptr; node = node->next) {
+			// TODO(Dedrick)
+			chunk_idx += 1;
+		}
+	}
+
+#if 0
+	//~ dksm: @bake_stage bake gpu meshes
+	{
+		ZoneScopedN("bake gpu meshes");
+		u64 chunk_idx = 0;
+		for (DKSM_GPU_MeshChunkNode *n = params->gpu_meshes.first; n != nullptr; n = n->next)
+		{
+			LaneRange range = lane_range(n->count);
+			u64 slot_idx = lane_idx() * params->gpu_meshes.chunk_count + chunk_idx;
+
+			u64 dst_v_off  = mesh_map_layout->lane_chunk_v_offs[slot_idx];
+			u64 dst_mo_off = mesh_map_layout->lane_chunk_mo_offs[slot_idx];
+			u64 dst_mv_off = mesh_map_layout->lane_chunk_mv_offs[slot_idx];
+			u64 dst_mt_off = mesh_map_layout->lane_chunk_mt_offs[slot_idx];
+
+			for (u64 i = range.begin; i < range.end; ++i)
+			{
+				u64 gpu_mesh_idx = 1 + n->base_idx + i;
+				DKSM_GPU_Mesh &m = n->data[i];
+
+				std::memcpy(baked_gpu_meshes->gpu_meshes[gpu_mesh_idx].sphere_center, m.sphere_center, sizeof(f32) * 3);
+				baked_gpu_meshes->gpu_meshes[gpu_mesh_idx].sphere_radius = m.sphere_radius;
+				std::memcpy(baked_gpu_meshes->gpu_meshes[gpu_mesh_idx].dequantization_factor, m.dequantization_factor, sizeof(f32) * 3);
+				std::memcpy(baked_gpu_meshes->gpu_meshes[gpu_mesh_idx].dequantization_summand, m.dequantization_summand, sizeof(f32) * 3);
+
+				baked_gpu_meshes->gpu_meshes[gpu_mesh_idx].meshlet_offset = (u32)dst_mo_off;
+				baked_gpu_meshes->gpu_meshes[gpu_mesh_idx].meshlet_count  = m.meshlet_count;
+
+				for (u64 ml = 0; ml < m.meshlet_count; ++ml)
+				{
+					u32 ml_v_count = baked_gpu_meshes->meshlets[dst_mo_off + ml].vertex_count;
+					for (u32 mvi = 0; mvi < ml_v_count; ++mvi)
+					{
+						baked_gpu_meshes->meshlet_vertices[dst_mv_off + mvi] += (u32)dst_v_off;
+					}
+					baked_gpu_meshes->meshlets[dst_mo_off + ml].vertex_offset   += (u32)dst_mv_off;
+					baked_gpu_meshes->meshlets[dst_mo_off + ml].triangle_offset += (u32)dst_mt_off;
+
+					dst_mv_off += ml_v_count;
+					dst_mt_off += baked_gpu_meshes->meshlets[dst_mo_off + ml].triangle_count;
+				}
+
+				dst_mo_off += m.meshlet_count;
+				dst_v_off  += m.vertex_count;
+			}
+			chunk_idx += 1;
+		}
+	}
+	lane_sync();
+#endif
+
+	//~ Dedrick: @dksm_bake_stage Bake gpu mesh data.
+	{
+		ZoneScopedN("bake gpu mesh data");
+		{
+			ZoneScopedN("set up");
+			if (lane_idx() == lane_from_task_idx(0)) {
+				baked_gpu_meshes->vertices_count = params->gpu_vertices.total_count + 1;
+				baked_gpu_meshes->vertices = arena_push_array<DKS_GPU_Vertex>(arena, baked_gpu_meshes->vertices_count);
+			}
+			if (lane_idx() == lane_from_task_idx(1)) {
+				baked_gpu_meshes->meshlets_count = params->gpu_meshlets.total_count + 1;
+				baked_gpu_meshes->meshlets = arena_push_array<DKS_GPU_Meshlet>(arena, baked_gpu_meshes->meshlets_count);
+			}
+			if (lane_idx() == lane_from_task_idx(2)) {
+				baked_gpu_meshes->meshlet_bounds_count = params->gpu_meshlet_bounds.total_count + 1;
+				baked_gpu_meshes->meshlet_bounds = arena_push_array<DKS_GPU_MeshletBounds>(arena, baked_gpu_meshes->meshlet_bounds_count);
+			}
+			if (lane_idx() == lane_from_task_idx(3)) {
+				baked_gpu_meshes->meshlet_vertices_count = params->gpu_meshlet_vertices.total_count + 1;
+				baked_gpu_meshes->meshlet_vertices = arena_push_array<u32>(arena, baked_gpu_meshes->meshlet_vertices_count);
+			}
+			if (lane_idx() == lane_from_task_idx(4)) {
+				baked_gpu_meshes->meshlet_triangles_count = params->gpu_meshlet_triangles.total_count + 1;
+				baked_gpu_meshes->meshlet_triangles = arena_push_array<u32>(arena, baked_gpu_meshes->meshlet_triangles_count);
+			}
+			lane_sync();
+		}
+
+		{
+			ZoneScopedN("bake vertices");
+			for (DKSM_GPU_VertexChunkNode const *node = params->gpu_vertices.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					baked_gpu_meshes->vertices[node->base_idx + idx + 1] = node->data[idx];
+				}
+			}
+		}
+		{
+			ZoneScopedN("bake meshlets");
+			for (DKSM_GPU_MeshletChunkNode const *node = params->gpu_meshlets.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					baked_gpu_meshes->meshlets[node->base_idx + idx + 1] = node->data[idx];
+				}
+			}
+		}
+		{
+			ZoneScopedN("bake meshlet bounds");
+			for (DKSM_GPU_MeshletBoundsChunkNode const *node = params->gpu_meshlet_bounds.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					baked_gpu_meshes->meshlet_bounds[node->base_idx + idx + 1] = node->data[idx];
+				}
+			}
+		}
+		{
+			ZoneScopedN("bake meshlet vertices");
+			for (DKSM_GPU_MeshletVerticesChunkNode const *node = params->gpu_meshlet_vertices.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					baked_gpu_meshes->meshlet_vertices[node->base_idx + idx + 1] = node->data[idx];
+				}
+			}
+		}
+		{
+			ZoneScopedN("bake meshlet triangles");
+			for (DKSM_GPU_MeshletTrianglesChunkNode const *node = params->gpu_meshlet_triangles.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					baked_gpu_meshes->meshlet_triangles[node->base_idx + idx + 1] = node->data[idx];
+				}
+			}
+		}
+		lane_sync();
+	}
+
+	//~ Dedrick: @dksm_bake_stage Small final baking tasks.
+	DKSM_TopLevelInfoBakeResult *baked_top_level_info = nullptr;
+	{
+		ZoneScopedN("small final baking tasks");
+		if (lane_idx() == lane_from_task_idx(0)) {
+			ZoneScopedN("bake top level info");
+			baked_top_level_info = arena_push<DKSM_TopLevelInfoBakeResult>(scratch.arena);
+			baked_top_level_info->top_level_info = arena_push<DKSM_TopLevelInfo>(arena);
+			baked_top_level_info->top_level_info->model_name_string_idx = dksm_bake_idx_from_string(bake_strings, params->top_level_info.model_name);
+		}
+		lane_sync_broadcast(&baked_top_level_info, lane_from_task_idx(0));
+	}
+
+	//~ Dedrick: @dksm_bake_stage Package results.
+	DKSM_BakeResults results = {};
+	{
+		results.top_level_info = *baked_top_level_info;
+		results.strings = *baked_strings_result;
+		results.instances = *baked_instances;
+		results.gpu_instances = *baked_gpu_instances;
+		results.gpu_meshes = *baked_gpu_meshes;
+	}
+	lane_sync();
+
+	scratch_end(scratch);
+	return result;
 }
 
 auto dk::dksm_serialized_section_bundle_from_bake_results(DKSM_BakeResults const *bake_results) noexcept -> DKSM_SerializedSectionBundle {

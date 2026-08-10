@@ -136,6 +136,8 @@ namespace dk {
 		u64 vertex_count;
 		u32 meshlet_offset;
 		u32 meshlet_count;
+		u32 total_meshlet_vertex_count;
+		u32 total_meshlet_triangle_count;
 	};
 
 	struct DKSM_GPU_MeshChunkNode {
