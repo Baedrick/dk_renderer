@@ -52,92 +52,21 @@ namespace dk {
 		u64 total_count;
 	};
 
-	struct DKSM_GPU_VertexChunkNode {
-		DKSM_GPU_VertexChunkNode *next;
-		DKS_GPU_Vertex *data;
-		u64 count;
-		u64 capacity;
-		u64 base_idx;
-	};
-
-	struct DKSM_GPU_VertexChunkList {
-		DKSM_GPU_VertexChunkNode *first;
-		DKSM_GPU_VertexChunkNode *last;
-		u64 chunk_count;
-		u64 total_count;
-	};
-
-	struct DKSM_GPU_MeshletChunkNode {
-		DKSM_GPU_MeshletChunkNode *next;
-		DKS_GPU_Meshlet *data;
-		u64 count;
-		u64 capacity;
-		u64 base_idx;
-	};
-
-	struct DKSM_GPU_MeshletChunkList {
-		DKSM_GPU_MeshletChunkNode *first;
-		DKSM_GPU_MeshletChunkNode *last;
-		u64 chunk_count;
-		u64 total_count;
-	};
-
-	struct DKSM_GPU_MeshletBoundsChunkNode {
-		DKSM_GPU_MeshletBoundsChunkNode *next;
-		DKS_GPU_MeshletBounds *data;
-		u64 count;
-		u64 capacity;
-		u64 base_idx;
-	};
-
-	struct DKSM_GPU_MeshletBoundsChunkList {
-		DKSM_GPU_MeshletBoundsChunkNode *first;
-		DKSM_GPU_MeshletBoundsChunkNode *last;
-		u64 chunk_count;
-		u64 total_count;
-	};
-
-	struct DKSM_GPU_MeshletVerticesChunkNode {
-		DKSM_GPU_MeshletVerticesChunkNode *next;
-		u32 *data;
-		u64 count;
-		u64 capacity;
-		u64 base_idx;
-	};
-
-	struct DKSM_GPU_MeshletVerticesChunkList {
-		DKSM_GPU_MeshletVerticesChunkNode *first;
-		DKSM_GPU_MeshletVerticesChunkNode *last;
-		u64 chunk_count;
-		u64 total_count;
-	};
-
-	struct DKSM_GPU_MeshletTrianglesChunkNode {
-		DKSM_GPU_MeshletTrianglesChunkNode *next;
-		u32 *data; // packed: [unused:8][i2:8][i1:8][i0:8]
-		u64 count;
-		u64 capacity;
-		u64 base_idx;
-	};
-
-	struct DKSM_GPU_MeshletTrianglesChunkList {
-		DKSM_GPU_MeshletTrianglesChunkNode *first;
-		DKSM_GPU_MeshletTrianglesChunkNode *last;
-		u64 chunk_count;
-		u64 total_count;
-	};
-
 	struct DKSM_GPU_Mesh {
 		struct DKSM_GPU_MeshChunkNode *chunk;
 		f32 sphere_center[3];
 		f32 sphere_radius;
 		f32 dequantization_factor[3];
 		f32 dequantization_summand[3];
+		DKS_GPU_Vertex *vertices;
 		u64 vertex_count;
-		u32 meshlet_offset;
+		DKS_GPU_Meshlet *meshlets;
+		DKS_GPU_MeshletBounds *meshlet_bounds;
 		u32 meshlet_count;
-		u32 total_meshlet_vertex_count;
-		u32 total_meshlet_triangle_count;
+		u32 *meshlet_vertices;
+		u32 *meshlet_triangles;
+		u32 meshlet_vertex_count;
+		u32 meshlet_triangle_count;
 	};
 
 	struct DKSM_GPU_MeshChunkNode {
@@ -164,11 +93,6 @@ namespace dk {
 		DKSM_InstanceChunkList instances;
 		DKSM_GPU_InstanceChunkList gpu_instances;
 		DKSM_GPU_MeshChunkList gpu_meshes;
-		DKSM_GPU_VertexChunkList gpu_vertices;
-		DKSM_GPU_MeshletChunkList gpu_meshlets;
-		DKSM_GPU_MeshletBoundsChunkList gpu_meshlet_bounds;
-		DKSM_GPU_MeshletVerticesChunkList gpu_meshlet_vertices;
-		DKSM_GPU_MeshletTrianglesChunkList gpu_meshlet_triangles;
 	};
 
 	struct DKSM_BakeString {
@@ -271,20 +195,6 @@ namespace dk {
 	auto dksm_gpu_instance_chunk_list_concat_in_place(DKSM_GPU_InstanceChunkList *dst, DKSM_GPU_InstanceChunkList *to_push) noexcept -> void;
 	auto dksm_idx_from_gpu_instance(DKSM_GPU_Instance const *gpu_instance) noexcept -> u64;
 
-	auto dksm_gpu_vertex_chunk_list_push(Arena *arena, DKSM_GPU_VertexChunkList *list, u64 capacity) noexcept -> DKS_GPU_Vertex *;
-	auto dksm_gpu_vertex_chunk_list_concat_in_place(DKSM_GPU_VertexChunkList *dst, DKSM_GPU_VertexChunkList *to_push) noexcept -> void;
-
-	auto dksm_gpu_meshlet_chunk_list_push(Arena *arena, DKSM_GPU_MeshletChunkList *list, u64 capacity) noexcept -> DKS_GPU_Meshlet *;
-	auto dksm_gpu_meshlet_chunk_list_concat_in_place(DKSM_GPU_MeshletChunkList *dst, DKSM_GPU_MeshletChunkList *to_push) noexcept -> void;
-
-	auto dksm_gpu_meshlet_bounds_chunk_list_push(Arena *arena, DKSM_GPU_MeshletBoundsChunkList *list, u64 capacity) noexcept -> DKS_GPU_MeshletBounds *;
-	auto dksm_gpu_meshlet_bounds_chunk_list_concat_in_place(DKSM_GPU_MeshletBoundsChunkList *dst, DKSM_GPU_MeshletBoundsChunkList *to_push) noexcept -> void;
-
-	auto dksm_gpu_meshlet_vertices_chunk_list_push(Arena *arena, DKSM_GPU_MeshletVerticesChunkList *list, u64 capacity) noexcept -> u32 *;
-	auto dksm_gpu_meshlet_vertices_chunk_list_concat_in_place(DKSM_GPU_MeshletVerticesChunkList *dst, DKSM_GPU_MeshletVerticesChunkList *to_push) noexcept -> void;
-
-	auto dksm_gpu_meshlet_triangles_chunk_list_push(Arena *arena, DKSM_GPU_MeshletTrianglesChunkList *list, u64 capacity) noexcept -> u32 *;
-	auto dksm_gpu_meshlet_triangles_chunk_list_concat_in_place(DKSM_GPU_MeshletTrianglesChunkList *dst, DKSM_GPU_MeshletTrianglesChunkList *to_push) noexcept -> void;
 	auto dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32;
 
 	auto dksm_gpu_mesh_chunk_list_push(Arena *arena, DKSM_GPU_MeshChunkList *list, u64 capacity) noexcept -> DKSM_GPU_Mesh *;
