@@ -14,6 +14,9 @@ namespace dk {
 		DKSM_Instance *first_child;
 		DKSM_Instance *next_sibling;
 		DKSM_Instance *prev_sibling;
+		struct DKSM_GPU_Instance *first_gpu_instance;
+		struct DKSM_GPU_Instance *last_gpu_instance;
+		u64 gpu_instance_count;
 	};
 
 	struct DKSM_InstanceChunkNode {
@@ -32,9 +35,10 @@ namespace dk {
 	};
 
 	struct DKSM_GPU_Instance {
+		DKSM_GPU_Instance *next;
 		struct DKSM_GPU_InstanceChunkNode *chunk;
-		f32 world_from_object[12]; ///< mat4x3, implicit vec4(0,0,0,1)
 		struct DKSM_GPU_Mesh *mesh;
+		f32 world_from_object[12]; ///< mat4x3, implicit vec4(0,0,0,1)
 	};
 
 	struct DKSM_GPU_InstanceChunkNode {
@@ -195,11 +199,12 @@ namespace dk {
 	auto dksm_gpu_instance_chunk_list_concat_in_place(DKSM_GPU_InstanceChunkList *dst, DKSM_GPU_InstanceChunkList *to_push) noexcept -> void;
 	auto dksm_idx_from_gpu_instance(DKSM_GPU_Instance const *gpu_instance) noexcept -> u64;
 
-	auto dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32;
-
 	auto dksm_gpu_mesh_chunk_list_push(Arena *arena, DKSM_GPU_MeshChunkList *list, u64 capacity) noexcept -> DKSM_GPU_Mesh *;
 	auto dksm_gpu_mesh_chunk_list_concat_in_place(DKSM_GPU_MeshChunkList *dst, DKSM_GPU_MeshChunkList *to_push) noexcept -> void;
 	auto dksm_idx_from_gpu_mesh(DKSM_GPU_Mesh const *gpu_mesh) noexcept -> u64;
+
+	auto dksm_quantize_vertex_position(f32 const position[3], f32 const dequant_summand[3], f32 const dequant_factor[3]) noexcept -> u64;
+	auto dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32;
 
 	auto dksm_bake_string_chunk_list_push(Arena *arena, DKSM_BakeStringChunkList *list, u64 capacity) noexcept -> DKSM_BakeString *;
 	auto dksm_bake_string_chunk_list_concat_in_place(DKSM_BakeStringChunkList *dst, DKSM_BakeStringChunkList *to_push) noexcept -> void;

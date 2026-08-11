@@ -51,6 +51,8 @@ namespace dk {
 		u32 first_child;
 		u32 prev_sibling;
 		u32 next_sibling;
+		u32 gpu_instance_offset;
+		u32 gpu_instance_count;
 	};
 
 	struct DKS_GPU_Instance {

@@ -31,28 +31,141 @@ auto dk::g2d_cgltf_file_release(cgltf_memory_options const *mem_opts, cgltf_file
 
 auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> DKSM_BakeParams {
 	ZoneScoped;
+	TempArena const scratch = scratch_begin(&arena, 1);
 
 	cgltf_data *gltf = nullptr;
 	{
 		ZoneScopedN("load and parse gltf file(s)");
 		if (lane_idx() == 0) {
+			//~ Dedrick: Parse glTF file.
 			cgltf_options options = {};
 			options.file.read = g2d_cgltf_file_read;
 			options.file.release = g2d_cgltf_file_release;
 			options.file.user_data = arena;
-			cgltf_parse(&options, params->file_data.data, static_cast<cgltf_size>(params->file_data.size), &gltf);
-			cgltf_load_buffers(&options, gltf, reinterpret_cast<char const *>(params->file_path.data));
+			cgltf_result const parse_status = cgltf_parse(&options, params->file_data.data, static_cast<cgltf_size>(params->file_data.size), &gltf);
+			if (parse_status != cgltf_result_success) {
+				DK_LOG_ERRORF("[cgltf]: ERROR: failed to parse %.*s.\n", DK_STR8_VARG(params->file_path));
+				gltf = nullptr;
+			}
+
+			//~ Dedrick: Load glTF data buffers.
+			if (gltf != nullptr) {
+				cgltf_result const load_status = cgltf_load_buffers(&options, gltf, reinterpret_cast<char const *>(params->file_path.data));
+				if (load_status != cgltf_result_success) {
+					DK_LOG_ERRORF("[cgltf]: ERROR: failed to load mesh data.\n");
+					cgltf_free(gltf);
+					gltf = nullptr;
+				}
+			}
 		}
 		lane_sync_broadcast(&gltf, 0);
+
+		//~ Dedrick: Print basic information.
+		if (gltf != nullptr) {
+			if (gltf->file_type == cgltf_file_type_glb) {
+				DK_LOG_INFOF("[dks_from_gltf]: %.*s model (glb) loaded.\n", DK_STR8_VARG(params->file_path));
+			}
+			else if (gltf->file_type == cgltf_file_type_gltf) {
+				DK_LOG_INFOF("[dks_from_gltf]: %.*s model (glTF) loaded.\n", DK_STR8_VARG(params->file_path));
+			}
+			else {
+				DK_LOG_INFOF("[dks_from_gltf]: %.*s model format not recognized.\n", DK_STR8_VARG(params->file_path));
+			}
+			DK_LOG_INFOF("  > meshes count: %i\n", gltf->meshes_count);
+			DK_LOG_INFOF("  > materials count: %i\n", gltf->materials_count);
+			DK_LOG_INFOF("  > buffers count: %i\n", gltf->buffers_count);
+			DK_LOG_INFOF("  > images count: %i\n", gltf->images_count);
+			DK_LOG_INFOF("  > textures count: %i\n", gltf->textures_count);
+		}
 	}
 
-	// TODO(Dedrick): Multilane compile.
+	//~ Dedrick: @g2d_stage Build primitive map.
+	G2D_PrimitiveMap *primitive_map = nullptr;
+	if (gltf != nullptr) {
+		ZoneScopedN("build primitive map");
+		if (lane_idx() == 0) {
+			primitive_map = arena_push<G2D_PrimitiveMap>(scratch.arena);
+			primitive_map->mesh_base_idxs = arena_push_array<>(scratch.arena, gltf->meshes_count);
+			u64 total_primitive_count = 0;
+			for (cgltf_size idx = 0; idx < gltf->meshes_count; ++idx) {
+				prim_map->mesh_base_idxs[i] = total_prims;
+				total_primitive_count += gltf->meshes[i].primitives_count;
+			}
+			primitive_map->total_primitive_count = total_primitive_count;
+			primitive_map->primitives = arena_push_array<DKSM_GPU_Mesh *>(scratch.arena, primitive_map->total_primitive_count);
+		}
+	}
+
+	//~ Dedrick: @g2d_stage Covert primitives, run meshoptimizer.
+
+
+	//~ Dedrick: @g2d_stage Parse and build instances.
+
+
+	//~ Dedrick: @g2d_stage Link instance hierarchy.
+
+
+	//~ Dedrick: @g2d_stage Join all lane blocks.
+	DKSM_InstanceChunkList all_instances = {};
+	DKSM_GPU_InstanceChunkList all_gpu_instances = {};
+	DKSM_GPU_MeshChunkList all_gpu_meshes = {};
+	{
+		DKSM_InstanceChunkList *all_instances_ptr = nullptr;
+		DKSM_GPU_InstanceChunkList *all_gpu_instances_ptr = nullptr;
+		DKSM_GPU_MeshChunkList *all_gpu_meshes_ptr = nullptr;
+		if (lane_idx() == 0) {
+			all_instances_ptr = arena_push<DKSM_InstanceChunkList>(scrach.arena);
+			all_gpu_instances_ptr = arena_push<DKSM_GPU_InstanceChunkList>(scrach.arena);
+			all_gpu_meshes_ptr = arena_push<DKSM_GPU_MeshChunkList>(scrach.arena);
+		}
+		lane_sync_broadcast(&all_instances_ptr, 0);
+		lane_sync_broadcast(&all_gpu_instances_ptr, 0);
+		lane_sync_broadcast(&all_gpu_meshes_ptr, 0);
+		if (lane_idx() == lane_from_task_idx(0)) {
+			ZoneScopedN("join instances");
+			for (u64 l = 0; l < lane_count(); ++l) {
+				dksm_instance_chunk_list_concat_in_place(all_instances_ptr, &lane_instances[l]);
+			}
+		}
+		if (lane_idx() == lane_from_task_idx(0)) {
+			ZoneScopedN("join gpu instances");
+			for (u64 l = 0; l < lane_count(); ++l) {
+				dksm_gpu_instance_chunk_list_concat_in_place(all_gpu_instances_ptr, &lane_gpu_instances[l]);
+			}
+		}
+		if (lane_idx() == lane_from_task_idx(0)) {
+			ZoneScopedN("join gpu meshes");
+			for (u64 l = 0; l < lane_count(); ++l) {
+				dksm_gpu_mesh_chunk_list_concat_in_place(all_gpu_meshes_ptr, &lane_gpu_meshes[l]);
+			}
+		}
+		lane_sync();
+		all_instances = *all_instances_ptr;
+		all_gpu_instances = *all_gpu_instances_ptr;
+		all_gpu_meshes = *all_gpu_meshes_ptr;
+		lane_sync();
+	}
+
+	//~ Dedrick: @g2d_stage Bundle all outputs.
+	DKSM_BakeParams result = {};
+	{
+		//~ Dedrick: Produce top level info.
+		DKSM_TopLeveInfo top_level_info = {};
+		{
+			top_level_info.model_name = path_skip_last_slash(params->file_path);
+		}
+
+		//~ Dedrick: Fill.
+		result.top_level_info = top_level_info;
+		result.instances      = all_instances;
+		result.gpu_instances  = all_gpu_instances;
+		result.gpu_meshes     = all_gpu_meshes;
+	}
 
 	if (lane_idx() == 0) {
 		cgltf_free(gltf);
 	}
-	lane_sync();
 
-	DKSM_BakeParams result = {};
+	scratch_end(scratch);
 	return result;
 }
