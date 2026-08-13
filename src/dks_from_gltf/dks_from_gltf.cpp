@@ -96,7 +96,59 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		}
 	}
 
-	//~ Dedrick: @g2d_stage Covert primitives, run meshoptimizer.
+	//~ Dedrick: @g2d_stage Covert primitives.
+	DKSM_GPU_MeshChunkList *lane_gpu_meshes = nullptr;
+	{
+		ZoneScopedN("convert primitives");
+		u64 *mesh_take_counter = nullptr;
+		if (lane_idx() == 0) {
+			lane_gpu_meshes = arena_push_array<DKSM_GPU_MeshChunkList>(scratch.arena, lane_count());
+			mesh_take_counter = arena_push<u64>(scratch.arena);
+		}
+		lane_sync_broadcast(&lane_gpu_meshes, 0);
+		lane_sync_broadcast(&mesh_take_counter, 0);
+
+		//~ Dedrick: Wide fill.
+		{
+			ZoneScopedN("wide fill");
+			while (true) {
+				//~ Dedrick: Take next glTF mesh.
+				u64 const mesh_idx = atomic_u64_inc_fetch(mesh_take_counter) - 1;
+				if (mesh_idx >= gltf->meshes_count) {
+					break;
+				}
+
+				//~ Dedrick:
+				TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
+				u64 const primitive_base_idx = primitive_map->mesh_base_idxs[mesh_idx];
+				cgltf_mesh const *const src_mesh = &gltf->meshes[mesh_idx];
+				for (cgltf_size p_idx = 0; p_idx < src_mesh->primitives_count; ++p_idx) {
+					cgltf_primitive const *src_prim = &src_mesh->primitives[p_idx];
+					if (src_mesh->primitives[p_idx].type != cgltf_primitive_type_triangles) {
+						continue;
+					}
+
+					//~ Dedrick:
+					for (cgltf_size a_idx = 0; a_idx < src_prim->attributes_count; ++a_idx) {
+						if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_position) {
+							cgltf_accessor const *attribute = src_prim->attributes[a_idx].data;
+
+						}
+						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_normal) {
+							// TODO(Dedrick)
+						}
+						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_tangent) {
+							// TODO(Dedrick)
+						}
+						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_texcoord) {
+							// TODO(Dedrick)
+						}
+					}
+				}
+			}
+			lane_sync();
+		}
+	}
 
 
 	//~ Dedrick: @g2d_stage Parse and build instances.
@@ -114,9 +166,9 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		DKSM_GPU_InstanceChunkList *all_gpu_instances_ptr = nullptr;
 		DKSM_GPU_MeshChunkList *all_gpu_meshes_ptr = nullptr;
 		if (lane_idx() == 0) {
-			all_instances_ptr = arena_push<DKSM_InstanceChunkList>(scrach.arena);
-			all_gpu_instances_ptr = arena_push<DKSM_GPU_InstanceChunkList>(scrach.arena);
-			all_gpu_meshes_ptr = arena_push<DKSM_GPU_MeshChunkList>(scrach.arena);
+			all_instances_ptr = arena_push<DKSM_InstanceChunkList>(scratch.arena);
+			all_gpu_instances_ptr = arena_push<DKSM_GPU_InstanceChunkList>(scratch.arena);
+			all_gpu_meshes_ptr = arena_push<DKSM_GPU_MeshChunkList>(scratch.arena);
 		}
 		lane_sync_broadcast(&all_instances_ptr, 0);
 		lane_sync_broadcast(&all_gpu_instances_ptr, 0);
