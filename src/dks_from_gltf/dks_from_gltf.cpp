@@ -1,5 +1,19 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+namespace dk {
+	template <typename SrcType, typename DstType = SrcType>
+	static auto g2d_load_attribute(cgltf_accessor const *accessor, u32 num_components, DstType *dst) noexcept -> void {
+		u8 const *const base = static_cast<u8 const *>(accessor->buffer_view->buffer->data) + accessor->buffer_view->offset + accessor->offset;
+		u64 const stride = accessor->stride;
+		for (u64 a_idx = 0; a_idx < accessor->count; ++a_idx) {
+			SrcType const *const src_component = reinterpret_cast<SrcType const *>(base + a_idx * stride);
+			for (u32 c_idx = 0; c_idx < num_components; ++c_idx) {
+				dst[a_idx * num_components + c_idx] = static_cast<DstType>(src_component);
+			}
+		}
+	}
+}
+
 auto dk::g2d_cgltf_file_read(cgltf_memory_options const *mem_opts, cgltf_file_options const *file_opts, char const *path, cgltf_size *out_size, void **out_data) noexcept -> cgltf_result {
 	(void)mem_opts;
 
@@ -133,6 +147,9 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 						if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_position) {
 							cgltf_accessor const *attribute = src_prim->attributes[a_idx].data;
 
+							f32 *positions = arena_push_array<f32>(scratch2.arena, attribute->count * 3);
+							g2d_load_attribute<f32>(attribute, 3, positions);
+
 						}
 						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_normal) {
 							// TODO(Dedrick)
@@ -145,6 +162,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 						}
 					}
 				}
+				scratch_end(scratch2);
 			}
 			lane_sync();
 		}
@@ -179,13 +197,13 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 				dksm_instance_chunk_list_concat_in_place(all_instances_ptr, &lane_instances[l]);
 			}
 		}
-		if (lane_idx() == lane_from_task_idx(0)) {
+		if (lane_idx() == lane_from_task_idx(1)) {
 			ZoneScopedN("join gpu instances");
 			for (u64 l = 0; l < lane_count(); ++l) {
 				dksm_gpu_instance_chunk_list_concat_in_place(all_gpu_instances_ptr, &lane_gpu_instances[l]);
 			}
 		}
-		if (lane_idx() == lane_from_task_idx(0)) {
+		if (lane_idx() == lane_from_task_idx(2)) {
 			ZoneScopedN("join gpu meshes");
 			for (u64 l = 0; l < lane_count(); ++l) {
 				dksm_gpu_mesh_chunk_list_concat_in_place(all_gpu_meshes_ptr, &lane_gpu_meshes[l]);
