@@ -62,7 +62,7 @@ namespace dk {
 		f32 sphere_radius;
 		f32 dequantization_factor[3];
 		f32 dequantization_summand[3];
-		DKS_GPU_Vertex *vertices;
+		DKS_GPU_Vertex *vertices; // TODO(Dedrick): Quantizing should happen in baking, not the conversion function before dksm_bake()
 		u64 vertex_count;
 		DKS_GPU_Meshlet *meshlets;
 		DKS_GPU_MeshletBounds *meshlet_bounds;
