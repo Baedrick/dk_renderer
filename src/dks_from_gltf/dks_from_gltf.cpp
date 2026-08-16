@@ -170,10 +170,85 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 
 
 	//~ Dedrick: @g2d_stage Parse and build instances.
+	DKSM_InstanceChunkList *lane_instances = nullptr;
+	DKSM_GPU_InstanceChunkList *lane_gpu_instances = nullptr;
+	DKSM_Instance **flat_node_map = nullptr;
+	{
+		ZoneScopedN("parse and build instances");
+		u64 *node_take_counter = nullptr;
+		if (lane_idx() == 0) {
+			lane_instances = arena_push_array<DKSM_InstanceChunkList>(scratch.arena, lane_count());
+			lane_gpu_instances = arena_push_array<DKSM_GPU_InstanceChunkList>(scratch.arena, lane_count());
+			flat_node_map = arena_push_array<DKSM_Instance *>(scratch.arena, gltf->nodes_count);
+			node_take_counter = arena_push<u64>(scratch.arena);
+		}
+		lane_sync_broadcast(&lane_instances, 0);
+		lane_sync_broadcast(&lane_gpu_instances, 0);
+		lane_sync_broadcast(&flat_node_map, 0);
+		lane_sync_broadcast(&node_take_counter, 0);
 
+		//~ Dedrick: Wide fill.
+		while (true) {
+			u64 const node_idx = atomic_u64_inc_fetch(node_take_counter) - 1;
+			if (node_idx >= gltf->nodes_count) {
+				break;
+			}
+
+			cgltf_node const *const src_node = &gltf->nodes[node_idx];
+			DKSM_Instance *dst_inst = dksm_instance_chunk_list_push(arena, &lane_instances[lane_idx()], 256);
+			flat_node_map[node_idx] = dst_inst;
+
+			dst_inst->name = str8_cstring(reinterpret_cast<u8 const *>(src_node->name));
+			if (src_node->mesh != nullptr) {
+
+			}
+		}
+		lane_sync();
+	}
 
 	//~ Dedrick: @g2d_stage Link instance hierarchy.
+	{
+		ZoneScopedN("link instance hierarchy");
+		u64 *node_take_counter = nullptr;
+		if (lane_idx() == 0) {
+			node_take_counter = arena_push<u64>(scratch.arena);
+		}
+		lane_sync_broadcast(&node_take_counter, 0);
 
+		while (true) {
+			//~ Dedrick: Take next glTF node.
+			u64 const node_idx = atomic_u64_inc_fetch(node_take_counter) - 1;
+			if (node_idx >= gltf->meshes_count) {
+				break;
+			}
+
+			cgltf_node const *const src_node = &gltf->nodes[node_idx];
+			DKSM_Instance *dst_inst = flat_node_map[node_idx];
+
+			//~ Dedrick: Link parent.
+			if (src_node->parent != nullptr) {
+				u64 const parent_idx = src_node->parent - gltf->nodes;
+				dst_inst->parent = flat_node_map[parent_idx];
+			}
+
+			//~ Dedrick: Link siblings and children.
+			DKSM_Instance *prev_child = nullptr;
+			for (cgltf_size c_idx = 0; c_idx < src_node->children_count; ++c_idx) {
+				u64 const child_idx = src_node->children[c_idx] - gltf->nodes;
+				DKSM_Instance *child_inst = flat_node_map[child_idx];
+
+				if (c_idx == 0) {
+					dst_inst->first_child = child_inst;
+				}
+				else if (prev_child != nullptr) {
+					prev_child->next_sibling = child_inst;
+					child_inst->prev_sibling = prev_child;
+				}
+				prev_child = child_inst;
+			}
+		}
+		lane_sync();
+	}
 
 	//~ Dedrick: @g2d_stage Join all lane blocks.
 	DKSM_InstanceChunkList all_instances = {};
