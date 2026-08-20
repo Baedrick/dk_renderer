@@ -52,31 +52,22 @@ namespace dk {
 	static auto dksm_chunk_list_concat_in_place(ChunkListType *dst, ChunkListType *to_push) noexcept -> void {
 		dksm_chunk_list_concat_in_place(dst, to_push, [](ChunkListType *, ChunkListType *) { });
 	}
-
-	template <typename T>
-	static auto dksm_serialized_section_make_unpacked(T *data, u64 count) noexcept -> DKSM_SerializedSection {
-		DKSM_SerializedSection s = {};
-		s.data = data;
-		s.size = count * sizeof(T);
-		return s;
-	};
 }
 
-auto dk::dksm_instance_chunk_list_push(Arena *arena, DKSM_InstanceChunkList *list, u64 capacity) noexcept -> DKSM_Instance * {
-	return dksm_indexed_chunk_list_push<DKSM_InstanceChunkNode, DKSM_Instance>(arena, list, capacity);
+auto dk::dksm_node_chunk_list_push(Arena *arena, DKSM_NodeChunkList *list, u64 capacity) noexcept -> DKSM_Node * {
+	return dksm_indexed_chunk_list_push<DKSM_NodeChunkNode, DKSM_Node>(arena, list, capacity);
 }
 
-auto dk::dksm_instance_chunk_list_concat_in_place(DKSM_InstanceChunkList *dst, DKSM_InstanceChunkList *to_push) noexcept -> void {
-	dksm_chunk_list_concat_in_place<DKSM_InstanceChunkNode>(dst, to_push);
+auto dk::dksm_node_chunk_list_concat_in_place(DKSM_NodeChunkList *dst, DKSM_NodeChunkList *to_push) noexcept -> void {
+	dksm_chunk_list_concat_in_place<DKSM_NodeChunkNode>(dst, to_push);
 }
 
-auto dk::dksm_idx_from_instance(DKSM_Instance const *instance) noexcept -> u64 {
-	return dksm_idx_from_indexed_chunk_list_element(instance);
+auto dk::dksm_idx_from_node(DKSM_Node const *node) noexcept -> u64 {
+	return dksm_idx_from_indexed_chunk_list_element(node);
 }
 
 auto dk::dksm_gpu_instance_chunk_list_push(Arena *arena, DKSM_GPU_InstanceChunkList *list, u64 capacity) noexcept -> DKSM_GPU_Instance * {
 	return dksm_indexed_chunk_list_push<DKSM_GPU_InstanceChunkNode, DKSM_GPU_Instance>(arena, list, capacity);
-
 }
 
 auto dk::dksm_gpu_instance_chunk_list_concat_in_place(DKSM_GPU_InstanceChunkList *dst, DKSM_GPU_InstanceChunkList *to_push) noexcept -> void {
@@ -92,33 +83,11 @@ auto dk::dksm_gpu_mesh_chunk_list_push(Arena *arena, DKSM_GPU_MeshChunkList *lis
 }
 
 auto dk::dksm_gpu_mesh_chunk_list_concat_in_place(DKSM_GPU_MeshChunkList *dst, DKSM_GPU_MeshChunkList *to_push) noexcept -> void {
-	dksm_chunk_list_concat_in_place<DKSM_GPU_MeshChunkNode>(dst, to_push,
-		[](DKSM_GPU_MeshChunkList *dst, DKSM_GPU_MeshChunkList *to_push) {
-			dst->total_vertex_count += to_push->total_vertex_count;
-			dst->total_meshlet_count += to_push->total_meshlet_count;
-			dst->total_meshlet_vertex_count += to_push->total_meshlet_vertex_count;
-			dst->total_meshlet_triangle_count += to_push->total_meshlet_triangle_count;
-		}
-	);
+	dksm_chunk_list_concat_in_place<DKSM_GPU_MeshChunkNode>(dst, to_push);
 }
 
 auto dk::dksm_idx_from_gpu_mesh(DKSM_GPU_Mesh const *gpu_mesh) noexcept -> u64 {
 	return dksm_idx_from_indexed_chunk_list_element(gpu_mesh);
-}
-
-auto dk::dksm_quantize_vertex_position(f32 const position[3], f32 const dequant_summand[3], f32 const dequant_factor[3]) noexcept -> u64 {
-	f32 const quant_bits = static_cast<f32>((1 << 21) - 1);
-	u64 quantized[3] = {};
-	for (u64 axis = 0; axis < 3; ++axis) {
-		f32 const normalized = (position[axis] - dequant_summand[axis]) / dequant_factor[axis];
-		u64 const q_val = static_cast<u64>(normalized + 0.5f);
-		quantized[axis] = (q_val < static_cast<u64>(quant_bits)) ? q_val : static_cast<u64>(quant_bits);
-	}
-	return (quantized[0] << 42) | (quantized[1] << 21) | quantized[2];
-}
-
-auto dk::dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32 {
-	return (i0 & 0xFF) | ((i1 & 0xFF) << 8) | ((i2 & 0xFF) << 16);
 }
 
 auto dk::dksm_bake_string_chunk_list_push(Arena *arena, DKSM_BakeStringChunkList *list, u64 capacity) noexcept -> DKSM_BakeString * {
@@ -191,7 +160,6 @@ auto dk::dksm_bake_string_chunk_list_sorted_from_unsorted(Arena *arena, DKSM_Bak
 
 auto dk::dksm_bake_string_map_loose_make(Arena *arena, DKSM_BakeStringMapTopology *topology) noexcept -> DKSM_BakeStringMapLoose * {
 	ZoneScoped;
-
 	DKSM_BakeStringMapLoose *map = arena_push<DKSM_BakeStringMapLoose>(arena);
 	map->slots = arena_push_array<DKSM_BakeStringChunkList *>(arena, topology->slots_count);
 	for (u64 idx = 0; idx < topology->slots_count; ++idx) {
@@ -205,7 +173,7 @@ auto dk::dksm_bake_string_map_loose_insert(Arena *arena, DKSM_BakeStringMapTopol
 	if (str.size > 0) {
 		u64 const hash = u64_hash_from_str8(str);
 		u64 const slot_idx = hash % map_topology->slots_count;
-		DKSM_BakeStringChunkList *const slot = &map->slots[slot_idx];
+		DKSM_BakeStringChunkList *const slot = map->slots[slot_idx];
 		for (DKSM_BakeStringChunkNode const *node = slot->first; node != nullptr; node = node->next) {
 			for (u64 idx = 0; idx < node->count; ++idx) {
 				if (node->data[idx].hash == hash && str8_equals(str, node->data[idx].string, STRING_MATCH_FLAG_NONE)) {
@@ -219,8 +187,8 @@ auto dk::dksm_bake_string_map_loose_insert(Arena *arena, DKSM_BakeStringMapTopol
 		}
 		if (result == nullptr) {
 			result = dksm_bake_string_chunk_list_push(arena, slot, chunk_cap);
-			result.string = str;
-			result.hash = hash;
+			result->string = str;
+			result->hash = hash;
 		}
 	}
 	return result;
@@ -259,14 +227,40 @@ auto dk::dksm_bake_idx_from_string(DKSM_BakeStringMapTight const *map, String8 s
 	return bake_idx;
 }
 
+auto dk::dksm_mat4x3_from_mat4(mat4 const &src, f32 dst[12]) noexcept -> void {
+	// NOTE(Dedrick): Truncate mat4 to mat4x3, last row implicitly vec4(0, 0, 0, 1).
+	for (u32 c = 0; c < 4; ++c) {
+		dst[c * 3 + 0] = src[c].x;
+		dst[c * 3 + 1] = src[c].y;
+		dst[c * 3 + 2] = src[c].z;
+	}
+}
+
+auto dk::dksm_quantize_vertex_position(f32 const position[3], f32 const dequant_summand[3], f32 const dequant_factor[3]) noexcept -> u64 {
+	f32 const quant_bits = static_cast<f32>((1 << 21) - 1);
+	u64 quantized[3] = {};
+	for (u64 axis = 0; axis < 3; ++axis) {
+		f32 const normalized = (position[axis] - dequant_summand[axis]) / dequant_factor[axis];
+		u64 const q_val = static_cast<u64>(normalized + 0.5f);
+		quantized[axis] = (q_val < static_cast<u64>(quant_bits)) ? q_val : static_cast<u64>(quant_bits);
+	}
+	return (quantized[0] << 42) | (quantized[1] << 21) | quantized[2];
+}
+
+auto dk::dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32 {
+	return (i0 & 0xFF) | ((i1 & 0xFF) << 8) | ((i2 & 0xFF) << 16);
+}
+
 auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM_BakeResults {
 	TempArena const scratch = scratch_begin(&arena, 1);
+	dk_defer(scratch_end(scratch));
 
 	//~ Dedrick: @dksm_bake_stage Build string map.
 	DKSM_BakeStringMapTight *bake_strings = nullptr;
 	{
 		ZoneScopedN("build string map");
 		TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
+		dk_defer(scratch_end(scratch2));
 
 		//~ Dedrick: Set up per-line outputs.
 		DKSM_BakeStringMapTopology *topology = nullptr;
@@ -276,7 +270,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			ZoneScopedN("set up per line outputs");
 			bake_strings = arena_push<DKSM_BakeStringMapTight>(scratch.arena);
 			topology = arena_push<DKSM_BakeStringMapTopology>(scratch2.arena);
-			topology->slots_count = 64 + params->instances.total_count;
+			topology->slots_count = 64 + params->nodes.total_count;
 			lane_maps_loose = arena_push_array<DKSM_BakeStringMapLoose *>(scratch2.arena, lane_count());
 			map_loose = dksm_bake_string_map_loose_make(scratch2.arena, topology);
 		}
@@ -296,16 +290,16 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			//~ Dedrick: Push small top-level strings.
 			if (lane_idx() == 0) {
 				ZoneScopedN("push small top-level strings");
-				dksm_bake_string_map_loose_insert(scratch.arena, topology, lane_map, 1, params->top_level_info.model_name);
+				dksm_bake_string_map_loose_insert(arena, topology, lane_map, 1, params->top_level_info.model_name);
 			}
 
-			//~ Dedrick: Push strings from instances.
+			//~ Dedrick: Push strings from nodes.
 			{
-				ZoneScopedN("instances");
-				for (DKSM_InstanceChunkNode const *node = params->instances.first; node != nullptr; node = node->next) {
+				ZoneScopedN("nodes");
+				for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
 					LaneRange const range = lane_range(node->count);
 					for (u64 idx = range.begin; idx < range.end; ++idx) {
-						dksm_bake_string_map_loose_insert(scratch2.arena, topology, lane_map, 4, node->data[idx].name);
+						dksm_bake_string_map_loose_insert(arena, topology, lane_map, 4, node->data[idx].name);
 					}
 				}
 			}
@@ -333,7 +327,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			DKSM_BakeStringMapLoose *const map = map_loose;
 			LaneRange const slot_range = lane_range(topology->slots_count);
 			for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
-				*map->slots[slot_idx] = dksm_bake_string_chunk_list_sorted_from_unsorted(scratch2.arena, map_loose->slots[slot_idx]);
+				*map->slots[slot_idx] = dksm_bake_string_chunk_list_sorted_from_unsorted(arena, map_loose->slots[slot_idx]);
 			}
 			lane_sync();
 		}
@@ -361,8 +355,6 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 				lane_sync();
 			}
 		}
-
-		scratch_end(scratch2);
 	}
 
 	//~ Dedrick: @dksm_bake_stage Bake strings.
@@ -396,7 +388,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			ZoneScopedN("wide fill");
 			LaneRange const slot_range = lane_range(bake_strings->slots_count);
 			for (u64 slot_idx = slot_range.begin; slot_idx < slot_range.end; ++slot_idx) {
-				DKSM_BakeStringChunkNode const *const slot = &bake_strings->slots[slot_idx];
+				DKSM_BakeStringChunkList const *const slot = &bake_strings->slots[slot_idx];
 				for (DKSM_BakeStringChunkNode const *node = slot->first; node != nullptr; node = node->next) {
 					for (u64 idx = 0; idx < node->count; ++idx) {
 						DKSM_BakeString const *src = &node->data[idx];
@@ -410,6 +402,8 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		}
 	}
 
+	// TODO(Dedrick) \/\/\/
+	//
 	//~ Dedrick: @dksm_bake_stage Compute gpu instances layout.
 	struct InstanceLayout {
 		u64 *lane_chunk_gpu_inst_counts;
@@ -701,8 +695,17 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	}
 	lane_sync();
 
-	scratch_end(scratch);
 	return result;
+}
+
+namespace dk {
+	template <typename T>
+	static auto dksm_serialized_section_make_unpacked(T *data, u64 count) noexcept -> DKSM_SerializedSection {
+		DKSM_SerializedSection s = {};
+		s.data = data;
+		s.size = count * sizeof(T);
+		return s;
+	};
 }
 
 auto dk::dksm_serialized_section_bundle_from_bake_results(DKSM_BakeResults const *bake_results) noexcept -> DKSM_SerializedSectionBundle {
@@ -754,13 +757,13 @@ auto dk::dksm_buffer_blobs_from_section_bundle(Arena *arena, DKSM_SerializedSect
 		dst->size = bundle->sections[k].size;
 	}
 
-	//~ Dedrick: Fill metadata size.
+	//~ Dedrick: Fill cpu data size.
 	{
-		header->metadata_size = list.total_size;
+		header->cpu_data_size = list.total_size;
 		u32 constexpr gpu_section_start = DKS_SECTION_KIND_GPU_INSTANCES;
 		for (u32 k = gpu_section_start; k < DKS_SECTION_KIND_COUNT; ++k) {
 			if (sections[k].size > 0) {
-				header->metadata_size = sections[k].offset;
+				header->cpu_data_size = sections[k].offset;
 				break;
 			}
 		}
