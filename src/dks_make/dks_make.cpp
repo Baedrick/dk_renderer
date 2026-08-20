@@ -404,6 +404,65 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 
 	// TODO(Dedrick) \/\/\/
 	//
+	//~ Dedrick: @dksm_bake_stage Resolve world transforms.
+	mat4 *world_transforms = nullptr;
+	{
+		ZoneScopedN("resolve world transforms");
+
+		DKSM_Node const **roots = nullptr;
+		u64 roots_count = 0;
+		u64 *root_take_counter = nullptr;
+		if (lane_idx() == 0) {
+			ZoneScopedN("set up");
+			world_transforms = arena_push_array<mat4>(scratch.arena, params->nodes.total_count + 1);
+			world_transforms[0] = mat4_identity();
+			roots = arena_push_array<DKSM_Node const *>(scratch.arena, params->nodes.total_count);
+			root_take_counter = arena_push<u64>(scratch.arena);
+
+			//~ Dedrick: Find roots.
+			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
+				for (u64 idx = 0; idx < node->count; ++idx) {
+					if (node->data[idx].parent == nullptr) {
+						roots[roots_count] = &node->data[idx];
+						roots_count += 1;
+					}
+				}
+			}
+		}
+		lane_sync_broadcast(&roots, 0);
+		lane_sync_broadcast(&roots_count, 0);
+		lane_sync_broadcast(&root_take_counter, 0);
+
+		{
+			ZoneScopedN("wide hierarchy dfs");
+			while (true) {
+				u64 const root_idx = atomic_u64_inc_fetch(root_take_counter) - 1;
+				if (root_idx >= roots_count) {
+					break;
+				}
+
+				TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
+				dk_defer(scratch_end(scratch2));
+
+				struct StackNode { StackNode *next; DKSM_Node const *node; };
+				StackNode *free_node = nullptr;
+				StackNode *top_node = nullptr;
+
+				//~ Dedrick: Set up root node.
+				StackNode *root_node = arena_push<StackNode>(scratch2.arena);
+				root_node->node = roots[root_idx];
+				forward_list_stack_push(&top_node, root_node);
+
+				//~ Dedrick: Walk the hierarchy.
+				while (top_node != nullptr) {
+
+				}
+			}
+		}
+	}
+
+
+
 	//~ Dedrick: @dksm_bake_stage Compute gpu instances layout.
 	struct InstanceLayout {
 		u64 *lane_chunk_gpu_inst_counts;
