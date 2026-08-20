@@ -1,6 +1,5 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
-#include "thirdparty/meshoptimizer/meshoptimizer_unity.cpp"
 
 dk::String8 const dk::asc_file_format_display_name_table[] {
 	""_str8

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "thirdparty/meshoptimizer/meshoptimizer.h"
+
 namespace dk {
 	struct DKSM_TopLevelInfo {
 		String8 model_name;

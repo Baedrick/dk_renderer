@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "thirdparty/meshoptimizer/meshoptimizer.h"
-
 namespace dk {
 	enum ASC_FileFormat : u32 {
 		ASC_FILE_FORMAT_NULL = 0,

@@ -1,5 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+#include "thirdparty/meshoptimizer/meshoptimizer_unity.cpp"
+
 namespace dk {
 	template <typename T>
 	static auto dksm_idx_from_indexed_chunk_list_element(T const *ptr) noexcept -> u64 {
