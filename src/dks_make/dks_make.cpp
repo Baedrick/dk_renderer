@@ -402,8 +402,6 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		}
 	}
 
-	// TODO(Dedrick) \/\/\/
-	//
 	//~ Dedrick: @dksm_bake_stage Resolve world transforms.
 	mat4 *world_transforms = nullptr;
 	{
@@ -434,7 +432,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		lane_sync_broadcast(&root_take_counter, 0);
 
 		{
-			ZoneScopedN("wide hierarchy dfs");
+			ZoneScopedN("wide hierarchy walk");
 			while (true) {
 				u64 const root_idx = atomic_u64_inc_fetch(root_take_counter) - 1;
 				if (root_idx >= roots_count) {
@@ -443,7 +441,6 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 
 				TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
 				dk_defer(scratch_end(scratch2));
-
 				struct StackNode { StackNode *next; DKSM_Node const *node; };
 				StackNode *free_node = nullptr;
 				StackNode *top_node = nullptr;
@@ -455,13 +452,33 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 
 				//~ Dedrick: Walk the hierarchy.
 				while (top_node != nullptr) {
+					StackNode *frame = top_node;
+					forward_list_stack_pop(&top_node);
+					DKSM_Node const *node = frame->node;
+					forward_list_stack_push(&free_node, frame);
 
+					//~ Dedrick: Compute world transform.
+					mat4 const local_transform = make_transform(node->local_translation, node->local_rotation, node->local_scale);
+					mat4 const parent_transform = node->parent != nullptr ? world_transforms[dksm_idx_from_node(node)] : mat4_identity();
+					world_transforms[dksm_idx_from_node(node)] = parent_transform * local_transform;
+
+					//~ Dedrick: Push children.
+					for (DKSM_Node const *child = node->first_child; child != nullptr; child = child->next_sibling) {
+						StackNode *child_frame = free_node;
+						if (child_frame != nullptr) {
+							child_frame = forward_list_stack_pop(&free_node);
+						}
+						else {
+							child_frame = arena_push<StackNode>(scratch2.arena);
+						}
+						child_frame->node = child;
+						forward_list_stack_push(&top_node, child_frame);
+					}
 				}
 			}
 		}
+		lane_sync();
 	}
-
-
 
 	//~ Dedrick: @dksm_bake_stage Compute gpu instances layout.
 	struct InstanceLayout {
@@ -474,7 +491,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		ZoneScopedN("compute gpu instances layout");
 		if (lane_idx() == 0) {
 			inst_layout = arena_push<InstanceLayout>(scratch.arena);
-			u64 const slots_count = lane_count() * params->instances.chunk_count;
+			u64 const slots_count = lane_count() * params->nodes.chunk_count;
 			inst_layout->lane_chunk_gpu_inst_counts = arena_push_array<u64>(scratch.arena, slots_count);
 			inst_layout->lane_chunk_gpu_inst_offsets = arena_push_array<u64>(scratch.arena, slots_count);
 		}
@@ -483,9 +500,9 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		{
 			ZoneScopedN("wide count");
 			u64 chunk_idx = 0;
-			for (DKSM_InstanceChunkNode const *node = params->instances.first; node != nullptr; node = node->next) {
+			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
 				LaneRange const range = lane_range(node->count);
-				u64 const slot_idx = lane_idx() * params->instances.chunk_count + chunk_idx;
+				u64 const slot_idx = lane_idx() * params->nodes.chunk_count + chunk_idx;
 				for (u64 idx = range.begin; idx < range.end; ++idx) {
 					inst_layout->lane_chunk_gpu_inst_counts[slot_idx] += node->data[idx].gpu_instance_count;
 				}
@@ -497,9 +514,9 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		if (lane_idx() == 0) {
 			u64 chunk_idx = 0;
 			u64 gpu_inst_layout_offset = 1;
-			for (DKSM_InstanceChunkNode const *node = params->instances.first; node != nullptr; node = node->next) {
+			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
 				for (u64 lane = 0; lane < lane_count(); ++lane) {
-					u64 const slot_idx = lane * params->instances.chunk_count + chunk_idx;
+					u64 const slot_idx = lane * params->nodes.chunk_count + chunk_idx;
 					inst_layout->lane_chunk_gpu_inst_offsets[slot_idx] = gpu_inst_layout_offset;
 					gpu_inst_layout_offset += inst_layout->lane_chunk_gpu_inst_counts[slot_idx];
 				}
@@ -510,18 +527,19 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		lane_sync();
 	}
 
-	//~ Dedrick: @dksm_bake_stage Bake instances and gpu instances.
-	DKSM_InstanceBakeResult *baked_instances = nullptr;
+	//~ Dedrick: @dksm_bake_stage Bake nodes, gpu instances, gpu transforms.
+	DKSM_NodeBakeResult *baked_nodes = nullptr;
 	DKSM_GPU_InstanceBakeResult *baked_gpu_instances = nullptr;
+	DKSM_GPU_TransformBakeResult *baked_gpu_transforms = nullptr;
 	{
-		ZoneScopedN("bake instances and gpu instances");
 		if (lane_idx() == 0) {
-			ZoneScopedN("set up");
-			baked_instances = arena_push<DKSM_InstanceBakeResult>(scratch.arena);
+			baked_nodes = arena_push<DKSM_InstanceBakeResult>(scratch.arena);
 			baked_gpu_instances = arena_push<DKSM_GPU_InstanceBakeResult>(scratch.arena);
+			baked_gpu_transforms = arena_push<DKSM_GPU_TransformBakeResult>(scratch.arena);
 		}
-		lane_sync_broadcast(&baked_instances, 0);
+		lane_sync_broadcast(&baked_nodes, 0);
 		lane_sync_broadcast(&baked_gpu_instances, 0);
+		lane_sync_broadcast(&baked_gpu_transforms, 0);
 		if (lane_idx() == lane_from_task_idx(0)) {
 			baked_instances->instances_count = params->instances.total_count + 1;
 			baked_instances->instances = arena_push_array<DKS_Instance>(arena, baked_instances->instances_count);
@@ -530,43 +548,80 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			baked_gpu_instances->gpu_instances_count = inst_layout->total_gpu_inst_count;
 			baked_gpu_instances->gpu_instances = arena_push_array<DKS_GPU_Instance>(arena, baked_gpu_instances->gpu_instances_count);
 		}
+		if (lane_idx() == lane_from_task_idx(1)) {
+			baked_gpu_transforms->gpu_transforms_count = params->nodes.total_count + 1;
+			baked_gpu_transforms->gpu_transforms = arena_push_array<DKS_GPU_Transform>(arena, baked_gpu_transforms->gpu_transforms_count);
+			dksm_mat4x3_from_mat4(mat4_identity(), baked_gpu_transforms->gpu_transforms[0].world_from_object);
+		}
 		lane_sync();
 
 		{
-			ZoneScopedN("wide fill");
+			ZoneScopedN("bake nodes");
 			u64 chunk_idx = 0;
-			for (DKSM_InstanceChunkNode const *node = params->instances.first; node != nullptr; node = node->next) {
+			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
 				LaneRange const range = lane_range(node->count);
-				u64 const slot_idx = lane_idx() * params->instances.chunk_count + chunk_idx;
+				u64 const slot_idx = lane_idx() * params->nodes.chunk_count + chunk_idx;
 				u64 dst_gpu_inst_offset = inst_layout->lane_chunk_gpu_inst_offsets[slot_idx];
 				for (u64 idx = range.begin; idx < range.end; ++idx) {
 					u64 const dst_idx = node->base_idx + idx + 1;
-					DKSM_Instance const *src = &node->data[idx];
-					DKS_Instance *dst = &baked_instances->instances[dst_idx];
-
-					//~ Dedrick: Fill instance data.
-					dst->name_string_idx = dksm_bake_idx_from_string(bake_strings, src->name);
-					dst->parent       = static_cast<u32>(dksm_idx_from_instance(src->parent));
-					dst->first_child  = static_cast<u32>(dksm_idx_from_instance(src->first_child));
-					dst->prev_sibling = static_cast<u32>(dksm_idx_from_instance(src->prev_sibling));
-					dst->next_sibling = static_cast<u32>(dksm_idx_from_instance(src->next_sibling));
+					DKSM_Node const *src = &node->data[idx];
+					DKS_Node *dst = &baked_nodes->nodes[dst_idx];
+					dst->name_string_idx     = dksm_bake_idx_from_string(bake_strings, src->name);
+					dst->parent              = static_cast<u32>(dksm_idx_from_node(src->parent));
+					dst->first_child         = static_cast<u32>(dksm_idx_from_node(src->first_child));
+					dst->prev_sibling        = static_cast<u32>(dksm_idx_from_node(src->prev_sibling));
+					dst->next_sibling        = static_cast<u32>(dksm_idx_from_node(src->next_sibling));
+					dst->gpu_transform_idx   = static_cast<u32>(dst_idx);
 					dst->gpu_instance_offset = static_cast<u32>(dst_gpu_inst_offset);
 					dst->gpu_instance_count  = static_cast<u32>(src->gpu_instance_count);
+					dst->local_translation   = src->local_translation;
+					dst->local_rotation      = src->local_rotation;
+					dst->local_scale         = src->local_scale;
+					dst_gpu_inst_offset += src->gpu_instance_count;
+				}
+				chunk_idx += 1;
+			}
+		}
 
-					//~ Dedrick: Fill gpu instance data.
-					for (DKSM_GPU_Instance const *src_gpu_inst = src->first_gpu_instance; src_gpu_inst != nullptr; src_gpu_inst = src_gpu_inst->next_gpu_instance) {
+		{
+			ZoneScopedN("bake gpu instances");
+			u64 chunk_idx = 0;
+			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				u64 const slot_idx = lane_idx() * params->nodes.chunk_count + chunk_idx;
+				u64 dst_gpu_inst_offset = inst_layout->lane_chunk_gpu_inst_offsets[slot_idx];
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					u64 const dst_idx = node->base_idx + idx + 1;
+					DKSM_Node const *src_node = &node->data[idx];
+					for (DKSM_GPU_Instance const *src_gpu_inst = src_node->first_gpu_instance; src_gpu_inst != nullptr; src_gpu_inst = src_gpu_inst->next) {
 						DKS_GPU_Instance *dst_gpu_inst = &baked_gpu_instances->gpu_instances[dst_gpu_inst_offset];
-						std::memcpy(dst_gpu_inst->world_from_object, src_gpu_inst->world_from_object, sizeof(dst_gpu_inst->world_from_object));
-						dst_gpu_inst->mesh_idx = static_cast<u32>(dksm_idx_from_gpu_mesh(src_gpu_inst->mesh));
+						dst_gpu_inst->gpu_transform_idx = static_cast<u32>(dst_idx);
+						dst_gpu_inst->mesh_idx          = static_cast<u32>(dksm_idx_from_gpu_mesh(src_gpu_inst->mesh));
 						dst_gpu_inst_offset += 1;
 					}
 				}
 				chunk_idx += 1;
 			}
-			lane_sync();
 		}
+
+		{
+			ZoneScopedN("bake gpu transforms");
+			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
+				LaneRange const range = lane_range(node->count);
+				for (u64 idx = range.begin; idx < range.end; ++idx) {
+					u64 const node_idx = node->base_idx + idx + 1;
+					dksm_mat4x3_from_mat4(world_transforms[node_idx], baked_gpu_transforms->gpu_transforms[node_idx].world_from_object);
+				}
+			}
+		}
+
+		lane_sync();
 	}
 
+	// TODO(Dedrick): \/\/\/
+	//
+	//~ Dedrick: @dksm_bake_stage Build meshlets.
+	//
 	//~ Dedrick: @dksm_bake_stage Compute gpu mesh layout.
 	struct MeshLayout {
 		u64 *lane_chunk_v_counts; // [lane_count * gpu_mesh_chunk_count]
