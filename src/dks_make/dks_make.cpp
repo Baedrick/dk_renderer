@@ -407,28 +407,36 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	{
 		ZoneScopedN("resolve world transforms");
 
-		DKSM_Node const **roots = nullptr;
+		//~ Dedrick: Count roots.
 		u64 roots_count = 0;
+		for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
+			for (u64 idx = 0; idx < node->count; ++idx) {
+				if (node->data[idx].parent == nullptr) {
+					roots_count += 1;
+				}
+			}
+		}
+
+		//~ Dedrick: Layout roots.
+		DKSM_Node const **roots = nullptr;
 		u64 *root_take_counter = nullptr;
 		if (lane_idx() == 0) {
-			ZoneScopedN("set up");
+			ZoneScopedN("layout roots");
 			world_transforms = arena_push_array<mat4>(scratch.arena, params->nodes.total_count + 1);
 			world_transforms[0] = mat4_identity();
-			roots = arena_push_array<DKSM_Node const *>(scratch.arena, params->nodes.total_count);
+			roots = arena_push_array<DKSM_Node const *>(scratch.arena, roots_count);
 			root_take_counter = arena_push<u64>(scratch.arena);
-
-			//~ Dedrick: Find roots.
+			u64 root_idx = 0;
 			for (DKSM_NodeChunkNode const *node = params->nodes.first; node != nullptr; node = node->next) {
 				for (u64 idx = 0; idx < node->count; ++idx) {
 					if (node->data[idx].parent == nullptr) {
-						roots[roots_count] = &node->data[idx];
-						roots_count += 1;
+						roots[root_idx] = &node->data[idx];
+						root_idx += 1;
 					}
 				}
 			}
 		}
 		lane_sync_broadcast(&roots, 0);
-		lane_sync_broadcast(&roots_count, 0);
 		lane_sync_broadcast(&root_take_counter, 0);
 
 		{
@@ -618,10 +626,99 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		lane_sync();
 	}
 
-	// TODO(Dedrick): \/\/\/
-	//
-	//~ Dedrick: @dksm_bake_stage Build meshlets.
-	//
+	//~ Dedrick: @dksm_bake_stage Build gpu mesh data.
+	struct DKSM_GPU_MeshBlock {
+		DKS_GPU_Vertex *vertices;
+		u64 vertex_count;
+		DKS_GPU_Meshlet *meshlets;
+		DKS_GPU_MeshletBounds *meshlet_bounds;
+		u32 meshlet_count;
+		u32 *meshlet_vertices;
+		u32 *meshlet_triangles;
+		u32 meshlet_vertex_count;
+		u32 meshlet_triangle_count;
+	};
+	DKSM_GPU_MeshBlock *gpu_mesh_blocks = nullptr;
+	{
+		ZoneScopedN("build gpu mesh data");
+
+		//~ Dedrick: Flatten meshes.
+		DKSM_GPU_Mesh **meshes = nullptr;
+		u64 *mesh_take_counter = nullptr;
+		if (lane_idx() == 0) {
+			ZoneScopedN("flatten meshes");
+			gpu_mesh_blocks = arena_push_array<DKSM_GPU_MeshBlock>(scratch.arena, params->gpu_meshes.total_count);
+			meshes = arena_push_array<DKSM_GPU_Mesh *>(scratch.arena, params->gpu_meshes.total_count);
+			mesh_take_counter = arena_push<u64>(scratch.arena);
+			u64 mesh_idx = 0;
+			for (DKSM_GPU_MeshChunkNode const *node = params->gpu_meshes.first; node != nullptr; node = node->next) {
+				for (u64 idx = 0; idx < node->count; ++idx) {
+					meshes[mesh_idx] = &node->data[idx];
+					mesh_idx += 1;
+				}
+			}
+		}
+		lane_sync_broadcast(&gpu_mesh_blocks, 0);
+		lane_sync_broadcast(&meshes, 0);
+		lane_sync_broadcast(&mesh_take_counter, 0);
+
+		{
+			ZoneScopedN("pass 1: vertex quantization");
+			if (lane_idx() == 0) {
+				*mesh_take_counter = 0;
+			}
+			lane_sync();
+
+			while (true) {
+				u64 const mesh_idx = atomic_u64_inc_fetch(mesh_take_counter) - 1;
+				if (mesh_idx >= params->gpu_meshes.total_count) {
+					break;
+				}
+
+				DKSM_GPU_Mesh const *src = meshes[mesh_idx];
+				DKSM_GPU_MeshBlock *dst = &gpu_mesh_blocks[mesh_idx];
+				dst->vertex_count = src->vertex_count;
+				dst->vertices = arena_push_array<DKS_GPU_Vertex>(scratch.arena, dst->vertex_count);
+				for (u64 idx = 0; idx < dst->vertex_count; ++idx) {
+					dst->vertices[idx].position = dksm_quantize_vertex_position(src->vertices[i].position, src->dequantization_summand, src->dequantization_factor);
+				}
+			}
+			lane_sync();
+		}
+
+		struct MeshOpt_Meshlet {
+			meshopt_Meshlet *meshlets;
+			u32 *meshlet_vertices;
+			u8 *meshlet_triangles;
+		};
+		MeshOpt_Meshlet *mo_meshlets = nullptr;
+		{
+			ZoneScopedN("pass 2: wide build meshlets");
+			if (lane_idx() == 0) {
+				mo_meshlets = arena_push_array<MeshOpt_Meshlet>(scratch.arena, params->gpu_meshes.total_count);
+				*mesh_take_counter = 0;
+			}
+			lane_sync_broadcast(&mo_meshlets, 0);
+
+			f32 const cone_weight = 0.5f;
+			u64 const max_meshlet_vertices_count = 126;
+			u64 const max_meshlet_triangles_count = 64;
+
+			lane_sync();
+		}
+
+		{
+			ZoneScopedN("pass 3: wide compute meshlet bounds");
+			if (lane_idx() == 0) {
+				*mesh_take_counter = 0;
+			}
+			lane_sync();
+
+
+			lane_sync();
+		}
+	}
+
 	//~ Dedrick: @dksm_bake_stage Compute gpu mesh layout.
 	struct MeshLayout {
 		u64 *lane_chunk_v_counts; // [lane_count * gpu_mesh_chunk_count]
