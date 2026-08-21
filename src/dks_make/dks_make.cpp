@@ -541,22 +541,18 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	DKSM_GPU_TransformBakeResult *baked_gpu_transforms = nullptr;
 	{
 		if (lane_idx() == 0) {
-			baked_nodes = arena_push<DKSM_InstanceBakeResult>(scratch.arena);
+			baked_nodes = arena_push<DKSM_NodeBakeResult>(scratch.arena);
 			baked_gpu_instances = arena_push<DKSM_GPU_InstanceBakeResult>(scratch.arena);
 			baked_gpu_transforms = arena_push<DKSM_GPU_TransformBakeResult>(scratch.arena);
 		}
 		lane_sync_broadcast(&baked_nodes, 0);
 		lane_sync_broadcast(&baked_gpu_instances, 0);
 		lane_sync_broadcast(&baked_gpu_transforms, 0);
-		if (lane_idx() == lane_from_task_idx(0)) {
-			baked_instances->instances_count = params->instances.total_count + 1;
-			baked_instances->instances = arena_push_array<DKS_Instance>(arena, baked_instances->instances_count);
-		}
 		if (lane_idx() == lane_from_task_idx(1)) {
 			baked_gpu_instances->gpu_instances_count = inst_layout->total_gpu_inst_count;
 			baked_gpu_instances->gpu_instances = arena_push_array<DKS_GPU_Instance>(arena, baked_gpu_instances->gpu_instances_count);
 		}
-		if (lane_idx() == lane_from_task_idx(1)) {
+		if (lane_idx() == lane_from_task_idx(2)) {
 			baked_gpu_transforms->gpu_transforms_count = params->nodes.total_count + 1;
 			baked_gpu_transforms->gpu_transforms = arena_push_array<DKS_GPU_Transform>(arena, baked_gpu_transforms->gpu_transforms_count);
 			dksm_mat4x3_from_mat4(mat4_identity(), baked_gpu_transforms->gpu_transforms[0].world_from_object);
@@ -627,7 +623,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	}
 
 	//~ Dedrick: @dksm_bake_stage Build gpu mesh data.
-	struct DKSM_GPU_MeshBlock {
+	struct MeshBlock {
 		DKS_GPU_Vertex *vertices;
 		u64 vertex_count;
 		DKS_GPU_Meshlet *meshlets;
@@ -638,85 +634,122 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 		u32 meshlet_vertex_count;
 		u32 meshlet_triangle_count;
 	};
-	DKSM_GPU_MeshBlock *gpu_mesh_blocks = nullptr;
+	MeshBlock *mesh_blocks = nullptr;
 	{
 		ZoneScopedN("build gpu mesh data");
 
-		//~ Dedrick: Flatten meshes.
-		DKSM_GPU_Mesh **meshes = nullptr;
+		//~ Dedrick: Allocate; flatten chunk list.
+		DKSM_GPU_Mesh **mesh_take_table = nullptr;
 		u64 *mesh_take_counter = nullptr;
 		if (lane_idx() == 0) {
-			ZoneScopedN("flatten meshes");
-			gpu_mesh_blocks = arena_push_array<DKSM_GPU_MeshBlock>(scratch.arena, params->gpu_meshes.total_count);
-			meshes = arena_push_array<DKSM_GPU_Mesh *>(scratch.arena, params->gpu_meshes.total_count);
+			mesh_blocks = arena_push_array<MeshBlock>(scratch.arena, params->gpu_meshes.total_count);
+			mesh_take_table = arena_push_array<DKSM_GPU_Mesh *>(scratch.arena, params->gpu_meshes.total_count);
 			mesh_take_counter = arena_push<u64>(scratch.arena);
 			u64 mesh_idx = 0;
 			for (DKSM_GPU_MeshChunkNode const *node = params->gpu_meshes.first; node != nullptr; node = node->next) {
 				for (u64 idx = 0; idx < node->count; ++idx) {
-					meshes[mesh_idx] = &node->data[idx];
+					mesh_take_table[mesh_idx] = &node->data[idx];
 					mesh_idx += 1;
 				}
 			}
 		}
-		lane_sync_broadcast(&gpu_mesh_blocks, 0);
-		lane_sync_broadcast(&meshes, 0);
+		lane_sync_broadcast(&mesh_blocks, 0);
+		lane_sync_broadcast(&mesh_take_table, 0);
 		lane_sync_broadcast(&mesh_take_counter, 0);
 
-		{
-			ZoneScopedN("pass 1: vertex quantization");
-			if (lane_idx() == 0) {
-				*mesh_take_counter = 0;
+		//~ Dedrick: Wide per-mesh meshlet build, vertex quantization, and packing.
+		u64 const max_meshlet_vertices_count = 126;
+		u64 const max_meshlet_triangles_count = 64;
+		f32 const cone_weight = 0.5f;
+		while (true) {
+			u64 const mesh_idx = atomic_u64_inc_fetch(mesh_take_counter) - 1;
+			if (mesh_idx >= params->gpu_meshes.total_count) {
+				break;
 			}
-			lane_sync();
 
-			while (true) {
-				u64 const mesh_idx = atomic_u64_inc_fetch(mesh_take_counter) - 1;
-				if (mesh_idx >= params->gpu_meshes.total_count) {
-					break;
+			TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
+			dk_defer(scratch_end(scratch2));
+			DKSM_GPU_Mesh const *src = mesh_take_table[mesh_idx];
+			MeshBlock *const dst = &mesh_blocks[mesh_idx];
+
+			//~ Dedrick: Quantize and fill vertices.
+			dst->vertex_count = src->vertex_count;
+			dst->vertices = arena_push_array<DKS_GPU_Vertex>(scratch.arena, dst->vertex_count);
+			for (u64 idx = 0; idx < src->vertex_count; ++idx) {
+				dst->vertices[idx].position = dksm_quantize_vertex_position(src->vertices[idx].position, src->dequantization_summand, src->dequantization_factor);
+			}
+
+			//~ Dedrick: Build meshlets.
+			u64 const max_meshlet_count = meshopt_buildMeshletsBound(src->index_count, max_meshlet_vertices_count, max_meshlet_triangles_count);
+			meshopt_Meshlet *const mo_meshlets = arena_push_array<meshopt_Meshlet>(scratch2.arena, max_meshlet_count);
+			u32 *const mo_meshlet_vertices = arena_push_array<u32>(scratch2.arena, src->index_count);
+			u8 *const mo_meshlet_triangles = arena_push_array<u8>(scratch2.arena, src->index_count);
+			u64 const meshlet_count = meshopt_buildMeshlets(
+				mo_meshlets,
+				mo_meshlet_vertices,
+				mo_meshlet_triangles,
+				src->indices, src->index_count,
+				&src->vertices[0].position[0], src->vertex_count,
+				sizeof(DKSM_GPU_Vertex),
+				max_meshlet_vertices_count, max_meshlet_triangles_count,
+				cone_weight
+			);
+
+			//~ Dedrick: Fill meshlets and bounds; accumulate counts.
+			dst->meshlet_count = static_cast<u32>(meshlet_count);
+			dst->meshlets = arena_push_array<DKS_GPU_Meshlet>(scratch.arena, dst->meshlet_count);
+			dst->meshlet_bounds = arena_push_array<DKS_GPU_MeshletBounds>(scratch.arena, dst->meshlet_count);
+			u32 meshlet_vertex_offset = 0;
+			u32 meshlet_triangle_offset = 0;
+			for (u64 idx = 0; idx < meshlet_count; ++idx) {
+				meshopt_Meshlet const *mo_meshlet = &mo_meshlets[idx];
+				dst->meshlets[idx].vertex_offset = meshlet_vertex_offset;
+				dst->meshlets[idx].vertex_count = static_cast<u8>(mo_meshlet->vertex_count);
+				dst->meshlets[idx].triangle_offset = meshlet_triangle_offset;
+				dst->meshlets[idx].triangle_count = static_cast<u8>(mo_meshlet->triangle_count);
+
+				//~ Dedrick: Compute meshlet bounds.
+				meshopt_Bounds const mo_bounds = meshopt_computeMeshletBounds(
+					&mo_meshlet_vertices[mo_meshlet->vertex_offset],
+					&mo_meshlet_triangles[mo_meshlet->triangle_offset],
+					mo_meshlet->triangle_count,
+					&src->vertices[0].position[0], src->vertex_count,
+					sizeof(DKSM_GPU_Vertex)
+				);
+
+				//~ Dedrick: Fill meshlet bounds.
+				DKS_GPU_MeshletBounds *bounds = &dst->meshlet_bounds[idx];
+				std::memcpy(bounds->sphere_center, mo_bounds.center, sizeof(mo_bounds.center));
+				bounds->sphere_radius = mo_bounds.radius;
+				std::memcpy(bounds->cone_apex, mo_bounds.cone_apex, sizeof(mo_bounds.cone_apex));
+				std::memcpy(bounds->cone_axis, mo_bounds.cone_axis, sizeof(mo_bounds.cone_axis));
+				bounds->cone_cutoff = mo_bounds.cone_cutoff;
+
+				//~ Dedrick: Bump counters.
+				meshlet_vertex_offset   += mo_meshlet->vertex_count;
+				meshlet_triangle_offset += mo_meshlet->triangle_count;
+			}
+			dst->meshlet_vertex_count   = meshlet_vertex_offset;
+			dst->meshlet_triangle_count = meshlet_triangle_offset;
+
+			//~ Dedrick: Fill meshlet vertex indices.
+			dst->meshlet_vertices = arena_push_array<u32>(scratch.arena, dst->meshlet_vertex_count);
+			std::memcpy(dst->meshlet_vertices, mo_meshlet_vertices, dst->meshlet_vertex_count * sizeof(u32));
+
+			//~ Dedrick: Pack meshlet triangles.
+			dst->meshlet_triangles = arena_push_array<u32>(scratch.arena, dst->meshlet_triangle_count);
+			for (u64 idx = 0; idx < meshlet_count; ++idx) {
+				meshopt_Meshlet const *mo_meshlet = &mo_meshlets[idx];
+				u32 const dst_tri_offset = dst->meshlets[idx].triangle_offset;
+				for (u32 t_idx = 0; t_idx < mo_meshlet->triangle_count; ++t_idx) {
+					u8 const i0 = mo_meshlet_triangles[mo_meshlet->triangle_offset + t_idx * 3 + 0];
+					u8 const i1 = mo_meshlet_triangles[mo_meshlet->triangle_offset + t_idx * 3 + 1];
+					u8 const i2 = mo_meshlet_triangles[mo_meshlet->triangle_offset + t_idx * 3 + 2];
+					dst->meshlet_triangles[dst_tri_offset + t_idx] = dksm_gpu_meshlet_triangle_from_indices(i0, i1, i2);
 				}
-
-				DKSM_GPU_Mesh const *src = meshes[mesh_idx];
-				DKSM_GPU_MeshBlock *dst = &gpu_mesh_blocks[mesh_idx];
-				dst->vertex_count = src->vertex_count;
-				dst->vertices = arena_push_array<DKS_GPU_Vertex>(scratch.arena, dst->vertex_count);
-				for (u64 idx = 0; idx < dst->vertex_count; ++idx) {
-					dst->vertices[idx].position = dksm_quantize_vertex_position(src->vertices[i].position, src->dequantization_summand, src->dequantization_factor);
-				}
 			}
-			lane_sync();
 		}
-
-		struct MeshOpt_Meshlet {
-			meshopt_Meshlet *meshlets;
-			u32 *meshlet_vertices;
-			u8 *meshlet_triangles;
-		};
-		MeshOpt_Meshlet *mo_meshlets = nullptr;
-		{
-			ZoneScopedN("pass 2: wide build meshlets");
-			if (lane_idx() == 0) {
-				mo_meshlets = arena_push_array<MeshOpt_Meshlet>(scratch.arena, params->gpu_meshes.total_count);
-				*mesh_take_counter = 0;
-			}
-			lane_sync_broadcast(&mo_meshlets, 0);
-
-			f32 const cone_weight = 0.5f;
-			u64 const max_meshlet_vertices_count = 126;
-			u64 const max_meshlet_triangles_count = 64;
-
-			lane_sync();
-		}
-
-		{
-			ZoneScopedN("pass 3: wide compute meshlet bounds");
-			if (lane_idx() == 0) {
-				*mesh_take_counter = 0;
-			}
-			lane_sync();
-
-
-			lane_sync();
-		}
+		lane_sync();
 	}
 
 	//~ Dedrick: @dksm_bake_stage Compute gpu mesh layout.
@@ -758,11 +791,11 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 				LaneRange const range = lane_range(node->count);
 				u64 const slot_idx = lane_idx() * params->gpu_meshes.chunk_count + chunk_idx;
 				for (u64 idx = range.begin; idx < range.end; ++idx) {
-					DKSM_GPU_Mesh const *src = &node->data[idx];
-					mesh_layout->lane_chunk_v_counts[slot_idx] += src->vertex_count;
-					mesh_layout->lane_chunk_mo_counts[slot_idx] += src->meshlet_count;
-					mesh_layout->lane_chunk_mv_counts[slot_idx] += src->meshlet_vertex_count;
-					mesh_layout->lane_chunk_mt_counts[slot_idx] += src->meshlet_triangle_count;
+					MeshBlock const *block = &mesh_blocks[node->base_idx + idx];
+					mesh_layout->lane_chunk_v_counts[slot_idx] += block->vertex_count;
+					mesh_layout->lane_chunk_mo_counts[slot_idx] += block->meshlet_count;
+					mesh_layout->lane_chunk_mv_counts[slot_idx] += block->meshlet_vertex_count;
+					mesh_layout->lane_chunk_mt_counts[slot_idx] += block->meshlet_triangle_count;
 				}
 				chunk_idx += 1;
 			}
@@ -845,37 +878,38 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			for (u64 idx = range.begin; idx < range.end; ++idx) {
 				DKSM_GPU_Mesh const *src = &node->data[idx];
 				DKS_GPU_Mesh *dst = &baked_gpu_meshes->gpu_meshes[node->base_idx + idx + 1];
+				MeshBlock const *block = &mesh_blocks[node->base_idx + idx];
 
 				//~ Dedrick: Fill mesh info.
-				std::memcpy(dst->sphere_center, src->sphere_center, sizeof(dst->sphere_center));
+				std::memcpy(dst->sphere_center, src->sphere_center, sizeof(src->sphere_center));
 				dst->sphere_radius = src->sphere_radius;
-				std::memcpy(dst->dequantization_factor, src->dequantization_factor, sizeof(dst->dequantization_factor));
-				std::memcpy(dst->dequantization_summand, src->dequantization_summand, sizeof(dst->dequantization_summand));
+				std::memcpy(dst->dequantization_factor, src->dequantization_factor, sizeof(src->dequantization_factor));
+				std::memcpy(dst->dequantization_summand, src->dequantization_summand, sizeof(src->dequantization_summand));
 				dst->meshlet_offset = static_cast<u32>(dst_mo_offset);
-				dst->meshlet_count = src->meshlet_count;
+				dst->meshlet_count = block->meshlet_count;
 
 				//~ Dedrick: Fill mesh vertex data.
-				std::memcpy(&baked_gpu_meshes->vertices[dst_v_offset], src->vertices, src->vertex_count * sizeof(DKS_GPU_Vertex));
+				std::memcpy(&baked_gpu_meshes->vertices[dst_v_offset], block->vertices, block->vertex_count * sizeof(DKS_GPU_Vertex));
 
 				//~ Dedrick: Fill mesh meshlet data.
-				std::memcpy(&baked_gpu_meshes->meshlet_bounds[dst_mo_offset], src->meshlet_bounds, src->meshlet_count * sizeof(DKS_GPU_MeshletBounds));
-				std::memcpy(&baked_gpu_meshes->meshlet_triangles[dst_mt_offset], src->meshlet_triangles, src->meshlet_triangle_count * sizeof(u32));
-				for (u32 ml_idx = 0; ml_idx < src->meshlet_count; ++ml_idx) {
-					DKS_GPU_Meshlet meshlet = src->meshlets[ml_idx];
+				std::memcpy(&baked_gpu_meshes->meshlet_bounds[dst_mo_offset], block->meshlet_bounds, block->meshlet_count * sizeof(DKS_GPU_MeshletBounds));
+				std::memcpy(&baked_gpu_meshes->meshlet_triangles[dst_mt_offset], block->meshlet_triangles, block->meshlet_triangle_count * sizeof(u32));
+				for (u32 ml_idx = 0; ml_idx < block->meshlet_count; ++ml_idx) {
+					DKS_GPU_Meshlet meshlet = block->meshlets[ml_idx];
 					meshlet.vertex_offset += static_cast<u32>(dst_mv_offset);
 					meshlet.triangle_offset += static_cast<u32>(dst_mt_offset);
 					baked_gpu_meshes->meshlets[dst_mo_offset + ml_idx] = meshlet;
 				}
 
 				//~ Dedrick: Fixup meshlet vertices from local to global.
-				for (u32 v_idx = 0; v_idx < src->meshlet_vertex_count; ++v_idx) {
-					baked_gpu_meshes->meshlet_vertices[dst_mv_offset + v_idx] = src->meshlet_vertices[v_idx] + static_cast<u32>(dst_v_offset);
+				for (u32 v_idx = 0; v_idx < block->meshlet_vertex_count; ++v_idx) {
+					baked_gpu_meshes->meshlet_vertices[dst_mv_offset + v_idx] = block->meshlet_vertices[v_idx] + static_cast<u32>(dst_v_offset);
 				}
 
-				dst_v_offset += src->vertex_count;
-				dst_mo_offset += src->meshlet_count;
-				dst_mv_offset += src->meshlet_vertex_count;
-				dst_mt_offset += src->meshlet_triangle_count;
+				dst_v_offset += block->vertex_count;
+				dst_mo_offset += block->meshlet_count;
+				dst_mv_offset += block->meshlet_vertex_count;
+				dst_mt_offset += block->meshlet_triangle_count;
 			}
 			chunk_idx += 1;
 		}
@@ -900,8 +934,9 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	{
 		result.top_level_info = *baked_top_level_info;
 		result.strings = *baked_strings;
-		result.instances = *baked_instances;
+		result.nodes = *baked_nodes;
 		result.gpu_instances = *baked_gpu_instances;
+		result.gpu_transforms = *baked_gpu_transforms;
 		result.gpu_meshes = *baked_gpu_meshes;
 	}
 	lane_sync();
@@ -924,7 +959,8 @@ auto dk::dksm_serialized_section_bundle_from_bake_results(DKSM_BakeResults const
 	bundle.sections[DKS_SECTION_KIND_TOP_LEVEL_INFO] = dksm_serialized_section_make_unpacked(bake_results->top_level_info.top_level_info, 1);
 	bundle.sections[DKS_SECTION_KIND_STRING_DATA] = dksm_serialized_section_make_unpacked(bake_results->strings.string_data, bake_results->strings.string_data_size);
 	bundle.sections[DKS_SECTION_KIND_STRING_TABLE] = dksm_serialized_section_make_unpacked(bake_results->strings.strings_table, bake_results->strings.strings_table_count);
-	bundle.sections[DKS_SECTION_KIND_INSTANCES] = dksm_serialized_section_make_unpacked(bake_results->instances.instances, bake_results->instances.instances_count);
+	bundle.sections[DKS_SECTION_KIND_NODES] = dksm_serialized_section_make_unpacked(bake_results->nodes.nodes, bake_results->nodes.nodes_count);
+	bundle.sections[DKS_SECTION_KIND_GPU_TRANSFORMS] = dksm_serialized_section_make_unpacked(bake_results->gpu_transforms.gpu_transforms, bake_results->gpu_transforms.gpu_transforms_count);
 	bundle.sections[DKS_SECTION_KIND_GPU_INSTANCES] = dksm_serialized_section_make_unpacked(bake_results->gpu_instances.gpu_instances, bake_results->gpu_instances.gpu_instances_count);
 	bundle.sections[DKS_SECTION_KIND_GPU_MESHES] = dksm_serialized_section_make_unpacked(bake_results->gpu_meshes.gpu_meshes, bake_results->gpu_meshes.gpu_meshes_count);
 	bundle.sections[DKS_SECTION_KIND_GPU_VERTICES] = dksm_serialized_section_make_unpacked(bake_results->gpu_meshes.vertices, bake_results->gpu_meshes.vertices_count);
