@@ -208,7 +208,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 				primitive_layout->node_primitive_offsets[idx] = layout_offset;
 				layout_offset += primitive_layout->node_primitive_counts[idx];
 			}
-			prim_layout->node_prim_offs[gltf->nodes_count] = layout_offset;
+			prim_layout->node_primitive_offsets[gltf->nodes_count] = layout_offset;
 			prim_layout->total_prim_count = layout_offset;
 		}
 	}
@@ -217,7 +217,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 	//
 	//~ Dedrick: @g2d_stage Convert primitives.
 	DKSM_GPU_Mesh **mesh_from_primitive_table = nullptr;
-	{
+	if (gltf != nullptr) {
 
 	}
 
