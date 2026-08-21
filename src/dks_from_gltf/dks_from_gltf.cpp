@@ -43,9 +43,61 @@ auto dk::g2d_cgltf_file_release(cgltf_memory_options const *mem_opts, cgltf_file
 	(void)size;
 }
 
+// https://github.com/zeux/meshoptimizer/blob/97bbdce4716f6257c9527b051515136882f33e79/gltf/node.cpp#L161
+auto dk::g2d_decompose_transform(f32 const *transform, f32 out_translation[3], f32 out_rotation[4], f32 out_scale[3]) noexcept -> void {
+	f32 m[4][4] = {};
+	std::memcpy(m, transform, 16 * sizeof(f32));
+
+	// extract translation from last row
+	out_translation[0] = m[3][0];
+	out_translation[1] = m[3][1];
+	out_translation[2] = m[3][2];
+
+	// compute determinant to determine handedness
+	f32 const det =
+		m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
+		m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+		m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+	f32 const sign = det < 0.0f ? -1.0f : 1.0f;
+
+	// recover scale from axis lengths
+	out_scale[0] = sqrt(m[0][0] * m[0][0] + m[0][1] * m[0][1] + m[0][2] * m[0][2]) * sign;
+	out_scale[1] = sqrt(m[1][0] * m[1][0] + m[1][1] * m[1][1] + m[1][2] * m[1][2]) * sign;
+	out_scale[2] = sqrt(m[2][0] * m[2][0] + m[2][1] * m[2][1] + m[2][2] * m[2][2]) * sign;
+
+	// normalize axes to get a pure rotation matrix
+	f32 const rsx = out_scale[0] == 0.0f ? 0.0f : 1.0f / out_scale[0];
+	f32 const rsy = out_scale[1] == 0.0f ? 0.0f : 1.0f / out_scale[1];
+	f32 const rsz = out_scale[2] == 0.0f ? 0.0f : 1.0f / out_scale[2];
+
+	f32 const r00 = m[0][0] * rsx;
+	f32 const r10 = m[1][0] * rsy;
+	f32 const r20 = m[2][0] * rsz;
+	f32 const r01 = m[0][1] * rsx;
+	f32 const r11 = m[1][1] * rsy;
+	f32 const r21 = m[2][1] * rsz;
+	f32 const r02 = m[0][2] * rsx;
+	f32 const r12 = m[1][2] * rsy;
+	f32 const r22 = m[2][2] * rsz;
+
+	// "branchless" version of Mike Day's matrix to quaternion conversion
+	s32 const qc = r22 < 0 ? (r00 > r11 ? 0 : 1) : (r00 < -r11 ? 2 : 3);
+	f32 const qs1 = qc & 2 ? -1.0f : 1.0f;
+	f32 const qs2 = qc & 1 ? -1.0f : 1.0f;
+	f32 const qs3 = (qc - 1) & 2 ? -1.0f : 1.0f;
+	f32 const qt = 1.0f - qs3 * r00 - qs2 * r11 - qs1 * r22;
+	f32 const qs = 0.5f / sqrt(qt);
+
+	out_rotation[qc ^ 0] = qs * qt;
+	out_rotation[qc ^ 1] = qs * (r01 + qs1 * r10);
+	out_rotation[qc ^ 2] = qs * (r20 + qs2 * r02);
+	out_rotation[qc ^ 3] = qs * (r12 + qs3 * r21);
+}
+
 auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> DKSM_BakeParams {
 	ZoneScoped;
 	TempArena const scratch = scratch_begin(&arena, 1);
+	dk_defer(scratch_end(scratch));
 
 	cgltf_data *gltf = nullptr;
 	{
