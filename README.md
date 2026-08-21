@@ -1,19 +1,6 @@
 # Toy Renderer
 Real-time, physically based, gpu-driven toy renderer build with OpenGL.
 
-# AI Usage Declaration
-I used local Large Language Models (LLMs) as an offline tool to support
-development without replacing the core work of building the rendering engine. I
-used AI to interpret platform libraries and debug poorly documented APIs, and to
-generate throwaway code to test technical ideas. These mockups served only as a
-quick check to see if an approach was viable within academic timelines. I
-rewrote all final code from scratch to meet the performance and architectural
-needs of the codebase. Finally, I used AI to check grammar and phrasing in my
-development journal and documentation.
-
-Beyond these specific uses, I am solely responsible for the project's design,
-architecture, and every line of code in the final implementation.
-
 # Building
 To build the binaries from source, you'll need [Microsoft C/C++ Build Tools v17
 (2022) or later](https://aka.ms/vs/17/release/vs_buildtools.exe). The codebase
@@ -84,3 +71,31 @@ After setting up the codebase and building, the following directories will
 also exist in the root level of the codebase:
 - `bin`: All build artifacts.
 - `.tmp`: All intermediate files when building.
+
+# Origins and Attribution
+This project uses the foundational architecture of the RAD Debugger codebase as
+an initial template. The application structure, memory patterns, and coding
+conventions follow the approaches established by Ryan Fleury and the RAD
+Debugger contributors.
+
+The codebase diverges from that foundation in its purpose and execution. While
+the original software is an interactive debugger, this capstone project builds
+a standalone GPU-driven renderer. High-level subsystems like asset pipelines,
+GPU memory allocation, and the rendering pipelines, etc. are original components
+written specifically for this project.
+
+Thanks to Ryan Fleury and the RAD Debugger team for open-sourcing their work and
+demonstrating practical data-oriented systems programming.
+
+# AI Usage Declaration
+I used local Large Language Models (LLMs) as an tool to support development
+without replacing the core work of building the rendering engine. I used AI to
+interpret platform libraries and debug poorly documented APIs, and to generate
+throwaway code to test technical ideas. These mockups served only as a quick
+check to see if an approach was viable within academic timelines. I rewrote all
+final code from scratch to meet the performance and architectural needs of the
+codebase. Finally, I used AI to check grammar and phrasing in my development
+journal and documentation.
+
+Beyond these specific uses, I am solely responsible for the project's design,
+architecture, and every line of code in the final implementation.
