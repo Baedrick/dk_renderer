@@ -31,13 +31,14 @@ auto dk::g2d_cgltf_file_release(cgltf_memory_options const *mem_opts, cgltf_file
 
 namespace dk {
 	template <typename SrcType, typename DstType = SrcType>
-	static auto g2d_load_attribute(cgltf_accessor const *accessor, u32 num_components, DstType *dst) noexcept -> void {
+	static auto g2d_load_attribute(cgltf_accessor const *accessor, u32 num_components, DstType *dst, u64 dst_stride) noexcept -> void {
 		u8 const *const base = static_cast<u8 const *>(accessor->buffer_view->buffer->data) + accessor->buffer_view->offset + accessor->offset;
-		u64 const stride = accessor->stride;
+		u64 const src_stride = accessor->stride;
 		for (u64 a_idx = 0; a_idx < accessor->count; ++a_idx) {
-			SrcType const *const src_component = reinterpret_cast<SrcType const *>(base + a_idx * stride);
+			SrcType const *const src_component = reinterpret_cast<SrcType const *>(base + a_idx * src_stride);
+			DstType *const dst_component = reinterpret_cast<DstType *>(reinterpret_cast<u8 *>(dst) + a_idx * dst_stride);
 			for (u32 c_idx = 0; c_idx < num_components; ++c_idx) {
-				dst[a_idx * num_components + c_idx] = static_cast<DstType>(src_component);
+				dst_component[c_idx] = static_cast<DstType>(src_component[c_idx]);
 			}
 		}
 	}
@@ -213,8 +214,6 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		}
 	}
 
-	// TODO(Dedrick): \/\/\/
-	//
 	//~ Dedrick: @g2d_stage glTF primitive -> dksm mesh.
 	DKSM_GPU_Mesh **mesh_from_primitive_table = nullptr;
 	DKSM_GPU_MeshChunkList *lane_gpu_meshes = nullptr;
@@ -242,51 +241,60 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 
 					//~ Dedrick:
 					DKSM_GPU_Mesh *dst = dksm_gpu_mesh_chunk_list_push(arena, &lane_gpu_meshes[lane_idx()], 64);
-					// FIXME(Dedrick): Our attributes are interleaved, we can't guarantee the order of attributes
-					// so how do we allocate enough space for all (possible) attributes without doing too much extra work?
 
-					//~ Dedrick:
-					for (u64 a_idx = 0; a_idx < primitive->attributes_count; ++a_idx) {
-						if (primitive->attributes[a_idx].type == cgltf_attribute_type_position) {
-							cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
-						}
-						else if (primitive->attributes[attr_idx].type == cgltf_attribute_type_normal) {
-							// TODO(Dedrick)
-							// cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
-						}
-						else if (primitive->attributes[attr_idx].type == cgltf_attribute_type_tangent) {
-							// TODO(Dedrick)
-							// cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
-						}
-						else if (primitive->attributes[attr_idx].type == cgltf_attribute_type_texcoord) {
-							// TODO(Dedrick)
-							// cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
+					//~ Dedrick: Load attributes.
+					if (primitive->attributes_count > 0) {
+						// NOTE(Dedrick): glTF SPECS specify that all attributes in a primitive have the same count.
+						dst->vertex_count = primitive->attributes[0].data->count;
+						dst->vertices = arena_push_array<DKSM_GPU_Vertex>(arena, dst->vertex_count);
+						for (u64 a_idx = 0; a_idx < primitive->attributes_count; ++a_idx) {
+							if (primitive->attributes[a_idx].type == cgltf_attribute_type_position) {
+								// TODO(Dedrick): World have different common source component type, float, u16, s16.
+								cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].position[0], sizeof(DKSM_GPU_Vertex));
+
+								// TODO(Dedrick): Compute sphere bounds, dequantization summand and factor.
+							}
+							else if (primitive->attributes[a_idx].type == cgltf_attribute_type_normal) {
+								// TODO(Dedrick): Normals have different common source component type, float, u16, u8, s8.
+								// cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								// g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].normal[0], sizeof(DKSM_GPU_Vertex));
+							}
+							else if (primitive->attributes[a_idx].type == cgltf_attribute_type_tangent) {
+								// TODO(Dedrick): w is tangent basis sign.
+								// cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								// g2d_load_attribute<f32>(attribute, 4, &dst->vertices[0].normal[0], sizeof(DKSM_GPU_Vertex));
+							}
+							else if (primitive->attributes[a_idx].type == cgltf_attribute_type_texcoord) {
+								// TODO(Dedrick): TEXCOORD have different common source component type, float, u16n, u8n.
+								// cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								// g2d_load_attribute<f32>(attribute, 2, &dst->vertices[0].uv0[0], sizeof(DKSM_GPU_Vertex));
+							}
 						}
 					}
 
-					//~ Dedrick:
+					//~ Dedrick: Load indices.
 					if (primitive->indices != nullptr && primitive->indices->buffer_view != nullptr) {
 						cgltf_accessor const *attribute = primitive->indices;
 						if (attribute->component_type == cgltf_component_type_r_32u) {
-							mesh->indices = arena_push_array<u32>(arena, attribute->count);
-							g2d_load_attribute<u32>(accessor, 1, mesh->indices);
+							dst->indices = arena_push_array<u32>(arena, attribute->count);
+							g2d_load_attribute<u32>(accessor, 1, dst->indices, sizeof(u32));
 						}
 						else if (attribute->component_type == cgltf_component_type_r_16u) {
-							mesh->indices = arena_push_array<u32>(arena, attribute->count);
-							g2d_load_attribute<u16, u32>(accessor, 1, mesh->indices);
+							dst->indices = arena_push_array<u32>(arena, attribute->count);
+							g2d_load_attribute<u16, u32>(accessor, 1, dst->indices, sizeof(u32));
 						}
 						else if (attribute->component_type == cgltf_component_type_r_8u) {
-							mesh->indices = arena_push_array<u32>(arena, attribute->count);
-							g2d_load_attribute<u8, u32>(accessor, 1, mesh->indices);
+							dst->indices = arena_push_array<u32>(arena, attribute->count);
+							g2d_load_attribute<u8, u32>(accessor, 1, dst->indices, sizeof(u32));
 						}
 						else {
-							// TODO(Dedrick): Write with the same format as other logs.
-							DK_LOG_INFOF("indices data format not supported, use u32");
+							DK_LOG_INFOF("[dks_from_gltf]: indices data format not supported, use u32.\n");
 						}
 					}
 
 					//~ Dedrick: Save to table; bump primitive index.
-					mesh_from_primitive_table[primitive_idx] = mesh;
+					mesh_from_primitive_table[primitive_idx] = dst;
 					primitive_idx += 1;
 				}
 			}
