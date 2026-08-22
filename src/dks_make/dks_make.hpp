@@ -62,6 +62,8 @@ namespace dk {
 
 	struct DKSM_GPU_Vertex {
 		f32 position[3];
+		// f32 normal[3]; ///< TODO(Dedrick)
+		// f32 uv0[2]; ///< TODO(Dedrick)
 	};
 
 	struct DKSM_GPU_Mesh {

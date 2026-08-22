@@ -96,6 +96,8 @@ namespace dk {
 
 	struct DKS_GPU_Vertex {
 		u64 position; ///< fixed point quantized: [unused:1][x:21][y:21][z:21]
+		// u32 normal; ///< TODO(Dedrick): octahedral mapping: [x:16][y:16]
+		// f32 uv0[2]; ///< TODO(Dedrick)
 	};
 
 	using DKS_SectionElementType_TopLevelInfo         = DKS_TopLevelInfo;

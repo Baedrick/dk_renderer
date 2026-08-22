@@ -186,9 +186,9 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		{
 			ZoneScopedN("wide count");
 			LaneRange const range = lane_range(gltf->nodes_count);
-			for (u64 idx = range.begin; idx < range.end; ++idx) {
+			for (u64 n_idx = range.begin; n_idx < range.end; ++n_idx) {
 				u64 primitives_count = 0;
-				cgltf_node const *node = &gltf->nodes[idx];
+				cgltf_node const *node = &gltf->nodes[n_idx];
 				cgltf_mesh const *mesh = node->mesh;
 				if (mesh != nullptr) {
 					for (cgltf_size p_idx = 0; p_idx < mesh->primitives_count; ++p_idx) {
@@ -197,7 +197,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 						}
 					}
 				}
-				primitive_layout->node_primitive_counts[idx] = primitives_count;
+				primitive_layout->node_primitive_counts[n_idx] = primitives_count;
 			}
 			lane_sync();
 		}
@@ -208,223 +208,179 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 				primitive_layout->node_primitive_offsets[idx] = layout_offset;
 				layout_offset += primitive_layout->node_primitive_counts[idx];
 			}
-			prim_layout->node_primitive_offsets[gltf->nodes_count] = layout_offset;
-			prim_layout->total_prim_count = layout_offset;
+			primitive_layout->node_primitive_offsets[gltf->nodes_count] = layout_offset;
+			primitive_layout->total_primitive_count = layout_offset;
 		}
 	}
 
 	// TODO(Dedrick): \/\/\/
 	//
-	//~ Dedrick: @g2d_stage Convert primitives.
+	//~ Dedrick: @g2d_stage glTF primitive -> dksm mesh.
 	DKSM_GPU_Mesh **mesh_from_primitive_table = nullptr;
-	if (gltf != nullptr) {
-
-	}
-
-
-#if 0
-	{
-		ZoneScopedN("load and parse gltf file(s)");
-		if (lane_idx() == 0) {
-			//~ Dedrick: Parse glTF file.
-			cgltf_options options = {};
-			options.file.read = g2d_cgltf_file_read;
-			options.file.release = g2d_cgltf_file_release;
-			options.file.user_data = arena;
-			cgltf_result const parse_status = cgltf_parse(&options, params->file_data.data, static_cast<cgltf_size>(params->file_data.size), &gltf);
-			if (parse_status != cgltf_result_success) {
-				DK_LOG_ERRORF("[cgltf]: ERROR: failed to parse %.*s.\n", DK_STR8_VARG(params->file_path));
-				gltf = nullptr;
-			}
-
-			//~ Dedrick: Load glTF data buffers.
-			if (gltf != nullptr) {
-				cgltf_result const load_status = cgltf_load_buffers(&options, gltf, reinterpret_cast<char const *>(params->file_path.data));
-				if (load_status != cgltf_result_success) {
-					DK_LOG_ERRORF("[cgltf]: ERROR: failed to load mesh data.\n");
-					cgltf_free(gltf);
-					gltf = nullptr;
-				}
-			}
-		}
-		lane_sync_broadcast(&gltf, 0);
-
-		//~ Dedrick: Print basic information.
-		if (gltf != nullptr) {
-			if (gltf->file_type == cgltf_file_type_glb) {
-				DK_LOG_INFOF("[dks_from_gltf]: %.*s model (glb) loaded.\n", DK_STR8_VARG(params->file_path));
-			}
-			else if (gltf->file_type == cgltf_file_type_gltf) {
-				DK_LOG_INFOF("[dks_from_gltf]: %.*s model (glTF) loaded.\n", DK_STR8_VARG(params->file_path));
-			}
-			else {
-				DK_LOG_INFOF("[dks_from_gltf]: %.*s model format not recognized.\n", DK_STR8_VARG(params->file_path));
-			}
-			DK_LOG_INFOF("  > meshes count: %i\n", gltf->meshes_count);
-			DK_LOG_INFOF("  > materials count: %i\n", gltf->materials_count);
-			DK_LOG_INFOF("  > buffers count: %i\n", gltf->buffers_count);
-			DK_LOG_INFOF("  > images count: %i\n", gltf->images_count);
-			DK_LOG_INFOF("  > textures count: %i\n", gltf->textures_count);
-		}
-	}
-
-	//~ Dedrick: @g2d_stage Build primitive map.
-	G2D_PrimitiveMap *primitive_map = nullptr;
-	if (gltf != nullptr) {
-		ZoneScopedN("build primitive map");
-		if (lane_idx() == 0) {
-			primitive_map = arena_push<G2D_PrimitiveMap>(scratch.arena);
-			primitive_map->mesh_base_idxs = arena_push_array<>(scratch.arena, gltf->meshes_count);
-			u64 total_primitive_count = 0;
-			for (cgltf_size idx = 0; idx < gltf->meshes_count; ++idx) {
-				prim_map->mesh_base_idxs[i] = total_prims;
-				total_primitive_count += gltf->meshes[i].primitives_count;
-			}
-			primitive_map->total_primitive_count = total_primitive_count;
-			primitive_map->primitives = arena_push_array<DKSM_GPU_Mesh *>(scratch.arena, primitive_map->total_primitive_count);
-		}
-	}
-
-	//~ Dedrick: @g2d_stage Covert primitives.
 	DKSM_GPU_MeshChunkList *lane_gpu_meshes = nullptr;
-	{
-		ZoneScopedN("convert primitives");
-		u64 *mesh_take_counter = nullptr;
+	if (gltf != nullptr) {
+		ZoneScopedN("glTF primitive -> dksm mesh");
 		if (lane_idx() == 0) {
+			mesh_from_primitive_table = arena_push_array<DKSM_GPU_Mesh *>(scratch.arena, primitive_layout->total_primitive_count);
 			lane_gpu_meshes = arena_push_array<DKSM_GPU_MeshChunkList>(scratch.arena, lane_count());
-			mesh_take_counter = arena_push<u64>(scratch.arena);
 		}
+		lane_sync_broadcast(&mesh_from_primitive_table, 0);
 		lane_sync_broadcast(&lane_gpu_meshes, 0);
-		lane_sync_broadcast(&mesh_take_counter, 0);
 
-		//~ Dedrick: Wide fill.
-		{
-			ZoneScopedN("wide fill");
-			while (true) {
-				//~ Dedrick: Take next glTF mesh.
-				u64 const mesh_idx = atomic_u64_inc_fetch(mesh_take_counter) - 1;
-				if (mesh_idx >= gltf->meshes_count) {
-					break;
-				}
-
-				//~ Dedrick:
-				TempArena const scratch2 = scratch_begin(&scratch.arena, 1);
-				u64 const primitive_base_idx = primitive_map->mesh_base_idxs[mesh_idx];
-				cgltf_mesh const *const src_mesh = &gltf->meshes[mesh_idx];
-				for (cgltf_size p_idx = 0; p_idx < src_mesh->primitives_count; ++p_idx) {
-					cgltf_primitive const *src_prim = &src_mesh->primitives[p_idx];
-					if (src_mesh->primitives[p_idx].type != cgltf_primitive_type_triangles) {
+		//~ Dedrick: Wide convert.
+		LaneRange const range = lane_range(gltf->nodes_count);
+		for (u64 node_idx = range.begin; node_idx < range.end; ++node_idx) {
+			cgltf_node const *node = &gltf->nodes[node_idx];
+			cgltf_mesh const *mesh = node->mesh;
+			if (mesh != nullptr) {
+				u64 primitive_idx = primitive_layout->node_primitive_offsets[node_idx];
+				for (u64 p_idx = 0; p_idx < mesh->primitives_count; ++p_idx) {
+					cgltf_primitive const *primitive = &mesh->primitives[p_idx];
+					if (primitive->type != cgltf_primitive_type_triangles) {
 						continue;
 					}
 
 					//~ Dedrick:
-					for (cgltf_size a_idx = 0; a_idx < src_prim->attributes_count; ++a_idx) {
-						if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_position) {
-							cgltf_accessor const *attribute = src_prim->attributes[a_idx].data;
+					DKSM_GPU_Mesh *dst = dksm_gpu_mesh_chunk_list_push(arena, &lane_gpu_meshes[lane_idx()], 64);
+					// FIXME(Dedrick): Our attributes are interleaved, we can't guarantee the order of attributes
+					// so how do we allocate enough space for all (possible) attributes without doing too much extra work?
 
-							f32 *positions = arena_push_array<f32>(scratch2.arena, attribute->count * 3);
-							g2d_load_attribute<f32>(attribute, 3, positions);
-
+					//~ Dedrick:
+					for (u64 a_idx = 0; a_idx < primitive->attributes_count; ++a_idx) {
+						if (primitive->attributes[a_idx].type == cgltf_attribute_type_position) {
+							cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
 						}
-						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_normal) {
+						else if (primitive->attributes[attr_idx].type == cgltf_attribute_type_normal) {
 							// TODO(Dedrick)
+							// cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
 						}
-						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_tangent) {
+						else if (primitive->attributes[attr_idx].type == cgltf_attribute_type_tangent) {
 							// TODO(Dedrick)
+							// cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
 						}
-						else if (src_prim->attributes[attr_idx].type == cgltf_attribute_type_texcoord) {
+						else if (primitive->attributes[attr_idx].type == cgltf_attribute_type_texcoord) {
 							// TODO(Dedrick)
+							// cgltf_accessor const *attribute = primitive->attributes[a_idx].data;
 						}
 					}
+
+					//~ Dedrick:
+					if (primitive->indices != nullptr && primitive->indices->buffer_view != nullptr) {
+						cgltf_accessor const *attribute = primitive->indices;
+						if (attribute->component_type == cgltf_component_type_r_32u) {
+							mesh->indices = arena_push_array<u32>(arena, attribute->count);
+							g2d_load_attribute<u32>(accessor, 1, mesh->indices);
+						}
+						else if (attribute->component_type == cgltf_component_type_r_16u) {
+							mesh->indices = arena_push_array<u32>(arena, attribute->count);
+							g2d_load_attribute<u16, u32>(accessor, 1, mesh->indices);
+						}
+						else if (attribute->component_type == cgltf_component_type_r_8u) {
+							mesh->indices = arena_push_array<u32>(arena, attribute->count);
+							g2d_load_attribute<u16, u32>(accessor, 1, mesh->indices);
+						}
+						else {
+							// TODO(Dedrick): Write with the same format as other logs.
+							DK_LOG_INFOF("indices data format not supported, use u32");
+						}
+					}
+
+					//~ Dedrick: Save to table; bump primitive index.
+					mesh_from_primitive_table[primitive_idx] = mesh;
+					primitive_idx += 1;
 				}
-				scratch_end(scratch2);
 			}
-			lane_sync();
 		}
 	}
 
-
-	//~ Dedrick: @g2d_stage Parse and build instances.
-	DKSM_InstanceChunkList *lane_instances = nullptr;
-	DKSM_GPU_InstanceChunkList *lane_gpu_instances = nullptr;
-	DKSM_Instance **flat_node_map = nullptr;
-	{
-		ZoneScopedN("parse and build instances");
-		u64 *node_take_counter = nullptr;
+	//~ Dedrick: @g2d_stage Build nodes.
+	DKSM_Node **node_from_node_idx_table = nullptr;
+	DKSM_NodeChunkList *lane_nodes = nullptr;
+	if (gltf != nullptr) {
+		ZoneScopedN("build nodes");
 		if (lane_idx() == 0) {
-			lane_instances = arena_push_array<DKSM_InstanceChunkList>(scratch.arena, lane_count());
-			lane_gpu_instances = arena_push_array<DKSM_GPU_InstanceChunkList>(scratch.arena, lane_count());
-			flat_node_map = arena_push_array<DKSM_Instance *>(scratch.arena, gltf->nodes_count);
-			node_take_counter = arena_push<u64>(scratch.arena);
+			node_from_node_idx_table = arena_push_array<DKSM_Node *>(scratch.arena, gltf->nodes_count);
+			lane_count = arena_push_array<DKSM_NodeChunkList>(scratch.arena, lane_count());
 		}
-		lane_sync_broadcast(&lane_instances, 0);
+		lane_sync_broadcast(&node_from_node_idx_table, 0);
+		lane_sync_broadcast(&lane_nodes, 0);
+
+		//~ Dedrick: Wide fill name and transform.
+		LaneRange const range = lane_range(gltf->nodes_count);
+		for (u64 n_idx = range.begin; n_idx < range.end; ++n_idx) {
+			cgltf_node const *src = &gltf->nodes[n_idx];
+			DKSM_Node *dst = dksm_node_chunk_list_push(arena, &lane_nodes[lane_idx()], 256);
+			dst->name = str8_cstring(reinterpret_cast<u8 const *>(src->name));
+			dst->local_translation = { 0.0f, 0.0f, 0.0f };
+			dst->local_rotation = quat_identity();
+			dst->local_scale = { 1.0f, 1.0f, 1.0f };
+			node_from_node_idx_table[n_idx] = dst;
+
+			//~ Dedrick:
+			if (src->has_matrix) {
+				vec3 translation; quat rotation; vec3 scale;
+				g2d_decompose_transform(src->matrix, &translation[0], &rotation[0], &scale[0]);
+				dst->local_translation = translation;
+				dst->local_rotation = rotation;
+				dst->local_scale = scale;
+			}
+			else {
+				if (src->has_translation) { std::memcpy(&dst->local_translation[0], src->translation, sizeof(src->translation)); }
+				if (src->has_rotation) { std::memcpy(&dst->local_rotation[0], src->rotation, sizeof(src->rotation)); }
+				if (src->has_scale) { std::memcpy(&dst->local_scale[0], src->scale, sizeof(src->scale)); }
+			}
+		}
+	}
+
+	//~ Dedrick: @g2d_stage Link hierarchy.
+	if (gltf != nullptr) {
+		ZoneScopedN("link hierarchy");
+		LaneRange const range = lane_range(gltf->nodes_count);
+		for (u64 n_idx = range.begin; n_idx < range.end; ++n_idx) {
+			cgltf_node const *src = &gltf->nodes[n_idx];
+			DKSM_Node *dst = node_from_node_idx_table[n_idx];
+			if (src->parent != nullptr) {
+				dst->parent = node_from_node_idx_table[src->parent - gltf->nodes];
+			}
+			if (src->children_count > 0) {
+				dst->first_child = node_from_node_idx_table[src->children[0] - gltf->nodes];
+				for (cgltf_size c_idx = 0; c_idx < src->children_count; ++c_idx) {
+					DKSM_Node *dst_child = node_from_node_idx_table[src->children[c_idx] - gltf->nodes];
+					if (c_idx > 0) {
+						dst_child->next_sibling = node_from_node_idx_table[src->children[c_idx - 1] - gltf->nodes];
+					}
+					if (c_idx + 1 < src->children_count) {
+						dst_child->next_sibling = node_from_node_idx_table[src->children[c_idx + 1] - gltf->nodes];
+					}
+				}
+			}
+		}
+		lane_sync();
+	}
+
+	//~ Dedrick: @g2d_stage Build gpu instances.
+	DKSM_GPU_InstanceChunkList *lane_gpu_instances = nullptr;
+	if (gltf != nullptr) {
+		ZoneScopedN("build gpu instances");
+		if (lane_idx() == 0) {
+			lane_gpu_instances = arena_push_array<DKSM_GPU_InstanceChunkList>(scratch.arena, lane_count());
+		}
 		lane_sync_broadcast(&lane_gpu_instances, 0);
-		lane_sync_broadcast(&flat_node_map, 0);
-		lane_sync_broadcast(&node_take_counter, 0);
 
 		//~ Dedrick: Wide fill.
-		while (true) {
-			u64 const node_idx = atomic_u64_inc_fetch(node_take_counter) - 1;
-			if (node_idx >= gltf->nodes_count) {
-				break;
-			}
-
-			cgltf_node const *const src_node = &gltf->nodes[node_idx];
-			DKSM_Instance *dst_inst = dksm_instance_chunk_list_push(arena, &lane_instances[lane_idx()], 256);
-			flat_node_map[node_idx] = dst_inst;
-
-			dst_inst->name = str8_cstring(reinterpret_cast<u8 const *>(src_node->name));
-			if (src_node->mesh != nullptr) {
-
+		LaneRange const range = lane_range(gltf->nodes_count);
+		for (u64 n_idx = range.begin; n_idx < range.end; ++n_idx) {
+			DKSM_Node *dst = node_from_node_idx_table[n_idx];
+			u64 const p_begin = primitive_layout->node_primitive_offsets[n_idx];
+			u64 const p_end = primitive_layout->node_primitive_offsets[n_idx + 1];
+			for (u64 p_idx = p_begin; p_idx < p_end; ++p_idx) {
+				DKSM_GPU_Instance *gpu_instance = dksm_gpu_instance_chunk_list_push(arena, &lane_gpu_instances[lane_idx()], 256);
+				gpu_instance->mesh = mesh_from_primitive_table[p_idx];
+				forward_list_queue_push(&dst->first_gpu_instance, &dst->last_gpu_instance, gpu_instance);
+				dst->gpu_instance_count += 1;
 			}
 		}
-		lane_sync();
 	}
-
-	//~ Dedrick: @g2d_stage Link instance hierarchy.
-	{
-		ZoneScopedN("link instance hierarchy");
-		u64 *node_take_counter = nullptr;
-		if (lane_idx() == 0) {
-			node_take_counter = arena_push<u64>(scratch.arena);
-		}
-		lane_sync_broadcast(&node_take_counter, 0);
-
-		while (true) {
-			//~ Dedrick: Take next glTF node.
-			u64 const node_idx = atomic_u64_inc_fetch(node_take_counter) - 1;
-			if (node_idx >= gltf->meshes_count) {
-				break;
-			}
-
-			cgltf_node const *const src_node = &gltf->nodes[node_idx];
-			DKSM_Instance *dst_inst = flat_node_map[node_idx];
-
-			//~ Dedrick: Link parent.
-			if (src_node->parent != nullptr) {
-				u64 const parent_idx = src_node->parent - gltf->nodes;
-				dst_inst->parent = flat_node_map[parent_idx];
-			}
-
-			//~ Dedrick: Link siblings and children.
-			DKSM_Instance *prev_child = nullptr;
-			for (cgltf_size c_idx = 0; c_idx < src_node->children_count; ++c_idx) {
-				u64 const child_idx = src_node->children[c_idx] - gltf->nodes;
-				DKSM_Instance *child_inst = flat_node_map[child_idx];
-
-				if (c_idx == 0) {
-					dst_inst->first_child = child_inst;
-				}
-				else if (prev_child != nullptr) {
-					prev_child->next_sibling = child_inst;
-					child_inst->prev_sibling = prev_child;
-				}
-				prev_child = child_inst;
-			}
-		}
-		lane_sync();
-	}
-#endif
 
 	//~ Dedrick: @g2d_stage Join all lane blocks.
 	DKSM_InstanceChunkList all_instances = {};
