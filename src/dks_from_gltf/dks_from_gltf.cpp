@@ -277,7 +277,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 						}
 						else if (attribute->component_type == cgltf_component_type_r_8u) {
 							mesh->indices = arena_push_array<u32>(arena, attribute->count);
-							g2d_load_attribute<u16, u32>(accessor, 1, mesh->indices);
+							g2d_load_attribute<u8, u32>(accessor, 1, mesh->indices);
 						}
 						else {
 							// TODO(Dedrick): Write with the same format as other logs.
