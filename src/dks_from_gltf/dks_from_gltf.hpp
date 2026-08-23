@@ -8,12 +8,6 @@ namespace dk {
 		Buffer file_data;
 	};
 
-	struct G2D_PrimitiveMap {
-		u64 *mesh_base_idxs;
-		DKSM_GPU_Mesh **primitives;
-		u64 total_primitive_count;
-	};
-
 	auto g2d_cgltf_file_read(cgltf_memory_options const *mem_opts, cgltf_file_options const *file_opts, char const *path, cgltf_size *out_size, void **out_data) noexcept -> cgltf_result;
 	auto g2d_cgltf_file_release(cgltf_memory_options const *mem_opts, cgltf_file_options const *file_opts, void *data, cgltf_size size) noexcept -> void;
 

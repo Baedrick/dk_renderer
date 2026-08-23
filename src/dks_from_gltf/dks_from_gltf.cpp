@@ -42,6 +42,20 @@ namespace dk {
 			}
 		}
 	}
+
+	template <typename SrcType, typename DstType = SrcType>
+	static auto g2d_load_attribute_normalized(cgltf_accessor const *accessor, u32 num_components, f32 src_max_value, DstType *dst, u64 dst_stride) noexcept -> void {
+		u8 const *const base = static_cast<u8 const *>(accessor->buffer_view->buffer->data) + accessor->buffer_view->offset + accessor->offset;
+		u64 const src_stride = accessor->stride;
+		f32 const inv_max = 1.0f / src_max_value;
+		for (u64 a_idx = 0; a_idx < accessor->count; ++a_idx) {
+			SrcType const *const src_component = reinterpret_cast<SrcType const *>(base + a_idx * src_stride);
+			DstType *const dst_component = reinterpret_cast<DstType *>(reinterpret_cast<u8 *>(dst) + a_idx * dst_stride);
+			for (u32 c_idx = 0; c_idx < num_components; ++c_idx) {
+				dst_component[c_idx] = static_cast<DstType>(static_cast<f32>(src_component[c_idx]) * inv_max);
+			}
+		}
+	}
 }
 
 // https://github.com/zeux/meshoptimizer/blob/97bbdce4716f6257c9527b051515136882f33e79/gltf/node.cpp#L161
@@ -245,30 +259,63 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 					//~ Dedrick: Load attributes.
 					if (primitive->attributes_count > 0) {
 						// NOTE(Dedrick): glTF SPECS specify that all attributes in a primitive have the same count.
+						// We only support component types specified by the specs and not extensions (like KHR_mesh_quantization).
 						dst->vertex_count = primitive->attributes[0].data->count;
 						dst->vertices = arena_push_array<DKSM_GPU_Vertex>(arena, dst->vertex_count);
 						for (u64 a_idx = 0; a_idx < primitive->attributes_count; ++a_idx) {
 							if (primitive->attributes[a_idx].type == cgltf_attribute_type_position) {
-								// TODO(Dedrick): World have different common source component type, float, u16, s16.
 								cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
-								g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].position[0], sizeof(DKSM_GPU_Vertex));
+								if (attribute->type == cgltf_type_vec3 && attribute->component_type == cgltf_component_type_r_32f) {
+									g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].position[0], sizeof(DKSM_GPU_Vertex));
 
-								// TODO(Dedrick): Compute sphere bounds, dequantization summand and factor.
+									//~ Dedrick: Compute sphere bounds, dequantization summand and factor.
+
+								}
+								else {
+									DK_LOG_INFOF("[dks_from_gltf]: vertex position data format not supported, use vec3 float.\n")
+								}
 							}
 							else if (primitive->attributes[a_idx].type == cgltf_attribute_type_normal) {
-								// TODO(Dedrick): Normals have different common source component type, float, u16, u8, s8.
-								// cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
-								// g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].normal[0], sizeof(DKSM_GPU_Vertex));
+								// TODO(Dedrick)
+#if 0
+								cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								if (attribute->type == cgltf_type_vec3 && attribute->component_type == cgltf_component_type_r_32f) {
+									g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].normal[0], sizeof(DKSM_GPU_Vertex));
+								}
+								else {
+									DK_LOG_INFOF("[dks_from_gltf]: vertex normal data format not supported, use vec3 float.\n")
+								}
+#endif
 							}
 							else if (primitive->attributes[a_idx].type == cgltf_attribute_type_tangent) {
-								// TODO(Dedrick): w is tangent basis sign.
-								// cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
-								// g2d_load_attribute<f32>(attribute, 4, &dst->vertices[0].normal[0], sizeof(DKSM_GPU_Vertex));
+								// TODO(Dedrick)
+#if 0
+								cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								if (attribute->type == cgltf_type_vec3 && attribute->component_type == cgltf_component_type_r_32f) {
+									g2d_load_attribute<f32>(attribute, 4, &dst->vertices[0].normal[0], sizeof(DKSM_GPU_Vertex));
+								}
+								else {
+									DK_LOG_INFOF("[dks_from_gltf]: vertex tangent data format not supported, use vec4 float.\n")
+								}
+#endif
 							}
 							else if (primitive->attributes[a_idx].type == cgltf_attribute_type_texcoord) {
-								// TODO(Dedrick): TEXCOORD have different common source component type, float, u16n, u8n.
-								// cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
-								// g2d_load_attribute<f32>(attribute, 2, &dst->vertices[0].uv0[0], sizeof(DKSM_GPU_Vertex));
+								// TODO(Dedrick)
+#if 0
+								cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
+								if (attribute->type == cgltf_type_vec2 && attribute->component_type == cgltf_component_type_r_32f) {
+									g2d_load_attribute<f32>(attribute, 2, &dst->vertices[0].uv0[0], sizeof(DKSM_GPU_Vertex));
+								}
+								else if (attribute->type == cgltf_type_vec2 && attribute->component_type == cgltf_component_type_r_16u) {
+									g2d_load_attribute_normalized<u16, f32>(attribute, 2, 65535.0f, &dst->vertices[0].uv0[0], sizeof(DKSM_GPU_Vertex));
+								}
+								else if (attribute->type == cgltf_type_vec2 && attribute->component_type == cgltf_component_type_r_8u) {
+									g2d_load_attribute_normalized<u8, f32>(attribute, 2, 255.0f, &dst->vertices[0].uv0[0], sizeof(DKSM_GPU_Vertex));
+								}
+								else {
+									DK_LOG_INFOF("[dks_from_gltf]: vertex texcoord data format not supported, use vec2 float.\n")
+								}
+#endif
 							}
 						}
 					}
@@ -299,6 +346,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 				}
 			}
 		}
+		lane_sync();
 	}
 
 	//~ Dedrick: @g2d_stage Build nodes.
@@ -308,7 +356,7 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		ZoneScopedN("build nodes");
 		if (lane_idx() == 0) {
 			node_from_node_idx_table = arena_push_array<DKSM_Node *>(scratch.arena, gltf->nodes_count);
-			lane_count = arena_push_array<DKSM_NodeChunkList>(scratch.arena, lane_count());
+			lane_nodes = arena_push_array<DKSM_NodeChunkList>(scratch.arena, lane_count());
 		}
 		lane_sync_broadcast(&node_from_node_idx_table, 0);
 		lane_sync_broadcast(&lane_nodes, 0);
@@ -347,18 +395,16 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		for (u64 n_idx = range.begin; n_idx < range.end; ++n_idx) {
 			cgltf_node const *src = &gltf->nodes[n_idx];
 			DKSM_Node *dst = node_from_node_idx_table[n_idx];
-			if (src->parent != nullptr) {
-				dst->parent = node_from_node_idx_table[src->parent - gltf->nodes];
-			}
 			if (src->children_count > 0) {
 				dst->first_child = node_from_node_idx_table[src->children[0] - gltf->nodes];
 				for (cgltf_size c_idx = 0; c_idx < src->children_count; ++c_idx) {
-					DKSM_Node *dst_child = node_from_node_idx_table[src->children[c_idx] - gltf->nodes];
+					DKSM_Node *child = node_from_node_idx_table[src->children[c_idx] - gltf->nodes];
+					child->parent = dst;
 					if (c_idx > 0) {
-						dst_child->next_sibling = node_from_node_idx_table[src->children[c_idx - 1] - gltf->nodes];
+						child->prev_sibling = node_from_node_idx_table[src->children[c_idx - 1] - gltf->nodes];
 					}
 					if (c_idx + 1 < src->children_count) {
-						dst_child->next_sibling = node_from_node_idx_table[src->children[c_idx + 1] - gltf->nodes];
+						child->next_sibling = node_from_node_idx_table[src->children[c_idx + 1] - gltf->nodes];
 					}
 				}
 			}
@@ -391,25 +437,25 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 	}
 
 	//~ Dedrick: @g2d_stage Join all lane blocks.
-	DKSM_InstanceChunkList all_instances = {};
+	DKSM_NodeChunkList all_nodes = {};
 	DKSM_GPU_InstanceChunkList all_gpu_instances = {};
 	DKSM_GPU_MeshChunkList all_gpu_meshes = {};
 	{
-		DKSM_InstanceChunkList *all_instances_ptr = nullptr;
+		DKSM_NodeChunkList *all_nodes_ptr = nullptr;
 		DKSM_GPU_InstanceChunkList *all_gpu_instances_ptr = nullptr;
 		DKSM_GPU_MeshChunkList *all_gpu_meshes_ptr = nullptr;
 		if (lane_idx() == 0) {
-			all_instances_ptr = arena_push<DKSM_InstanceChunkList>(scratch.arena);
+			all_nodes_ptr = arena_push<DKSM_NodeChunkList>(scratch.arena);
 			all_gpu_instances_ptr = arena_push<DKSM_GPU_InstanceChunkList>(scratch.arena);
 			all_gpu_meshes_ptr = arena_push<DKSM_GPU_MeshChunkList>(scratch.arena);
 		}
-		lane_sync_broadcast(&all_instances_ptr, 0);
+		lane_sync_broadcast(&all_nodes_ptr, 0);
 		lane_sync_broadcast(&all_gpu_instances_ptr, 0);
 		lane_sync_broadcast(&all_gpu_meshes_ptr, 0);
 		if (lane_idx() == lane_from_task_idx(0)) {
-			ZoneScopedN("join instances");
+			ZoneScopedN("join nodes");
 			for (u64 l = 0; l < lane_count(); ++l) {
-				dksm_instance_chunk_list_concat_in_place(all_instances_ptr, &lane_instances[l]);
+				dksm_node_chunk_list_concat_in_place(all_nodes_ptr, &lane_nodes[l]);
 			}
 		}
 		if (lane_idx() == lane_from_task_idx(1)) {
@@ -425,9 +471,9 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 			}
 		}
 		lane_sync();
-		all_instances = *all_instances_ptr;
+		all_nodes         = *all_nodes_ptr;
 		all_gpu_instances = *all_gpu_instances_ptr;
-		all_gpu_meshes = *all_gpu_meshes_ptr;
+		all_gpu_meshes    = *all_gpu_meshes_ptr;
 		lane_sync();
 	}
 
@@ -435,16 +481,16 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 	DKSM_BakeParams result = {};
 	{
 		//~ Dedrick: Produce top level info.
-		DKSM_TopLeveInfo top_level_info = {};
+		DKSM_TopLevelInfo top_level_info = {};
 		{
 			top_level_info.model_name = path_skip_last_slash(params->file_path);
 		}
 
 		//~ Dedrick: Fill.
 		result.top_level_info = top_level_info;
-		result.instances      = all_instances;
-		result.gpu_instances  = all_gpu_instances;
-		result.gpu_meshes     = all_gpu_meshes;
+		result.nodes         = all_nodes;
+		result.gpu_instances = all_gpu_instances;
+		result.gpu_meshes    = all_gpu_meshes;
 	}
 
 	if (lane_idx() == 0) {
