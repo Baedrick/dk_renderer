@@ -68,10 +68,6 @@ namespace dk {
 
 	struct DKSM_GPU_Mesh {
 		struct DKSM_GPU_MeshChunkNode *chunk;
-		f32 sphere_center[3];
-		f32 sphere_radius;
-		f32 dequantization_factor[3];
-		f32 dequantization_summand[3];
 		DKSM_GPU_Vertex *vertices;
 		u64 vertex_count;
 		u32 *indices;
@@ -221,7 +217,7 @@ namespace dk {
 
 	auto dksm_mat4x3_from_mat4(mat4 const &src, f32 dst[12]) noexcept -> void;
 
-	auto dksm_quantize_vertex_position(f32 const position[3], f32 const dequant_summand[3], f32 const dequant_factor[3]) noexcept -> u64;
+	auto dksm_quantize_vertex_position(f32 const position[3], f32 const quant_factor[3], f32 const quant_offset[3]) noexcept -> u64;
 
 	auto dksm_gpu_meshlet_triangle_from_indices(u32 i0, u32 i1, u32 i2) noexcept -> u32;
 

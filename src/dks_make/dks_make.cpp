@@ -236,13 +236,11 @@ auto dk::dksm_mat4x3_from_mat4(mat4 const &src, f32 dst[12]) noexcept -> void {
 	}
 }
 
-auto dk::dksm_quantize_vertex_position(f32 const position[3], f32 const dequant_summand[3], f32 const dequant_factor[3]) noexcept -> u64 {
-	f32 const quant_bits = static_cast<f32>((1 << 21) - 1);
+auto dk::dksm_quantize_vertex_position(f32 const position[3], f32 const quant_factor[3], f32 const quant_offset[3]) noexcept -> u64 {
 	u64 quantized[3] = {};
 	for (u64 axis = 0; axis < 3; ++axis) {
-		f32 const normalized = (position[axis] - dequant_summand[axis]) / dequant_factor[axis];
-		u64 const q_val = static_cast<u64>(normalized + 0.5f);
-		quantized[axis] = (q_val < static_cast<u64>(quant_bits)) ? q_val : static_cast<u64>(quant_bits);
+		f32 const quantized_position = position[axis] * quant_factor[axis] + quant_offset[axis];
+		quantized[axis] = min((1u << 21) - 1, static_cast<u64>(quantized_position));
 	}
 	return (quantized[0] << 42) | (quantized[1] << 21) | quantized[2];
 }
@@ -626,6 +624,10 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 	struct MeshBlock {
 		DKS_GPU_Vertex *vertices;
 		u64 vertex_count;
+		f32 dequantization_factor[3];
+		f32 dequantization_summand[3];
+		f32 sphere_center[3];
+		f32 sphere_radius;
 		DKS_GPU_Meshlet *meshlets;
 		DKS_GPU_MeshletBounds *meshlet_bounds;
 		u32 meshlet_count;
@@ -672,11 +674,74 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			DKSM_GPU_Mesh const *src = mesh_take_table[mesh_idx];
 			MeshBlock *const dst = &mesh_blocks[mesh_idx];
 
+			//~ Dedrick: Compute per-mesh bounding box.
+			f32 bounding_box_min[3] = { src->vertices[0].position[0], src->vertices[0].position[1], src->vertices[0].position[2] };
+			f32 bounding_box_max[3] = { src->vertices[0].position[0], src->vertices[0].position[1], src->vertices[0].position[2] };
+			for (u64 v_idx = 1; v_idx < src->vertex_count; ++v_idx) {
+				f32 const *p = src->vertices[v_idx].position;
+				bounding_box_min[0] = min(bounding_box_min[0], p[0]);
+				bounding_box_min[1] = min(bounding_box_min[1], p[1]);
+				bounding_box_min[2] = min(bounding_box_min[2], p[2]);
+				bounding_box_max[0] = max(bounding_box_max[0], p[0]);
+				bounding_box_max[1] = max(bounding_box_max[1], p[1]);
+				bounding_box_max[2] = max(bounding_box_max[2], p[2]);
+			}
+
+			//~ Dedrick: Ritter sphere - center & initial radius from axis-aligned bounding box.
+			f32 sphere_center[3] = {
+				(bounding_box_max[0] + bounding_box_min[0]) * 0.5f,
+				(bounding_box_max[1] + bounding_box_min[1]) * 0.5f,
+				(bounding_box_max[2] + bounding_box_min[2]) * 0.5f,
+			};
+			f32 const bounding_box_diff_x = bounding_box_max[0] - bounding_box_min[0];
+			f32 const bounding_box_diff_y = bounding_box_max[1] - bounding_box_min[1];
+			f32 const bounding_box_diff_z = bounding_box_max[2] - bounding_box_min[2];
+			f32 sphere_radius = max(max(bounding_box_diff_x, bounding_box_diff_y), bounding_box_diff_z) * 0.5f;
+
+			//~ Dedrick: Grow the sphere to encase all points.
+			for (u64 v_idx = 0; v_idx < src->vertex_count; ++v_idx) {
+				f32 const *position = src->vertices[v_idx].position;
+				f32 const diff_x = pposition[0] - sphere_center[0];
+				f32 const diff_y = pposition[1] - sphere_center[1];
+				f32 const diff_z = pposition[2] - sphere_center[2];
+				f32 const diff_sq = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
+				f32 const radius_sq = sphere_radius * sphere_radius;
+				if (diff_sq > radius_sq) {
+					f32 const dist = sqrt(diff_sq);
+					f32 const new_radius = (sphere_radius + dist) * 0.5f;
+					f32 const k = (new_radius - sphere_radius) / dist;
+					sphere_center[0] += diff_x * k;
+					sphere_center[1] += diff_y * k;
+					sphere_center[2] += diff_z * k;
+					sphere_radius = new_radius;
+				}
+			}
+
+			//~ Dedrick: Per-mesh position quantization - factor/offset derived from bounding box.
+			f32 quantization_factor[3] = {};
+			f32 quantization_offset[3] = {};
+			f32 dequantization_factor[3] = {};
+			f32 dequantization_summand[3] = {};
+			f32 const quantization_resolution = (f32)(1ULL << 21);
+			for (u32 axis = 0; axis < 3; ++axis) {
+				f32 const axis_range = bounding_box_max[axis] - bounding_box_min[axis];
+				quantization_factor[axis] = quantization_resolution / axis_range;
+				quantization_offset[axis] = -bounding_box_min[axis] * quantization_factor[axis];
+				dequantization_factor[axis] = 1.0f / quantization_factor[axis];
+				dequantization_summand[axis] = bounding_box_min[axis] + 0.5f * dequantization_factor[axis];
+			}
+
+			//~ Dedrick: Store mesh bounds and dequantization values.
+			std::memcpy(dst->sphere_center, sphere_center, sizeof(sphere_center));
+			dst->sphere_radius = sphere_radius;
+			std::memcpy(dst->dequantization_factor, dequantization_factor, sizeof(dequantization_factor));
+			std::memcpy(dst->dequantization_summand, dequantization_summand, sizeof(dequantization_summand));
+
 			//~ Dedrick: Quantize and fill vertices.
 			dst->vertex_count = src->vertex_count;
 			dst->vertices = arena_push_array<DKS_GPU_Vertex>(scratch.arena, dst->vertex_count);
 			for (u64 idx = 0; idx < src->vertex_count; ++idx) {
-				dst->vertices[idx].position = dksm_quantize_vertex_position(src->vertices[idx].position, src->dequantization_summand, src->dequantization_factor);
+				dst->vertices[idx].position = dksm_quantize_vertex_position(src->vertices[idx].position, quantization_factor, quantization_offset);
 			}
 
 			//~ Dedrick: Build meshlets.
@@ -881,10 +946,10 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 				MeshBlock const *block = &mesh_blocks[node->base_idx + idx];
 
 				//~ Dedrick: Fill mesh info.
-				std::memcpy(dst->sphere_center, src->sphere_center, sizeof(src->sphere_center));
-				dst->sphere_radius = src->sphere_radius;
-				std::memcpy(dst->dequantization_factor, src->dequantization_factor, sizeof(src->dequantization_factor));
-				std::memcpy(dst->dequantization_summand, src->dequantization_summand, sizeof(src->dequantization_summand));
+				std::memcpy(dst->sphere_center, block->sphere_center, sizeof(block->sphere_center));
+				dst->sphere_radius = block->sphere_radius;
+				std::memcpy(dst->dequantization_factor, block->dequantization_factor, sizeof(block->dequantization_factor));
+				std::memcpy(dst->dequantization_summand, block->dequantization_summand, sizeof(block->dequantization_summand));
 				dst->meshlet_offset = static_cast<u32>(dst_mo_offset);
 				dst->meshlet_count = block->meshlet_count;
 
