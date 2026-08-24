@@ -260,20 +260,50 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 			}
 
 			//~ Dedrick: Serialize.
-			// ...
+			DKSM_SerializedSectionBundle *serialized_section_bundle = nullptr;
+			{
+				ZoneScopedN("serialize");
+				if (lane_idx() == 0) {
+					serialized_section_bundle = arena_push<DKSM_SerializedSectionBundle>(arena);
+					*serialized_section_bundle = dksm_serialized_section_bundle_from_bake_results(&bake_results);
+				}
+				lane_sync_broadcast(&serialized_section_bundle, 0);
+			}
 
 			//~ Dedrick: Convert done, generate output blobs.
-			// ...
-
+			BufferList dks_blobs = {};
+			{
+				ZoneScopedN("generate dks output blobs");
+				if (lane_idx() == 0) {
+					dks_blobs = dksm_buffer_blobs_from_section_bundle(arena, serialized_section_bundle);
+					buf_list_concat_in_place(&output_blobs, &dks_blobs);
+				}
+			}
+			break;
+		}
+		case OUTPUT_KIND_CUBE: {
+			ZoneScopedN("cubemap from exr");
+			// TODO(Dedrick): parse EXR equirectangular input, march 5 cube faces, serialize to a DKCube output.
 			break;
 		}
 	}
 
 	//~ Dedrick: Write output.
-	if (lane_idx() == 0) {
-
+	{
+		ZoneScopedN("write output");
+		if (lane_idx() == 0) {
+			if (output_blobs.total_size > 0) {
+				b8 const wrote = write_bytes_list_to_file_path(output_path, &output_blobs);
+				if (wrote) {
+					DK_LOG_INFOF("[asc]: wrote %.*s (%llu bytes).\n", DK_STR8_VARG(output_path), output_blobs.total_size);
+				}
+				else {
+					DK_LOG_ERRORF("[asc]: failed to write %.*s.\n", DK_STR8_VARG(output_path));
+				}
+			}
+		}
+		lane_sync();
 	}
-	lane_sync();
 
 	//~ Dedrick: Collect logs
 	LogFrameResult const log_frame = log_frame_end(arena);
