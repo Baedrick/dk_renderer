@@ -141,20 +141,14 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 
 			//~ Dedrick: Scan for draco compression.
 			if (gltf != nullptr) {
-				b8 draco_compression = false;
+				u32 draco_compression = 0;
 				for (cgltf_size idx = 0; idx < gltf->meshes_count; ++idx) {
 					cgltf_mesh const *mesh = &gltf->meshes[idx];
 					for (cgltf_size p_idx = 0; p_idx < mesh->primitives_count; ++p_idx) {
-						if (mesh->primitives[p_idx].has_draco_mesh_compression) {
-							draco_compression = true;
-							break;
-						}
-					}
-					if (draco_compression) {
-						break;
+						draco_compression |= static_cast<u32>(mesh->primitives[p_idx].has_draco_mesh_compression);
 					}
 				}
-				if (draco_compression) {
+				if (draco_compression != 0) {
 					DK_LOG_ERRORF("[dks_from_gltf]: draco compression not supported.\n");
 					cgltf_free(gltf);
 					gltf = nullptr;
@@ -267,9 +261,6 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 								cgltf_attribute const *attribute = primitive->attributes[a_idx].data;
 								if (attribute->type == cgltf_type_vec3 && attribute->component_type == cgltf_component_type_r_32f) {
 									g2d_load_attribute<f32>(attribute, 3, &dst->vertices[0].position[0], sizeof(DKSM_GPU_Vertex));
-
-									//~ Dedrick: Compute sphere bounds, dequantization summand and factor.
-
 								}
 								else {
 									DK_LOG_INFOF("[dks_from_gltf]: vertex position data format not supported, use vec3 float.\n")
