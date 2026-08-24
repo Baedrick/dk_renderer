@@ -39,6 +39,7 @@ namespace dk {
 	auto buf_list_push(Arena *arena, BufferList *list, Buffer buf) noexcept -> BufferNode *;
 	auto buf_list_push_front(Arena *arena, BufferList *list, Buffer buf) noexcept -> BufferNode *;
 	auto buf_list_push_align(Arena *arena, BufferList *list, u64 align) noexcept -> void;
+	auto buf_list_concat_in_place(BufferList *dst, BufferList *to_push) noexcept -> void;
 	auto buf_list_copy(Arena *arena, BufferList const *list) noexcept -> BufferList;
 
 	auto buf_list_join(Arena *arena, BufferList const *list) noexcept -> Buffer;

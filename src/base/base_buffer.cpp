@@ -79,6 +79,21 @@ auto dk::buf_list_copy(Arena *arena, BufferList const *list) noexcept -> BufferL
 	return result;
 }
 
+auto dk::buf_list_concat_in_place(BufferList *dst, BufferList *to_push) noexcept -> void {
+	if (to_push->node_count > 0) {
+		if (dst->last != nullptr) {
+			dst->last->next = to_push->first;
+			dst->last = to_push->last;
+			dst->node_count += to_push->node_count;
+			dst->total_size += to_push->total_size;
+		}
+		else {
+			*dst = *to_push;
+		}
+		std::memset(to_push, 0, sizeof(BufferList));
+	}
+}
+
 auto dk::buf_list_join(Arena *arena, BufferList const *list) noexcept -> Buffer {
 	u8 *arr = arena_push_array<u8>(arena, list->total_size);
 	u8 *p = arr;
