@@ -153,7 +153,7 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	GPU_AllocResult alloc_result;
 	do {
 		alloc_result = gpu_arena_try_push(dkr_context->render.stage_arena, texture_data_size, 16, reinterpret_cast<void **>(&stage_base));
-		if (alloc_result == GPU_AllocResult::ERROR_OUT_OF_MEMORY) {
+		if (alloc_result == GPU_AllocResult::Error_OutOfMemory) {
 			if (dkr_context->render.stage_sync) {
 				glClientWaitSync(dkr_context->render.stage_sync, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
 				glDeleteSync(dkr_context->render.stage_sync);
@@ -161,7 +161,8 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 			}
 			gpu_arena_clear(dkr_context->render.stage_arena);
 		}
-	} while (alloc_result != GPU_AllocResult::OK);
+		DK_ASSERT(alloc_result != GPU_AllocResult::Error_ExceedsBufferSize);
+	} while (alloc_result != GPU_AllocResult::Ok);
 
 	for (u64 cursor = 0; cursor < texture_data_size; ) {
 		u64 const read_size = min(chunk_size, texture_data_size - cursor);
