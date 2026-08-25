@@ -54,7 +54,6 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	LogContext *log = log_alloc();
 	log_select(log);
 	log_frame_begin();
-	// meow i touched ur code
 
 	//~ Dedrick: Set up shared state.
 	if (lane_idx() == 0) {
