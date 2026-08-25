@@ -13,6 +13,7 @@ dk::ASC_Shared *dk::asc_shared;
 
 auto dk::asc_entry_point(CmdLine *cmd_line) noexcept -> void {
 	TempArena const scratch = scratch_begin(nullptr, 0);
+	dk_defer(scratch_end(scratch));
 	u64 threads_count = get_system_info()->logical_processor_count;
 	String8 const threads_count_from_cmd_line_str = cmd_line_value(cmd_line, "thread_count"_str8);
 	if (threads_count_from_cmd_line_str.size > 0) {
@@ -36,7 +37,6 @@ auto dk::asc_entry_point(CmdLine *cmd_line) noexcept -> void {
 	for (u64 i = 0; i < threads_count; ++i) {
 		thread_join(threads[i]);
 	}
-	scratch_end(scratch);
 }
 
 auto dk::asc_thread_entry_point(void *p) noexcept -> void {
@@ -54,6 +54,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 	LogContext *log = log_alloc();
 	log_select(log);
 	log_frame_begin();
+	// meow i touched ur code
 
 	//~ Dedrick: Set up shared state.
 	if (lane_idx() == 0) {
@@ -83,7 +84,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				ASC_FileFormat file_format = ASC_FILE_FORMAT_NULL;
 				{
 					ZoneScopedN("thin analysis of file");
-					File const file = file_open(node->string, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
+					File const file = file_open(input_file_path, FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_SHARE_READ);
 
 					//~ Dedrick: GLB magic -> GLTF input.
 					if (file_format == ASC_FILE_FORMAT_NULL) {
@@ -96,7 +97,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 
 					//~ Dedrick: GLTF ext -> GLTF input.
 					if (file_format == ASC_FILE_FORMAT_NULL) {
-						String8 const ext = path_skip_last_period(node->string);
+						String8 const ext = path_skip_last_period(input_file_path);
 						if (str8_equals(ext, "gltf"_str8, STRING_MATCH_FLAG_NONE)) {
 							file_format = ASC_FILE_FORMAT_GLTF;
 						}
@@ -125,7 +126,8 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				//~ Dedrick: Load recognized file.
 				Buffer file_data = {};
 				if (file_format != ASC_FILE_FORMAT_NULL) {
-					file_data = read_bytes_from_file_path(arena, node->string);
+					ZoneScopedN("load recognized file");
+					file_data = read_bytes_from_file_path(arena, input_file_path);
 				}
 
 				//~ Dedrick: Save to list.
@@ -154,6 +156,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				input_files_from_format->count += 1;
 			}
 		}
+		lane_sync();
 	}
 	ASC_FileList *const input_files_from_format = asc_shared->input_files_from_format;
 
@@ -165,8 +168,8 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 		OUTPUT_KIND_COUNT
 	};
 	struct { String8 flag; String8 title; } const output_kind_info[] = {
-		{ ""_str8, ""_str8 },
-		{ "dks"_str8, "DK Scene (.dks) Conversion"_str8 },
+		{ ""_str8,     ""_str8 },
+		{ "dks"_str8,  "DK Scene (.dks) Conversion"_str8 },
 		{ "cube"_str8, "Equirectangular to Cubemap Conversion"_str8 }
 	};
 	OutputKind output_kind = OUTPUT_KIND_NULL;
@@ -191,7 +194,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 			}
 			else if (str8_equals(path_skip_last_period(output_path), "cube"_str8, STRING_MATCH_FLAG_CASE_INSENSITIVE)) {
 				output_kind = OUTPUT_KIND_CUBE;
-				DK_LOG_INFOF("Output path has .cube extension; performing `%.*s`\n", DK_STR8_VARG(output_kind_info[output_kind].title));
+				DK_LOG_INFOF("Output path has .dkcube extension; performing `%.*s`\n", DK_STR8_VARG(output_kind_info[output_kind].title));
 			}
 		}
 	}
@@ -220,11 +223,37 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 		}
 	}
 
-	// TODO(Dedrick): Switch on output_kind.
+	//~ Dedrick: Switch on output_kind.
 	BufferList output_blobs = {};
 	switch (output_kind) {
 		default: [[fallthrough]];
 		case OUTPUT_KIND_NULL: {
+			DK_LOG_INFOF("USAGE EXAMPLES\n\n");
+
+			DK_LOG_INFOF("dkrend --compiler --dks model.gltf\n");
+			DK_LOG_INFOF("Converts `model.gltf` to dks, and stores it in `model.dks`.\n\n");
+
+			DK_LOG_INFOF("dkrend --compiler --dks model.glb\n");
+			DK_LOG_INFOF("Converts `model.glb` to dks, and stores it in `model.dks`.\n\n");
+
+			DK_LOG_INFOF("--------------------------------------------------------------------------------\n\n");
+
+			DK_LOG_INFOF("DESCRIPTION\n\n");
+			DK_LOG_INFOF("This mode provides operations to convert DCC formats, such as glTF, to the DK \n");
+			DK_LOG_INFOF("Scene (.dks) format used by the renderer. It can also convert EXR equirectangular\n");
+			DK_LOG_INFOF("images into cubemaps used by the renderer.\n\n");
+
+			DK_LOG_INFOF("--------------------------------------------------------------------------------\n\n");
+			DK_LOG_INFOF("ARGUMENTS\n\n");
+
+			DK_LOG_INFOF("--dks            Specifies that the compiler should convert DCC formats into DK\n");
+			DK_LOG_INFOF("                 Scene (.dks) format.\n\n");
+
+			DK_LOG_INFOF("--cube           Specifies that the compiler should convert equirectangular image\n");
+			DK_LOG_INFOF("                 to a cubemap.\n\n");
+
+			DK_LOG_INFOF("--out=<path>     Specifies the path to which output data is written. If not\n");
+			DK_LOG_INFOF("                 specified, the mode will choose a fallback.\n\n");
 			break;
 		}
 		case OUTPUT_KIND_DKS: {
@@ -234,6 +263,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 			//~ Dedrick: GLTF/GLB inputs -> DKS conversion.
 			if (asc_shared->input_files_from_format[ASC_FILE_FORMAT_GLTF].count > 0) {
 				convert_done = true;
+				DK_LOG_INFOF("glTF specified; converting glTF data to DKS.\n");
 
 				//~ Dedrick: Get GLTF/GLB file data.
 				ASC_File const *gltf_file = asc_shared->input_files_from_format[ASC_FILE_FORMAT_GLTF].first->file;
@@ -249,7 +279,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 
 			//~ Dedrick: No viable inputs.
 			if (!convert_done) {
-				DK_LOG_ERRORF("Could not \n");
+				DK_LOG_ERRORF("Could not load file data from specified inputs. You must provide a valid DCC file (glTF, glb).\n");
 			}
 
 			//~ Dedrick: Bake.
@@ -271,19 +301,19 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 			}
 
 			//~ Dedrick: Convert done, generate output blobs.
-			BufferList dks_blobs = {};
+			BufferList blobs = {};
 			{
 				ZoneScopedN("generate dks output blobs");
 				if (lane_idx() == 0) {
-					dks_blobs = dksm_buffer_blobs_from_section_bundle(arena, serialized_section_bundle);
-					buf_list_concat_in_place(&output_blobs, &dks_blobs);
+					blobs = dksm_buffer_blobs_from_section_bundle(arena, serialized_section_bundle);
+					buf_list_concat_in_place(&output_blobs, &blobs);
 				}
 			}
 			break;
 		}
 		case OUTPUT_KIND_CUBE: {
 			ZoneScopedN("cubemap from exr");
-			// TODO(Dedrick): parse EXR equirectangular input, march 5 cube faces, serialize to a DKCube output.
+			// TODO(Dedrick)
 			break;
 		}
 	}
@@ -305,7 +335,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 		lane_sync();
 	}
 
-	//~ Dedrick: Collect logs
+	//~ Dedrick: Collect logs.
 	LogFrameResult const log_frame = log_frame_end(arena);
 	if (lane_idx() == 0) {
 		// TODO(Dedrick): Write to shared memory so the renderer can display in its logs.
