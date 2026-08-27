@@ -6,7 +6,7 @@ namespace dk {
 	enum DKR_ShaderKind : u32 {
 		DKR_SHADER_KIND_HELLO_TRIANGLE,
 		DKR_SHADER_KIND_DUMMY,
-		DKR_SHADER_KIND_COUNT
+		DKR_SHADER_KIND_COUNT,
 	};
 
 	enum DKR_TextureKind : u32 {
@@ -14,17 +14,65 @@ namespace dk {
 		DKR_TEXTURE_KIND_COUNT,
 	};
 
+	enum DKR_EventKind : u32 {
+		DKR_EVENT_KIND_NULL = 0,
+		DKR_EVENT_KIND_QUIT,
+		DKR_EVENT_KIND_UPDATE_TARGET_FRAME_RATE,
+		DKR_EVENT_KIND_RELOAD_PAK,
+		DKR_EVENT_KIND_OPEN_CONSOLE,
+		DKR_EVENT_KIND_COUNT,
+	};
+
+	union DKR_Event {
+		DKR_EventKind kind;
+	};
+
+	struct DKR_EventNode {
+		DKR_EventNode *next;
+		DKR_EventNode *prev;
+		DKR_Event v;
+	};
+
+	struct DKR_EventList {
+		DKR_EventNode *first;
+		DKR_EventNode *last;
+		u64 count;
+	};
+
 	struct DKR_RenderAssets {
 		GLuint shaders[DKR_SHADER_KIND_COUNT];
 		GLuint textures[DKR_TEXTURE_KIND_COUNT];
 	};
 
+	struct DKR_PakOpen {
+		File file;
+		FileMap map;
+		void *metadata_view;
+		u64 metadata_size;
+		PAK_Parsed parsed;
+	};
+
+	struct DKR_StageFence {
+		GPU_Fence fence;
+		u64 replay_read_pos;
+	};
+
+	struct DKR_StageFenceNode {
+		DKR_StageFenceNode *next;
+		DKR_StageFence v;
+	};
+
+	struct DKR_StageFenceList {
+		DKR_StageFenceNode *first;
+		DKR_StageFenceNode *last;
+		u64 count;
+	};
+
 	struct DKR_RenderContext {
-		//~ Dedrick: Staging.
-		// TODO: Arena isn't right, should be changed to chunked pools.
-		GLsync stage_sync;
 		GLuint stage_buffer;
-		GPU_Arena *stage_arena;
+		RingBuffer *stage_ring;
+		DKR_StageFenceList stage_fence_list;
+		DKR_RenderAssets *assets;
 	};
 
 	struct DKR_ConsoleLine {
@@ -72,7 +120,6 @@ namespace dk {
 
 		//~ Dedrick: Rendering.
 		DKR_RenderContext render;
-		DKR_RenderAssets render_assets;
 
 		//~ Dedrick: Window.
 		RGFW_window *window;
@@ -86,15 +133,28 @@ namespace dk {
 	extern DKR_Context *dkr_context;
 
 	auto dkr_frame_arena() noexcept -> Arena *;
-
 	auto dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void;
-
 	auto dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void;
-
 	auto dkr_pak_path(Arena *arena) noexcept -> String8;
-	auto dkr_pak_read_metadata(Arena *arena, File file, PAK_Parsed *out_parsed) noexcept -> b8;
 
-	auto dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
+	auto dkr_pak_open(String8 path, DKR_PakOpen *out) noexcept -> b8;
+	auto dkr_pak_close(DKR_PakOpen *open) noexcept -> void;
+
+	auto dkr_pak_load_shaders(File file, PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
+	auto dkr_pak_load_textures(File file, PAK_Parsed const *pak,
+							   RingBuffer *ring, GLuint stage_buffer,
+							   DKR_RenderAssets *out_assets) noexcept -> b8;
+	auto dkr_render_assets_load(File file, PAK_Parsed const *pak,
+								RingBuffer *ring, GLuint stage_buffer,
+								DKR_RenderAssets *out_assets) noexcept -> b8;
+	auto dkr_render_assets_release(DKR_RenderAssets *assets) noexcept -> void;
+
+	auto dkr_pak_reload() noexcept -> void;
+
+	auto dkr_event_list_push(Arena *arena, DKR_EventList *events, DKR_Event const *event) noexcept -> void;
+	auto dkr_push_event(DKR_Event const *event) noexcept -> void;
+	auto dkr_push_event_kind(DKR_EventKind kind) noexcept -> void;
+	auto dkr_next_event(DKR_Event **event) noexcept -> b8;
 
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;
 	auto dkr_shutdown() noexcept -> void;
