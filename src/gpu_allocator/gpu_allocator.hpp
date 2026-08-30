@@ -10,6 +10,22 @@ namespace dk {
 		Error_Unknown
 	};
 
+	struct GPU_RingFence {
+		GLsync fence;
+		u64 read_pos;
+	};
+
+	struct GPU_RingFenceNode {
+		GPU_RingFenceNode *next;
+		GPU_RingFence fence;
+	};
+
+	struct GPU_RingFenceList {
+		GPU_RingFenceNode *first;
+		GPU_RingFenceNode *last;
+		u64 count;
+	};
+
 	struct GPU_RingBuffer {
 		u8 *base;
 		u64 size;
