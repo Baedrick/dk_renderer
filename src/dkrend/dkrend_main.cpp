@@ -6,7 +6,6 @@
 #define DK_OPENGL_INIT_MANUAL
 
 #include "base/base.hpp"
-#include "gpu_allocator/gpu_allocator.hpp"
 #include "dks/dks.hpp"
 #include "dks_make/dks_make.hpp"
 #include "exr/exr.hpp"
@@ -16,12 +15,12 @@
 #include "asset_server/asset_server.hpp"
 #include "desktop/desktop.hpp"
 #include "opengl/opengl.hpp"
+#include "gpu_allocator/gpu_allocator.hpp"
 #include "pak/pak.hpp"
 #include "ui/ui.hpp"
 #include "dkrend/dkrend.hpp"
 
 #include "base/base.cpp"
-#include "gpu_allocator/gpu_allocator.cpp"
 #include "dks/dks.cpp"
 #include "dks_make/dks_make.cpp"
 #include "exr/exr.cpp"
@@ -31,6 +30,7 @@
 #include "asset_server/asset_server.cpp"
 #include "desktop/desktop.cpp"
 #include "opengl/opengl.cpp"
+#include "gpu_allocator/gpu_allocator.cpp"
 #include "pak/pak.cpp"
 #include "ui/ui.cpp"
 #include "dkrend/dkrend.cpp"

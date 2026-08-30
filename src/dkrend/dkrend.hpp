@@ -2,5 +2,4 @@
 
 #pragma once
 
-#include "dkrend_event.hpp"
 #include "dkrend_app.hpp"

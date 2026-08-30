@@ -6,6 +6,42 @@ auto dk::dkr_frame_arena() noexcept -> Arena * {
 	return dkr_context->frame_arenas[dkr_context->frame_index % array_count(dkr_context->frame_arenas)];
 }
 
+auto dk::dkr_event_list_push(Arena *arena, DKR_EventList *events, DKR_Event const *event) noexcept -> void {
+	DKR_EventNode *node = arena_push<DKR_EventNode>(arena);
+	node->event.kind = event->kind;
+	// NOTE(Dedrick): Attach payload, if required.
+	switch (event->kind) {
+		case DKR_EVENT_KIND_RELOAD_PAK : {
+			node->event.reload_pak.file_path = str8_copy(arena, event->reload_pak.file_path);
+			break;
+		}
+	}
+	list_push_back(&events->first, &events->last, node);
+	events->count += 1;
+}
+
+auto dk::dkr_push_event(DKR_Event const *event) noexcept -> void {
+	dkr_event_list_push(dkr_frame_arena(), &dkr_context->events[0], event);
+}
+
+auto dk::dkr_push_event_kind(DKR_EventKind kind) noexcept -> void {
+	DKR_Event const event = { kind };
+	dkr_event_list_push(dkr_frame_arena(), &dkr_context->events[0], &event);
+}
+
+auto dk::dkr_next_event(DKR_Event **event) noexcept -> b8 {
+	DKR_EventNode *node = dkr_context->events[1].first;
+	if (*event != nullptr) {
+		node = DK_CAST_FROM_MEMBER(DKR_EventNode, event, *event);
+		node = node->next;
+	}
+	*event = nullptr;
+	if (node != nullptr) {
+		*event = &node->event;
+	}
+	return *event != nullptr;
+}
+
 auto dk::dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, LogKind kind) noexcept -> void {
 	if (console->line_write_pos - console->line_read_pos >= console->max_lines) {
 		console->line_read_pos += 1;
@@ -17,7 +53,7 @@ auto dk::dkr_console_commit_line(DKR_Console *console, u64 offset, u32 size, Log
 	console->line_write_pos += 1;
 }
 
-auto dk::dkr_target_frame_time_update(RGFW_monitor const *monitor) noexcept -> void {
+auto dk::dkr_set_target_frame_time_from_monitor(RGFW_monitor const *monitor) noexcept -> void {
 	f32 target_refresh_rate = 60.0f;
 	if (monitor->mode.refreshRate > 0.0f) {
 		target_refresh_rate = monitor->mode.refreshRate;
@@ -251,6 +287,17 @@ auto dk::dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAsse
 	return success;
 }
 
+auto dk::dkr_render_assets_release(DKR_RenderAssets *assets) noexcept -> void {
+	for (u64 s = 0; s < DKR_SHADER_KIND_COUNT; ++s) {
+		glDeleteProgram(assets->shaders[s]);
+		assets->shaders[s] = 0;
+	}
+	for (u64 t = 0; t < DKR_TEXTURE_KIND_COUNT; ++t) {
+		glDeleteTextures(1, &assets->textures[t]);
+		assets->textures[t] = 0;
+	}
+}
+
 auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	ZoneScoped;
 	(void)cmd_line;
@@ -320,7 +367,7 @@ auto dk::dkr_init(CmdLine *cmd_line) noexcept -> void {
 	//~ Dedrick: Set up main window.
 	dkr_context->window = dt_window_open("dk_renderer"_str8, 0, 0, 800, 600, RGFW_windowCenter | RGFW_windowScaleToMonitor);
 	dkr_context->monitor = RGFW_window_getMonitor(dkr_context->window);
-	dkr_target_frame_time_update(dkr_context->monitor);
+	dkr_set_target_frame_time_from_monitor(dkr_context->monitor);
 	ogl_window_equip(dkr_context->window);
 
 	//~ Dedrick: Initialize ImGui.
@@ -351,6 +398,7 @@ auto dk::dkr_shutdown() noexcept -> void {
 auto dk::dkr_frame() noexcept -> b8 {
 	ZoneScoped;
 	TempArena const scratch = scratch_begin(nullptr, 0);
+	dk_defer(scratch_end(scratch));
 
 	//~ Dedrick: Determine frame time.
 	// https://medium.com/@tglaiel/how-to-make-your-game-run-at-60fps-24c61210fe75
@@ -440,7 +488,7 @@ auto dk::dkr_frame() noexcept -> b8 {
 					break;
 				}
 				case DKR_EVENT_KIND_UPDATE_TARGET_FRAME_RATE: {
-					dkr_target_frame_time_update(dkr_context->monitor);
+					dkr_set_target_frame_time_from_monitor(dkr_context->monitor);
 					break;
 				}
 				case DKR_EVENT_KIND_RELOAD_PAK: {
@@ -746,6 +794,6 @@ auto dk::dkr_frame() noexcept -> b8 {
 			}
 		}
 	}
-	scratch_end(scratch);
+
 	return dkr_context->quit;
 }
