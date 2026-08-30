@@ -113,8 +113,30 @@ auto dk::ogl_window_unequip(RGFW_window *window) noexcept -> void {
 	(void)window;
 }
 
+auto dk::ogl_fence_alloc() noexcept -> GLsync {
+	GLsync const result = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	return result;
+}
+
+auto dk::ogl_fence_release(GLsync fence) noexcept -> void {
+	glDeleteSync(fence);
+}
+
+auto dk::ogl_fence_wait(GLsync fence, u64 end_time_us) noexcept -> OGL_FenceStatus {
+	u64 const wait_us = ogl__wait_us_from_end_time_us(end_time_us);
+	GLenum const status = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, wait_us);
+	OGL_FenceStatus result = OGL_FenceStatus::Error;
+	switch (status) {
+		case GL_CONDITION_SATISFIED: [[fallthrough]];
+		case GL_ALREADY_SIGNALED: { result = OGL_FenceStatus::Signaled; }
+		case GL_TIMEOUT_EXPIRED:  { result = OGL_FenceStatus::Timeout; }
+	}
+	return result;
+}
+
 auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noexcept -> GLuint {
 	TempArena const scratch = scratch_begin(nullptr, 0);
+	dk_defer(scratch_end(scratch));
 
 	//~ Dedrick: Compile shader stage.
 	GLuint shader = glCreateShader(stage);
@@ -144,12 +166,12 @@ auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noe
 		shader = 0;
 	}
 
-	scratch_end(scratch);
 	return shader;
 }
 
 auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept -> GLuint {
 	TempArena const scratch = scratch_begin(nullptr, 0);
+	dk_defer(scratch_end(scratch));
 
 	//~ Dedrick: Link program.
 	GLuint program = glCreateProgram();
@@ -181,6 +203,17 @@ auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept
 		program = 0;
 	}
 
-	scratch_end(scratch);
 	return program;
+}
+
+auto dk::ogl__wait_us_from_end_time_us(u64 end_time_us) noexcept -> u64 {
+	if (end_time_us == U64_MAX) {
+		return GL_TIMEOUT_IGNORED;
+	}
+	u64 wait_us = 0;
+	u64 const begin_time_us = now_time_us();
+	if (begin_time_us < end_time_us) {
+		wait_us = end_time_us - begin_time_us;
+	}
+	return wait_us;
 }
