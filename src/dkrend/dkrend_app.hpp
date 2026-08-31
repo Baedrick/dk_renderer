@@ -2,16 +2,9 @@
 
 #pragma once
 
-namespace dk {
-	enum DKR_EventKind : u32 {
-		DKR_EVENT_KIND_NULL = 0,
-		DKR_EVENT_KIND_QUIT,
-		DKR_EVENT_KIND_UPDATE_TARGET_FRAME_RATE,
-		DKR_EVENT_KIND_RELOAD_PAK,
-		DKR_EVENT_KIND_OPEN_CONSOLE,
-		DKR_EVENT_KIND_COUNT
-	};
+#include "dkrend_meta.hpp"
 
+namespace dk {
 	union DKR_Event {
 		DKR_EventKind kind;
 	};
@@ -28,19 +21,8 @@ namespace dk {
 		u64 count;
 	};
 
-	struct DKR_PakView {
+	struct DKR_Pak {
 
-	};
-
-	enum DKR_ShaderKind : u32 {
-		DKR_SHADER_KIND_HELLO_TRIANGLE,
-		DKR_SHADER_KIND_DUMMY,
-		DKR_SHADER_KIND_COUNT
-	};
-
-	enum DKR_TextureKind : u32 {
-		DKR_TEXTURE_KIND_TONY_MC_MAPFACE,
-		DKR_TEXTURE_KIND_COUNT,
 	};
 
 	struct DKR_RenderAssets {

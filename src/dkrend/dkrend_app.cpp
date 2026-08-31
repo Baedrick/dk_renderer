@@ -1,5 +1,7 @@
 // Copyright (C) 2026 Koh Swee Teck Dedrick. All rights reserved.
 
+#include "dkrend_meta.cpp"
+
 dk::DKR_Context *dk::dkr_context;
 
 auto dk::dkr_frame_arena() noexcept -> Arena * {
@@ -11,10 +13,7 @@ auto dk::dkr_event_list_push(Arena *arena, DKR_EventList *events, DKR_Event cons
 	node->event.kind = event->kind;
 	// NOTE(Dedrick): Attach payload, if required.
 	switch (event->kind) {
-		case DKR_EVENT_KIND_RELOAD_PAK : {
-			node->event.reload_pak.file_path = str8_copy(arena, event->reload_pak.file_path);
-			break;
-		}
+		default: break;
 	}
 	list_push_back(&events->first, &events->last, node);
 	events->count += 1;
