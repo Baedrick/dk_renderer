@@ -22,7 +22,10 @@ namespace dk {
 	};
 
 	struct DKR_Pak {
-
+		File file;
+		FileMap file_map;
+		Buffer metadata;
+		PAK_Parsed parsed;
 	};
 
 	struct DKR_RenderAssets {
@@ -31,7 +34,9 @@ namespace dk {
 	};
 
 	struct DKR_RenderContext {
-
+		GPU_RingBuffer *stage_ring;
+		GPU_RingFenceList stage_ring_fences;
+		GLuint stage_buffer;
 	};
 
 	struct DKR_ConsoleLine {
@@ -104,11 +109,10 @@ namespace dk {
 	auto dkr_set_target_frame_time_from_monitor(RGFW_monitor const *monitor) noexcept -> void;
 
 	auto dkr_pak_path(Arena *arena) noexcept -> String8;
-	auto dkr_pak_open() noexcept -> void; // TODO(Dedrick)
-	auto dkr_pak_close() noexcept -> void; // TODO(Dedrick)
-	auto dkr_pak_read_metadata(Arena *arena, File file, PAK_Parsed *out_parsed) noexcept -> b8;
+	auto dkr_pak_open(String8 path, DKR_Pak *out_pak) noexcept -> b8;
+	auto dkr_pak_close(DKR_Pak *pak) noexcept -> void;
 
-	auto dkr_render_assets_load(File file, PAK_Parsed const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
+	auto dkr_render_assets_load(DKR_Pak const *pak, DKR_RenderAssets *out_assets) noexcept -> b8;
 	auto dkr_render_assets_release(DKR_RenderAssets *assets) noexcept -> void;
 
 	auto dkr_init(CmdLine *cmd_line) noexcept -> void;

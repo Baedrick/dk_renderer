@@ -11,17 +11,6 @@ dk::u16 const dk::pak_section_element_size_table[] = {
 };
 static_assert(dk::array_count(dk::pak_section_element_size_table) == dk::PAK_SECTION_KIND_COUNT);
 
-auto dk::pak_metadata_size_from_bytes(Buffer bytes) noexcept -> u64 {
-	u64 result = 0;
-	if (bytes.size >= sizeof(PAK_Header)) {
-		PAK_Header *const header = reinterpret_cast<PAK_Header *>(bytes.data);
-		if (header->magic == PAK_MAGIC_CONSTANT && header->version == PAK_VERSION) {
-			result = header->metadata_size;
-		}
-	}
-	return result;
-}
-
 auto dk::pak_parse(Buffer bytes, PAK_Parsed *out) noexcept -> b8 {
 	b8 good = false;
 	if (bytes.size >= sizeof(PAK_Header)) {

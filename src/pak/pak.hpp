@@ -92,8 +92,6 @@ namespace dk {
 		u64 section_count;
 	};
 
-	auto pak_metadata_size_from_bytes(Buffer bytes) noexcept -> u64;
-
 	auto pak_parse(Buffer bytes, PAK_Parsed *out) noexcept -> b8;
 
 	auto pak_section_raw_data_from_kind(PAK_Parsed const *pak, PAK_SectionKind kind, u64 *out_size) noexcept -> void *;

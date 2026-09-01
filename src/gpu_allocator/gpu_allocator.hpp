@@ -17,7 +17,7 @@ namespace dk {
 
 	struct GPU_RingFenceNode {
 		GPU_RingFenceNode *next;
-		GPU_RingFence fence;
+		GPU_RingFence ring_fence;
 	};
 
 	struct GPU_RingFenceList {

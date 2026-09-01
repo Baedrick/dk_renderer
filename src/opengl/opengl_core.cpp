@@ -43,7 +43,7 @@ auto dk::ogl_debug_msg_callback(GLenum source, GLenum type, GLuint id, GLenum se
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String8 const log_msg = str8f(
 		scratch.arena,
-		"[OpenGL] %.*s (%d) of %.*s severity from %.*s: %.*s\n",
+		"[opengl] %.*s (%d) of %.*s severity from %.*s: %.*s\n",
 		DK_STR8_VARG(type_str),
 		id,
 		DK_STR8_VARG(severity_str),
@@ -153,13 +153,13 @@ auto dk::ogl_shader_stage_compile(GLenum stage, Buffer source, String8 name) noe
 		log.data = arena_push_array<u8>(scratch.arena, info_log_length);
 		log.size = info_log_length - 1;
 		glGetShaderInfoLog(shader, info_log_length, nullptr, reinterpret_cast<char *>(const_cast<u8 *>(log.data)));
-		DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(log));
+		DK_LOG_ERRORF("[opengl] %.*s\n", DK_STR8_VARG(log));
 	}
 	if (status == GL_TRUE) {
 		if (name.size > 0) {
 			glObjectLabel(GL_SHADER, shader, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
 		}
-		DK_LOG_INFOF("[OpenGL] shader stage %.*s compiled\n", DK_STR8_VARG(name));
+		DK_LOG_INFOF("[opengl] shader stage %.*s compiled\n", DK_STR8_VARG(name));
 	}
 	else {
 		glDeleteShader(shader);
@@ -190,13 +190,13 @@ auto dk::ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept
 		log.data = arena_push_array<u8>(scratch.arena, info_log_length);
 		log.size = info_log_length - 1;
 		glGetProgramInfoLog(program, info_log_length, nullptr, reinterpret_cast<char *>(const_cast<u8 *>(log.data)));
-		DK_LOG_ERRORF("[OpenGL] %.*s\n", DK_STR8_VARG(log));
+		DK_LOG_ERRORF("[opengl] %.*s\n", DK_STR8_VARG(log));
 	}
 	if (status == GL_TRUE) {
 		if (name.size > 0) {
 			glObjectLabel(GL_PROGRAM, program, static_cast<GLsizei>(name.size), reinterpret_cast<char const *>(name.data));
 		}
-		DK_LOG_INFOF("[OpenGL] shader %.*s linked\n", DK_STR8_VARG(name));
+		DK_LOG_INFOF("[opengl] shader %.*s linked\n", DK_STR8_VARG(name));
 	}
 	else {
 		glDeleteProgram(program);
