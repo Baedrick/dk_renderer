@@ -19,8 +19,6 @@ namespace dk {
 
 	extern OGL_Context *ogl_context;
 
-	auto ogl_debug_msg_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void;
-
 	auto ogl_init(CmdLine *cmd_line) noexcept -> void;
 	auto ogl_shutdown() noexcept -> void;
 
@@ -36,4 +34,5 @@ namespace dk {
 	auto ogl_shader_link(u64 count, GLuint const *stages, String8 name) noexcept -> GLuint;
 
 	auto ogl__wait_us_from_end_time_us(u64 end_time_us) noexcept -> u64;
+	auto ogl__debug_msg_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const *message, void const *user) noexcept -> void;
 }
