@@ -48,23 +48,23 @@ namespace dk {
 
 	using StringMatchFlags = u32;
 	enum : u32 {
-		STRING_MATCH_FLAG_NONE = 0,
-		STRING_MATCH_FLAG_CASE_INSENSITIVE = 1u << 0,
-		STRING_MATCH_FLAG_SLASH_INSENSITIVE = 1u << 1
+		StringMatchFlag_None              = 0,
+		StringMatchFlag_CaseInsensitive   = 1u << 0,
+		StringMatchFlag_SlashInsensitive  = 1u << 1
 	};
 
 	using StringSplitFlags = u32;
 	enum : u32 {
-		STRING_SPLIT_FLAG_NONE = 0,
-		STRING_SPLIT_FLAG_KEEP_EMPTIES
+		StringSplitFlag_None         = 0,
+		StringSplitFlag_KeepEmpties  = 1u << 0
 	};
 
-	enum class PathStyle {
-		Null,
-		Relative,
-		WindowsAbsolute,
+	enum PathStyle {
+		PathStyle_Null,
+		PathStyle_Relative,
+		PathStyle_WindowsAbsolute,
 #ifdef DK_PLATFORM_WIN32
-		PlatformAbsolute = WindowsAbsolute
+		PathStyle_PlatformAbsolute = PathStyle_WindowsAbsolute
 #else
 #	error "Absolute path style is undefined for this platform."
 #endif

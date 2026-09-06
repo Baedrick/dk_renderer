@@ -177,11 +177,11 @@ auto dk::str8_equals(String8 s1, String8 s2, StringMatchFlags flags) noexcept ->
 	for (u64 i = 0; i < s1.size; ++i) {
 		u8 c1 = s1[i];
 		u8 c2 = s2[i];
-		if ((flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0) {
+		if ((flags & StringMatchFlag_CaseInsensitive) != 0) {
 			c1 = char_to_lower(c1);
 			c2 = char_to_lower(c2);
 		}
-		if ((flags & STRING_MATCH_FLAG_SLASH_INSENSITIVE) != 0) {
+		if ((flags & StringMatchFlag_SlashInsensitive) != 0) {
 			c1 = char_to_forward_slash(c1);
 			c2 = char_to_forward_slash(c2);
 		}
@@ -197,11 +197,11 @@ auto dk::str8_compare(String8 s1, String8 s2, StringMatchFlags flags) noexcept -
 	for (u64 i = 0; i < size; ++i) {
 		u8 c1 = s1[i];
 		u8 c2 = s2[i];
-		if ((flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0) {
+		if ((flags & StringMatchFlag_CaseInsensitive) != 0) {
 			c1 = char_to_lower(c1);
 			c2 = char_to_lower(c2);
 		}
-		if ((flags & STRING_MATCH_FLAG_SLASH_INSENSITIVE) != 0) {
+		if ((flags & StringMatchFlag_SlashInsensitive) != 0) {
 			c1 = char_to_forward_slash(c1);
 			c2 = char_to_forward_slash(c2);
 		}
@@ -223,7 +223,7 @@ auto dk::str8_find_needle(String8 str, u64 start_pos, String8 needle, StringMatc
 		return str.size;
 	}
 	u64 const stop_index = max(str.size + 1, needle.size) - needle.size;
-	b8 const case_insensitive = (flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0;
+	b8 const case_insensitive = (flags & StringMatchFlag_CaseInsensitive) != 0;
 	u8 const needle_first = case_insensitive ? char_to_lower(needle[0]) : needle[0];
 	for (u64 i = start_pos; i < stop_index; ++i) {
 		u8 const haystack_char = case_insensitive ? char_to_lower(str[i]) : str[i];
@@ -265,11 +265,11 @@ auto dk::str16_equals(String16 s1, String16 s2, StringMatchFlags flags) noexcept
 	for (u64 i = 0; i < s1.size; ++i) {
 		u16 c1 = s1[i];
 		u16 c2 = s2[i];
-		if ((flags & STRING_MATCH_FLAG_CASE_INSENSITIVE) != 0) {
+		if ((flags & StringMatchFlag_CaseInsensitive) != 0) {
 			c1 = char16_to_lower(c1);
 			c2 = char16_to_lower(c2);
 		}
-		if ((flags & STRING_MATCH_FLAG_SLASH_INSENSITIVE) != 0) {
+		if ((flags & StringMatchFlag_SlashInsensitive) != 0) {
 			c1 = char16_to_forward_slash(c1);
 			c2 = char16_to_forward_slash(c2);
 		}
@@ -481,7 +481,7 @@ auto dk::str8_list_copy(Arena *arena, String8List const *list) noexcept -> Strin
 
 auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims, StringSplitFlags flags) noexcept -> String8List {
 	String8List list = {};
-	b8 const keep_empties = (flags & STRING_SPLIT_FLAG_KEEP_EMPTIES) != 0;
+	b8 const keep_empties = (flags & StringSplitFlag_KeepEmpties) != 0;
 	u64 last_split = 0;
 	for (u64 i = 0; i < str.size; ++i) {
 		b8 is_delim = false;
@@ -506,7 +506,7 @@ auto dk::str8_list_split_by_char(Arena *arena, String8 str, String8 delims, Stri
 
 auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *delims, u64 delims_count, StringSplitFlags flags) noexcept -> String8List {
 	String8List list = {};
-	b8 const keep_empties = (flags & STRING_SPLIT_FLAG_KEEP_EMPTIES) != 0;
+	b8 const keep_empties = (flags & StringSplitFlag_KeepEmpties) != 0;
 	u64 last_split = 0;
 	for (u64 i = 0; i < str.size; ) {
 		b8 is_delim = false;
@@ -515,7 +515,7 @@ auto dk::str8_list_split_by_substr(Arena *arena, String8 str, String8 const *del
 			String8 const delim = delims[d];
 			if (delim.size > 0 && str.size - i >= delim.size) {
 				String8 const sub = str8_substr(str, i, i + delim.size);
-				if (str8_equals(sub, delim, STRING_MATCH_FLAG_NONE)) {
+				if (str8_equals(sub, delim, StringMatchFlag_None)) {
 					is_delim = true;
 					delim_size = delim.size;
 					break;
@@ -650,18 +650,18 @@ auto dk::path_skip_last_period(String8 path) noexcept -> String8 {
 }
 
 auto dk::path_style_from_str8(String8 str) noexcept -> PathStyle {
-	PathStyle result = PathStyle::Relative;
+	PathStyle result = PathStyle_Relative;
 	if (str.size >= 2 && char_is_alpha(str[0]) && str[1] == ':') {
 		// NOTE(Dedrick): C:folder is a VALID drive-relative path.
 		if (str.size == 2 || char_is_slash(str[2])) {
-			result = PathStyle::WindowsAbsolute;
+			result = PathStyle_WindowsAbsolute;
 		}
 	}
 	return result;
 }
 
 auto dk::path_split(Arena *arena, String8 path) noexcept -> String8List {
-	String8List const result = str8_list_split_by_char(arena, path, "/\\"_str8, STRING_SPLIT_FLAG_NONE);
+	String8List const result = str8_list_split_by_char(arena, path, "/\\"_str8, StringSplitFlag_None);
 	return result;
 }
 
@@ -679,7 +679,7 @@ auto dk::path_list_resolve_dots_in_place(String8List *path, PathStyle style) noe
 	for (String8Node *node = first, *next = nullptr; node != nullptr; node = next) {
 		next = node->next;
 
-		if (node == first && style == PathStyle::WindowsAbsolute) {
+		if (node == first && style == PathStyle_WindowsAbsolute) {
 			// Save without stack.
 			str8_list_push_node(path, node);
 		}
@@ -727,9 +727,9 @@ auto dk::path_list_resolve_dots_in_place(String8List *path, PathStyle style) noe
 auto dk::path_list_join_by_style(Arena *arena, String8List *path, PathStyle style) noexcept -> String8 {
 	String8JoinParams params = {};
 	switch (style) {
-		case PathStyle::Null: break;
-		case PathStyle::Relative: [[fallthrough]];
-		case PathStyle::WindowsAbsolute: {
+		case PathStyle_Null: break;
+		case PathStyle_Relative: [[fallthrough]];
+		case PathStyle_WindowsAbsolute: {
 			params.separator = "/"_str8;
 			break;
 		}
@@ -741,7 +741,7 @@ auto dk::path_list_join_by_style(Arena *arena, String8List *path, PathStyle styl
 auto dk::path_absolute_from_relative_and_base(Arena *arena, String8 relative, String8 base) noexcept -> String8 {
 	String8 result = relative;
 	PathStyle const relative_style = path_style_from_str8(relative);
-	if (relative.size > 0 && relative_style == PathStyle::Relative) {
+	if (relative.size > 0 && relative_style == PathStyle_Relative) {
 		TempArena const scratch = scratch_begin(&arena, 1);
 		String8 const absolute_path = str8f(scratch.arena, "%.*s/%.*s", DK_STR8_VARG(base), DK_STR8_VARG(relative));
 		String8List absolute_path_parts = path_split(scratch.arena, absolute_path);
@@ -765,7 +765,7 @@ auto dk::path_normalized_list_from_path(Arena *arena, String8 path, PathStyle *o
 
 auto dk::path_normalized_from_path(Arena *arena, String8 path) noexcept -> String8 {
 	TempArena const scratch = scratch_begin(&arena, 1);
-	PathStyle style = PathStyle::Relative;
+	PathStyle style = PathStyle_Relative;
 	String8List path_parts = path_normalized_list_from_path(scratch.arena, path, &style);
 	String8 const result = path_list_join_by_style(arena, &path_parts, style);
 	scratch_end(scratch);
