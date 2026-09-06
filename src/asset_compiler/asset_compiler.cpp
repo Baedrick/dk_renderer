@@ -73,7 +73,7 @@ auto dk::asc_thread_entry_point(void *p) noexcept -> void {
 				String8 input_file_path = node->string;
 				{
 					PathStyle path_style = path_style_from_str8(input_file_path);
-					if (path_style == PathStyle::Relative) {
+					if (path_style == PathStyle_Relative) {
 						String8 const abs_path = str8f(arena, "%.*s/%.*s", DK_STR8_VARG(working_dir), DK_STR8_VARG(node->string));
 						input_file_path = path_normalized_from_path(arena, abs_path);
 					}
