@@ -488,6 +488,5 @@ auto dk::g2d_convert(Arena *arena, G2D_ConvertParams const *params) noexcept -> 
 		cgltf_free(gltf);
 	}
 
-	scratch_end(scratch);
 	return result;
 }
