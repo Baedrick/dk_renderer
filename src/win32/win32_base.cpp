@@ -6,9 +6,9 @@ dk::W32_Context dk::w32_context;
 //~ Dedrick: Win32 helpers.
 
 auto dk::w32_file_flags_from_dw_file_attributes(DWORD dw_file_attributes) noexcept -> FileFlags {
-	FileFlags flags = FILE_FLAG_NONE;
+	FileFlags flags = FileFlag_None;
 	if ((dw_file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-		flags |= FILE_FLAG_DIRECTORY;
+		flags |= FileFlag_Directory;
 	}
 	return flags;
 }
@@ -47,7 +47,7 @@ auto dk::w32_entity_alloc(W32_EntityKind kind) noexcept -> W32_Entity * {
 }
 
 auto dk::w32_entity_release(W32_Entity *entity) noexcept -> void {
-	entity->kind = W32_ENTITY_NULL;
+	entity->kind = W32_EntityKind_Null;
 	EnterCriticalSection(&w32_context.entity_mutex);
 	forward_list_stack_push(&w32_context.entity_free, entity);
 	LeaveCriticalSection(&w32_context.entity_mutex);
@@ -143,12 +143,12 @@ auto dk::file_open(String8 path, FileAccessFlags flags) noexcept -> File {
 	DWORD share_mode = 0;
 	DWORD creation_disposition = OPEN_EXISTING;
 	SECURITY_ATTRIBUTES security_attributes = { sizeof(SECURITY_ATTRIBUTES), nullptr, FALSE };
-	if (flags & FILE_ACCESS_FLAG_READ) { access_flags |= GENERIC_READ; }
-	if (flags & FILE_ACCESS_FLAG_WRITE) { access_flags |= GENERIC_WRITE; }
-	if (flags & FILE_ACCESS_FLAG_SHARE_READ) { share_mode |= FILE_SHARE_READ; }
-	if (flags & FILE_ACCESS_FLAG_SHARE_WRITE) { share_mode |= FILE_SHARE_WRITE | FILE_SHARE_DELETE; }
-	if (flags & FILE_ACCESS_FLAG_WRITE) { creation_disposition = CREATE_ALWAYS; }
-	if (flags & FILE_ACCESS_FLAG_APPEND) { creation_disposition = OPEN_ALWAYS; access_flags |= FILE_APPEND_DATA; }
+	if (flags & FileAccessFlag_Read) { access_flags |= GENERIC_READ; }
+	if (flags & FileAccessFlag_Write) { access_flags |= GENERIC_WRITE; }
+	if (flags & FileAccessFlag_ShareRead) { share_mode |= FILE_SHARE_READ; }
+	if (flags & FileAccessFlag_ShareWrite) { share_mode |= FILE_SHARE_WRITE | FILE_SHARE_DELETE; }
+	if (flags & FileAccessFlag_Write) { creation_disposition = CREATE_ALWAYS; }
+	if (flags & FileAccessFlag_Append) { creation_disposition = OPEN_ALWAYS; access_flags |= FILE_APPEND_DATA; }
 
 	HANDLE const file = CreateFileW(
 		reinterpret_cast<WCHAR const *>(path16.data),
@@ -296,12 +296,12 @@ auto dk::file_map_open(File file, FileAccessFlags flags) noexcept -> FileMap {
 	HANDLE const file_handle = reinterpret_cast<HANDLE>(file.v);
 	DWORD protect_flags = 0;
 	switch (flags) {
-		case FILE_ACCESS_FLAG_READ: {
+		case FileAccessFlag_Read: {
 			protect_flags |= PAGE_READONLY;
 			break;
 		}
-		case FILE_ACCESS_FLAG_WRITE:
-		case FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_WRITE: {
+		case FileAccessFlag_Write:
+		case FileAccessFlag_Read | FileAccessFlag_Write: {
 			protect_flags |= PAGE_READWRITE;
 			break;
 		}
@@ -324,15 +324,15 @@ auto dk::file_map_view_open(FileMap map, FileAccessFlags flags, u64 begin, u64 e
 	u64 const size = end - begin;
 	DWORD access_flags = 0;
 	switch (flags) {
-		case FILE_ACCESS_FLAG_READ: {
+		case FileAccessFlag_Read: {
 			access_flags = FILE_MAP_READ;
 			break;
 		}
-		case FILE_ACCESS_FLAG_WRITE: {
+		case FileAccessFlag_Write: {
 			access_flags = FILE_MAP_WRITE;
 			break;
 		}
-		case FILE_ACCESS_FLAG_READ | FILE_ACCESS_FLAG_WRITE: {
+		case FileAccessFlag_Read | FileAccessFlag_Write: {
 			access_flags = FILE_MAP_ALL_ACCESS;
 			break;
 		}
@@ -353,7 +353,7 @@ auto dk::dir_iter_begin(String8 dir, DirIterFlags flags) noexcept -> DirIter {
 	TempArena const scratch = scratch_begin(nullptr, 0);
 	String8 const dir_with_wildcard = str8_cat(scratch.arena, dir, "\\*"_str8);
 	String16 const dir16 = str16_from_8(scratch.arena, dir_with_wildcard);
-	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_DIR_ITER);
+	W32_Entity *const entity = w32_entity_alloc(W32_EntityKind_DirIter);
 	entity->dir_iter.flags = flags;
 	entity->dir_iter.handle = FindFirstFileExW(
 		reinterpret_cast<WCHAR const *>(dir16.data),
@@ -370,10 +370,10 @@ auto dk::dir_iter_begin(String8 dir, DirIterFlags flags) noexcept -> DirIter {
 
 auto dk::dir_iter_next(Arena *arena, DirIter dir_iter, DirIterResult *out_result) noexcept -> b8 {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(dir_iter.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_DIR_ITER);
+	DK_ASSERT(entity->kind == W32_EntityKind_DirIter);
 	W32_DirIter *const w32_iter = &entity->dir_iter;
 	DirIterFlags const flags = w32_iter->flags;
-	if ((flags & DIR_ITER_FLAG_DONE) != 0 || w32_iter->handle == INVALID_HANDLE_VALUE) {
+	if ((flags & DirIterFlag_Done) != 0 || w32_iter->handle == INVALID_HANDLE_VALUE) {
 		return false;
 	}
 	b8 found = false;
@@ -386,10 +386,10 @@ auto dk::dir_iter_next(Arena *arena, DirIter dir_iter, DirIterResult *out_result
 			usable = false;
 		}
 		if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
-			usable = usable && (flags & DIR_ITER_FLAG_SKIP_FOLDERS) == 0;
+			usable = usable && (flags & DirIterFlag_SkipFolders) == 0;
 		}
 		else {
-			usable = usable && (flags & DIR_ITER_FLAG_SKIP_FILES) == 0;
+			usable = usable && (flags & DirIterFlag_SkipFiles) == 0;
 		}
 		if (usable) {
 			out_result->name = str8_from_16(arena, name16);
@@ -399,20 +399,20 @@ auto dk::dir_iter_next(Arena *arena, DirIter dir_iter, DirIterResult *out_result
 			out_result->attributes.flags = w32_file_flags_from_dw_file_attributes(attributes);
 			found = true;
 			if (!FindNextFileW(w32_iter->handle, &w32_iter->find_data)) {
-				w32_iter->flags |= DIR_ITER_FLAG_DONE;
+				w32_iter->flags |= DirIterFlag_Done;
 			}
 			break;
 		}
 	} while (FindNextFileW(w32_iter->handle, &w32_iter->find_data));
 	if (!found) {
-		w32_iter->flags |= DIR_ITER_FLAG_DONE;
+		w32_iter->flags |= DirIterFlag_Done;
 	}
 	return found;
 }
 
 auto dk::dir_iter_end(DirIter dir_iter) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(dir_iter.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_DIR_ITER);
+	DK_ASSERT(entity->kind == W32_EntityKind_DirIter);
 	FindClose(entity->dir_iter.handle);
 	w32_entity_release(entity);
 }
@@ -451,7 +451,7 @@ auto dk::platform_set_thread_name(String8 name) noexcept -> void {
 }
 
 auto dk::thread_launch(ThreadFunction *func, void *params) noexcept -> Thread {
-	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_THREAD);
+	W32_Entity *const entity = w32_entity_alloc(W32_EntityKind_Thread);
 	entity->thread.func = func;
 	entity->thread.params = params;
 	entity->thread.handle = CreateThread(nullptr, 0, w32_thread_entry_caller, entity, 0, &entity->thread.tid);
@@ -462,7 +462,7 @@ auto dk::thread_launch(ThreadFunction *func, void *params) noexcept -> Thread {
 auto dk::thread_join(Thread thread) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(thread.v);
 	if (entity != nullptr) {
-		DK_ASSERT(entity->kind == W32_ENTITY_THREAD);
+		DK_ASSERT(entity->kind == W32_EntityKind_Thread);
 		WaitForSingleObject(entity->thread.handle, INFINITE);
 		CloseHandle(entity->thread.handle);
 		w32_entity_release(entity);
@@ -472,14 +472,14 @@ auto dk::thread_join(Thread thread) noexcept -> void {
 auto dk::thread_detach(Thread thread) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(thread.v);
 	if (entity != nullptr) {
-		DK_ASSERT(entity->kind == W32_ENTITY_THREAD);
+		DK_ASSERT(entity->kind == W32_EntityKind_Thread);
 		CloseHandle(entity->thread.handle);
 		w32_entity_release(entity);
 	}
 }
 
 auto dk::mutex_alloc() noexcept -> Mutex {
-	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_MUTEX);
+	W32_Entity *const entity = w32_entity_alloc(W32_EntityKind_Mutex);
 	InitializeCriticalSection(&entity->mutex.handle);
 	Mutex const result = { reinterpret_cast<uintptr_t>(entity) };
 	return result;
@@ -487,25 +487,25 @@ auto dk::mutex_alloc() noexcept -> Mutex {
 
 auto dk::mutex_release(Mutex mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_Mutex);
 	DeleteCriticalSection(&entity->mutex.handle);
 	w32_entity_release(entity);
 }
 
 auto dk::mutex_scope_enter(Mutex mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_Mutex);
 	EnterCriticalSection(&entity->mutex.handle);
 }
 
 auto dk::mutex_scope_leave(Mutex mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_Mutex);
 	LeaveCriticalSection(&entity->mutex.handle);
 }
 
 auto dk::rw_mutex_alloc() noexcept -> RWMutex {
-	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_RW_MUTEX);
+	W32_Entity *const entity = w32_entity_alloc(W32_EntityKind_RWMutex);
 	InitializeSRWLock(&entity->rw_mutex.handle);
 	RWMutex const result = { reinterpret_cast<uintptr_t>(entity) };
 	return result;
@@ -513,36 +513,36 @@ auto dk::rw_mutex_alloc() noexcept -> RWMutex {
 
 auto dk::rw_mutex_release(RWMutex rw_mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_RW_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_RWMutex);
 	w32_entity_release(entity);
 }
 
 auto dk::rw_mutex_scope_enter_w(RWMutex rw_mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_RW_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_RWMutex);
 	AcquireSRWLockExclusive(&entity->rw_mutex.handle);
 }
 
 auto dk::rw_mutex_scope_leave_w(RWMutex rw_mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_RW_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_RWMutex);
 	ReleaseSRWLockExclusive(&entity->rw_mutex.handle);
 }
 
 auto dk::rw_mutex_scope_enter_r(RWMutex rw_mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_RW_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_RWMutex);
 	AcquireSRWLockShared(&entity->rw_mutex.handle);
 }
 
 auto dk::rw_mutex_scope_leave_r(RWMutex rw_mutex) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_RW_MUTEX);
+	DK_ASSERT(entity->kind == W32_EntityKind_RWMutex);
 	ReleaseSRWLockShared(&entity->rw_mutex.handle);
 }
 
 auto dk::cond_var_alloc() noexcept -> CondVar {
-	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_CONDITIONAL_VARIABLE);
+	W32_Entity *const entity = w32_entity_alloc(W32_EntityKind_ConditionalVariable);
 	InitializeConditionVariable(&entity->cond_var.handle);
 	CondVar const result = { reinterpret_cast<uintptr_t>(entity) };
 	return result;
@@ -550,7 +550,7 @@ auto dk::cond_var_alloc() noexcept -> CondVar {
 
 auto dk::cond_var_release(CondVar cond_var) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(cond_var.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_CONDITIONAL_VARIABLE);
+	DK_ASSERT(entity->kind == W32_EntityKind_ConditionalVariable);
 	w32_entity_release(entity);
 }
 
@@ -559,9 +559,9 @@ auto dk::cond_var_wait(CondVar cond_var, Mutex mutex, u64 end_time_us) noexcept 
 	b8 result = false;
 	if (sleep_ms > 0) {
 		W32_Entity *const entity_cv = reinterpret_cast<W32_Entity *>(cond_var.v);
-		DK_ASSERT(entity_cv->kind == W32_ENTITY_CONDITIONAL_VARIABLE);
+		DK_ASSERT(entity_cv->kind == W32_EntityKind_ConditionalVariable);
 		W32_Entity *const entity_mutex = reinterpret_cast<W32_Entity *>(mutex.v);
-		DK_ASSERT(entity_mutex->kind == W32_ENTITY_MUTEX);
+		DK_ASSERT(entity_mutex->kind == W32_EntityKind_Mutex);
 		result = SleepConditionVariableCS(
 			&entity_cv->cond_var.handle,
 			&entity_mutex->mutex.handle,
@@ -576,9 +576,9 @@ auto dk::cond_var_wait_rw_w(CondVar cond_var, RWMutex rw_mutex, u64 end_time_us)
 	b8 result = false;
 	if (sleep_ms > 0) {
 		W32_Entity *const entity_cv = reinterpret_cast<W32_Entity *>(cond_var.v);
-		DK_ASSERT(entity_cv->kind == W32_ENTITY_CONDITIONAL_VARIABLE);
+		DK_ASSERT(entity_cv->kind == W32_EntityKind_ConditionalVariable);
 		W32_Entity *const entity_rw_mutex = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-		DK_ASSERT(entity_rw_mutex->kind == W32_ENTITY_RW_MUTEX);
+		DK_ASSERT(entity_rw_mutex->kind == W32_EntityKind_RWMutex);
 		result = SleepConditionVariableSRW(
 			&entity_cv->cond_var.handle,
 			&entity_rw_mutex->rw_mutex.handle,
@@ -594,9 +594,9 @@ auto dk::cond_var_wait_rw_r(CondVar cond_var, RWMutex rw_mutex, u64 end_time_us)
 	b8 result = false;
 	if (sleep_ms > 0) {
 		W32_Entity *const entity_cv = reinterpret_cast<W32_Entity *>(cond_var.v);
-		DK_ASSERT(entity_cv->kind == W32_ENTITY_CONDITIONAL_VARIABLE);
+		DK_ASSERT(entity_cv->kind == W32_EntityKind_ConditionalVariable);
 		W32_Entity *const entity_rw_mutex = reinterpret_cast<W32_Entity *>(rw_mutex.v);
-		DK_ASSERT(entity_rw_mutex->kind == W32_ENTITY_RW_MUTEX);
+		DK_ASSERT(entity_rw_mutex->kind == W32_EntityKind_RWMutex);
 		result = SleepConditionVariableSRW(
 			&entity_cv->cond_var.handle,
 			&entity_rw_mutex->rw_mutex.handle,
@@ -609,13 +609,13 @@ auto dk::cond_var_wait_rw_r(CondVar cond_var, RWMutex rw_mutex, u64 end_time_us)
 
 auto dk::cond_var_signal(CondVar cond_var) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(cond_var.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_CONDITIONAL_VARIABLE);
+	DK_ASSERT(entity->kind == W32_EntityKind_ConditionalVariable);
 	WakeConditionVariable(&entity->cond_var.handle);
 }
 
 auto dk::cond_var_signal_all(CondVar cond_var) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(cond_var.v);
-	DK_ASSERT(entity->kind == W32_ENTITY_CONDITIONAL_VARIABLE);
+	DK_ASSERT(entity->kind == W32_EntityKind_ConditionalVariable);
 	WakeAllConditionVariable(&entity->cond_var.handle);
 }
 
@@ -660,7 +660,7 @@ auto dk::semaphore_signal(Semaphore semaphore) noexcept -> void {
 }
 
 auto dk::barrier_alloc(u64 count) noexcept -> Barrier {
-	W32_Entity *const entity = w32_entity_alloc(W32_ENTITY_BARRIER);
+	W32_Entity *const entity = w32_entity_alloc(W32_EntityKind_Barrier);
 	InitializeSynchronizationBarrier(&entity->barrier.handle, static_cast<LONG>(count), -1);
 	Barrier const result = { reinterpret_cast<uintptr_t>(entity) };
 	return result;
@@ -669,7 +669,7 @@ auto dk::barrier_alloc(u64 count) noexcept -> Barrier {
 auto dk::barrier_release(Barrier barrier) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(barrier.v);
 	if (entity != nullptr) {
-		DK_ASSERT(entity->kind == W32_ENTITY_BARRIER);
+		DK_ASSERT(entity->kind == W32_EntityKind_Barrier);
 		DeleteSynchronizationBarrier(&entity->barrier.handle);
 		w32_entity_release(entity);
 	}
@@ -678,7 +678,7 @@ auto dk::barrier_release(Barrier barrier) noexcept -> void {
 auto dk::barrier_wait(Barrier barrier) noexcept -> void {
 	W32_Entity *const entity = reinterpret_cast<W32_Entity *>(barrier.v);
 	if (entity != nullptr) {
-		DK_ASSERT(entity->kind == W32_ENTITY_BARRIER);
+		DK_ASSERT(entity->kind == W32_EntityKind_Barrier);
 		EnterSynchronizationBarrier(&entity->barrier.handle, 0);
 	}
 }
@@ -804,7 +804,7 @@ auto dk::process_kill(Process process) noexcept -> b8 {
 
 auto dk::w32_thread_entry_caller(void *params) noexcept -> DWORD {
 	W32_Entity *const entity = static_cast<W32_Entity *>(params);
-	DK_ASSERT(entity->kind == W32_ENTITY_THREAD);
+	DK_ASSERT(entity->kind == W32_EntityKind_Thread);
 	ThreadFunction *const func = entity->thread.func;
 	void *const func_params = entity->thread.params;
 	thread_entry_point(func, func_params);

@@ -13,17 +13,17 @@ namespace dk {
 
 	using FileAccessFlags = u32;
 	enum : u32 {
-		FILE_ACCESS_FLAG_READ        = 1u << 0,
-		FILE_ACCESS_FLAG_WRITE       = 1u << 1,
-		FILE_ACCESS_FLAG_APPEND      = 1u << 2,
-		FILE_ACCESS_FLAG_SHARE_READ  = 1u << 3,
-		FILE_ACCESS_FLAG_SHARE_WRITE = 1u << 4
+		FileAccessFlag_Read        = 1u << 0,
+		FileAccessFlag_Write       = 1u << 1,
+		FileAccessFlag_Append      = 1u << 2,
+		FileAccessFlag_ShareRead   = 1u << 3,
+		FileAccessFlag_ShareWrite  = 1u << 4
 	};
 
 	using FileFlags = u32;
 	enum : u32 {
-		FILE_FLAG_NONE      = 0,
-		FILE_FLAG_DIRECTORY = 1u << 0
+		FileFlag_None       = 0,
+		FileFlag_Directory  = 1u << 0
 	};
 
 	struct FileAttributes {
@@ -33,11 +33,11 @@ namespace dk {
 
 	using DirIterFlags = u32;
 	enum : u32 {
-		DIR_ITER_FLAG_NONE              = 0,
-		DIR_ITER_FLAG_SKIP_FOLDERS      = 1u << 0,
-		DIR_ITER_FLAG_SKIP_FILES        = 1u << 1,
-		DIR_ITER_FLAG_SKIP_HIDDEN_FILES = 1u << 2,
-		DIR_ITER_FLAG_DONE              = 1u << 31,
+		DirIterFlag_None             = 0,
+		DirIterFlag_SkipFolders      = 1u << 0,
+		DirIterFlag_SkipFiles        = 1u << 1,
+		DirIterFlag_SkipHiddenFiles  = 1u << 2,
+		DirIterFlag_Done             = 1u << 31,
 	};
 
 	struct DirIter {

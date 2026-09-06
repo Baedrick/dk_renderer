@@ -50,13 +50,13 @@ namespace dk {
 	};
 
 	enum W32_EntityKind {
-		W32_ENTITY_NULL = 0,
-		W32_ENTITY_THREAD,
-		W32_ENTITY_MUTEX,
-		W32_ENTITY_RW_MUTEX,
-		W32_ENTITY_CONDITIONAL_VARIABLE,
-		W32_ENTITY_BARRIER,
-		W32_ENTITY_DIR_ITER
+		W32_EntityKind_Null = 0,
+		W32_EntityKind_Thread,
+		W32_EntityKind_Mutex,
+		W32_EntityKind_RWMutex,
+		W32_EntityKind_ConditionaVariable,
+		W32_EntityKind_Barrier,
+		W32_EntityKind_DirIter
 	};
 
 	struct W32_Entity {
