@@ -1,0 +1,7 @@
+[shader]
+src/dummy.comp
+src/hello_triangle.frag
+src/hello_triangle.vert
+
+[texture]
+res/tony_mc_mapface.dds
