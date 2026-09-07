@@ -687,7 +687,7 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 				bounding_box_max[2] = max(bounding_box_max[2], p[2]);
 			}
 
-			//~ Dedrick: Ritter sphere - center & initial radius from axis-aligned bounding box.
+			//~ Dedrick: Compute bounds using ritter sphere.
 			f32 sphere_center[3] = {
 				(bounding_box_max[0] + bounding_box_min[0]) * 0.5f,
 				(bounding_box_max[1] + bounding_box_min[1]) * 0.5f,
@@ -701,9 +701,9 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 			//~ Dedrick: Grow the sphere to encase all points.
 			for (u64 v_idx = 0; v_idx < src->vertex_count; ++v_idx) {
 				f32 const *position = src->vertices[v_idx].position;
-				f32 const diff_x = pposition[0] - sphere_center[0];
-				f32 const diff_y = pposition[1] - sphere_center[1];
-				f32 const diff_z = pposition[2] - sphere_center[2];
+				f32 const diff_x = position[0] - sphere_center[0];
+				f32 const diff_y = position[1] - sphere_center[1];
+				f32 const diff_z = position[2] - sphere_center[2];
 				f32 const diff_sq = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
 				f32 const radius_sq = sphere_radius * sphere_radius;
 				if (diff_sq > radius_sq) {
@@ -717,12 +717,12 @@ auto dk::dksm_bake(Arena *arena, DKSM_BakeParams const *params) noexcept -> DKSM
 				}
 			}
 
-			//~ Dedrick: Per-mesh position quantization - factor/offset derived from bounding box.
+			//~ Dedrick: Per-mesh position quantization.
 			f32 quantization_factor[3] = {};
 			f32 quantization_offset[3] = {};
 			f32 dequantization_factor[3] = {};
 			f32 dequantization_summand[3] = {};
-			f32 const quantization_resolution = (f32)(1ULL << 21);
+			f32 const quantization_resolution = static_cast<f32>(1u << 21);
 			for (u32 axis = 0; axis < 3; ++axis) {
 				f32 const axis_range = bounding_box_max[axis] - bounding_box_min[axis];
 				quantization_factor[axis] = quantization_resolution / axis_range;
