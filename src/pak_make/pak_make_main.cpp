@@ -4,12 +4,14 @@
 #include "dds/dds.hpp"
 #include "dds/dds_parse.hpp"
 #include "pak/pak.hpp"
+#include "pak_make/pak_make_parse.hpp"
 #include "pak_make/pak_make.hpp"
 
 #include "base/base.cpp"
 #include "dds/dds.cpp"
 #include "dds/dds_parse.cpp"
 #include "pak/pak.cpp"
+#include "pak_make/pak_make_parse.cpp"
 #include "pak_make/pak_make.cpp"
 
 auto dk::entry_point(CmdLine */* cmd_line */) noexcept -> int {
@@ -23,6 +25,60 @@ auto dk::entry_point(CmdLine */* cmd_line */) noexcept -> int {
 	log_select(log);
 	log_frame_begin();
 
+	String8 const binary_dir = get_process_info()->binary_dir;
+	String8 const project_dir = path_chop_last_slash(binary_dir);
+	String8 const output_path = str8f(arena, "%.*s/%.*s", DK_STR8_VARG(binary_dir), DK_STR8_VARG("dkrend.pak"_str8));
+
+	//~ Dedrick: Read, parse, bucket tasks from manifest.
+	struct TaskNode {
+		TaskNode *next;
+		String8 path;
+	};
+	struct TaskList {
+		TaskNode *first;
+		TaskNode *last;
+		u64 count;
+	};
+	TaskList shader_task_list = {};
+	TaskList texture_task_list = {};
+	{
+		//~ Dedrick: Read manifest.
+		String8 const manifest_path = str8f(arena, "%.*s/%.*s", DK_STR8_VARG(project_dir), DK_STR8_VARG("pak.manifest"_str8));
+		String8 const manifest_text = read_string_from_file_path(arena, manifest_path);
+
+		//~ Dedrick: Parse manifest & bucket paths.
+		PAKM_TokenArray const tokens = pakm_token_array_from_text(arena, manifest_text);
+		for (u64 t = 0; t < tokens.count; ++t) {
+			PAKM_Token const token = tokens[t];
+			ActiveSectionKind active_section = ActiveSectionKind_None;
+			if (token.kind == PAKM_TokenKind_Section) {
+				if (str8_equals("shader")) {
+					for (u64 ti = t + 1; ti < tokens.count; ++ti) {
+						if (token.kind == PAKM_TokenKind_Value) {
+
+						}
+						else {
+							t = ti;
+							break;
+						}
+					}
+				}
+				else if (str8_equals("texture")) {
+					active_section = ActiveSectionKind_Texture;
+				}
+			}
+
+			if (active_section != ActiveSectionKind_None) {
+				for (u64 s = t; s < tokens.count; ++s) {
+					forward_list_queue_push(&list.first, &list.last, str8_range(manifest_text.data + token.begin, token.end - token.begin));
+				}
+			}
+		}
+	}
+
+	//~ Dedrick: Shaders.
+
+#if 0
 	//~ Dedrick: Extract paths.
 	String8 const binary_dir = get_process_info()->binary_dir;
 	String8 const project_dir = path_chop_last_slash(binary_dir);
@@ -343,9 +399,12 @@ auto dk::entry_point(CmdLine */* cmd_line */) noexcept -> int {
 		}
 	}
 
+#endif
+
 	//~ Dedrick: Collect logs.
 	LogFrameResult const log_frame = log_frame_end(arena);
 	std::fwrite(log_frame.string.data, log_frame.string.size, 1, stdout);
+
 
 	// NOTE(Dedrick): Intentional leak because this is a short-lived application.
 	return 0;

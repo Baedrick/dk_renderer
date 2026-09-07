@@ -87,17 +87,17 @@ auto dk::pakm_token_array_from_text(Arena *arena, String8 text) noexcept -> PAKM
 		//~ Dedrick: Sections.
 		if (token_kind == PAKM_TokenKind_Null && *byte == '[') {
 			token_kind = PAKM_TokenKind_Section;
-			token_begin = byte;
-			token_end = byte;
+			token_begin = byte + 1;
+			token_end = byte + 1;
 			byte += 1;
 			for (; byte <= byte_end; byte += 1) {
-				token_end += 1;
-				if (byte == byte_end || *byte == '\n' || *byte == '\r') {
+				if (byte == byte_end || *byte == '\n') {
+					token_end = byte;
 					break;
 				}
 				if (*byte == ']') {
-					byte += 1;
 					token_end = byte;
+					byte += 1;
 					break;
 				}
 			}
