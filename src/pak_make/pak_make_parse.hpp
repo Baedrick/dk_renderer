@@ -39,13 +39,9 @@ namespace dk {
 		auto operator[](u64 index) const noexcept -> PAKM_Token const &;
 	};
 
-	struct PAKM_TonkenizeResult {
-		PAKM_TokenArray tokens;
-	};
-
 	auto pakm_token_make(u64 begin, u64 end, PAKM_TokenKind kind) noexcept -> PAKM_Token;
 	auto pakm_token_chunk_list_push(Arena *arena, PAKM_TokenChunkList *list, u64 capacity, PAKM_Token token) noexcept -> void;
 	auto pakm_token_array_from_chunk_list(Arena *arena, PAKM_TokenChunkList const *list) noexcept -> PAKM_TokenArray;
 
-	auto pakm_tokenize_from_text(Arena *arena, String8 text) noexcept -> PAKM_TonkenizeResult;
+	auto pakm_token_array_from_text(Arena *arena, String8 text) noexcept -> PAKM_TokenArray;
 }

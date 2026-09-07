@@ -44,9 +44,10 @@ auto dk::pakm_token_array_from_chunk_list(Arena *arena, PAKM_TokenChunkList cons
 	return result;
 }
 
-auto dk::pakm_tokenize_from_text(Arena *arena, String8 text) noexcept -> PAKM_TonkenizeResult {
+auto dk::pakm_token_array_from_text(Arena *arena, String8 text) noexcept -> PAKM_TonkenArray {
 	TempArena const scratch = scratch_begin(&arena, 1);
 	dk_defer(scratch_end(scratch));
+
 	PAKM_TokenChunkList tokens = {};
 	u8 const *byte_begin = text.data;
 	u8 const *byte_end = byte_begin + text.size;
@@ -61,22 +62,23 @@ auto dk::pakm_tokenize_from_text(Arena *arena, String8 text) noexcept -> PAKM_To
 		//~ Dedrick: Skip whitespace.
 		if (token_kind == PAKM_TokenKind_Null && char_is_whitespace(*byte)) {
 			byte += 1;
-			for (; byte < byte_end; byte += 1) {
-				if (!char_is_whitespace(*byte)) {
+			for (; byte <= byte_end; byte += 1) {
+				if (byte == byte_end || !char_is_whitespace(*byte)) {
 					break;
 				}
 			}
+			continue;
 		}
 
 		//~ Dedrick: Comments.
 		if (token_kind == PAKM_TokenKind_Null && *byte == '#') {
 			token_kind = PAKM_TokenKind_Comment;
 			token_begin = byte;
-			token_end = byte + 1;
+			token_end = byte;
 			byte += 1;
-			for (; byte < byte_end; byte += 1) {
+			for (; byte <= byte_end; byte += 1) {
 				token_end += 1;
-				if (*byte == '\n') {
+				if (byte == byte_end || *byte == '\n') {
 					break;
 				}
 			}
@@ -84,29 +86,41 @@ auto dk::pakm_tokenize_from_text(Arena *arena, String8 text) noexcept -> PAKM_To
 
 		//~ Dedrick: Sections.
 		if (token_kind == PAKM_TokenKind_Null && *byte == '[') {
+			token_kind = PAKM_TokenKind_Section;
 			token_begin = byte;
-			token_end = byte + 1;
+			token_end = byte;
 			byte += 1;
-			b8 valid_token = false;
-			for (; byte < byte_end; byte += 1) {
+			for (; byte <= byte_end; byte += 1) {
+				token_end += 1;
+				if (byte == byte_end || *byte == '\n' || *byte == '\r') {
+					break;
+				}
 				if (*byte == ']') {
-					valid_token = true;
-					token_end = byte + 1;
 					byte += 1;
+					token_end = byte;
 					break;
 				}
-				if (char_is_whitespace(*byte) || *byte == '#') {
-					break;
-				}
-			}
-			if (valid_token) {
-				token_kind = PAKM_TokenKind_Value;
 			}
 		}
 
 		//~ Dedrick: Values.
-		if (token_kind == PAKM_TokenKind_Null && (*byte = '.' || char_is_alpha(*byte))) {
+		if (token_kind == PAKM_TokenKind_Null &&
+		   (char_is_alpha(*byte) || char_is_digit(*byte, 10) || *byte == '.' || *byte == '/' || *byte == '_')) {
+			token_kind  = PAKM_TokenKind_Value;
+			token_begin = byte;
+			token_end = byte;
+			byte += 1;
+			for (; byte <= byte_end; byte += 1) {
+				token_end += 1;
+				if (byte == byte_end || char_is_whitespace(*byte) || *byte == '#') {
+					break;
+				}
+			}
+		}
 
+		//~ Dedrick: Fallthrough any bad inputs.
+		if (token_kind == PAKM_TokenKind_Null) {
+			byte += 1;
 		}
 
 		//~ Dedrick: Push token if formed.
@@ -121,10 +135,6 @@ auto dk::pakm_tokenize_from_text(Arena *arena, String8 text) noexcept -> PAKM_To
 	}
 
 	//~ Dedrick: Fill result.
-	PAKM_TonkenizeResult result = {};
-	{
-		result.tokens = pakm_token_array_from_chunk_list(tokens);
-	}
-
-	return result;
+	PAKM_TokenArray const array = pakm_token_array_from_chunk_list(arena, &tokens);
+	return array;
 }
